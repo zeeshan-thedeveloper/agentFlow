@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  createdAt DateTime   @default(now())
+
+  workflows Workflow[]
+
+  @@map("users")
+}
+
+// ─── Workflows ────────────────────────────────────────────────────────────────
+
+model Workflow {
+  id         String   @id @default(uuid())
+  name       String
+  canvasJson Json     @default("{}")
+  userId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs     AgentRun[]
+  memories AgentMemory[]
+
+  @@index([userId])
+  @@map("workflows")
+}
+
+// ─── Agent runs ───────────────────────────────────────────────────────────────
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model AgentRun {
+  id          String    @id @default(uuid())
+  workflowId  String
+  status      RunStatus @default(PENDING)
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  summary     String?
+
+  workflow Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  steps    AgentStep[]
+
+  @@index([workflowId, startedAt])
+  @@map("agent_runs")
+}
+
+model AgentStep {
+  id        String   @id @default(uuid())
+  runId     String
+  stepType  String
+  input     Json?
+  output    Json?
+  createdAt DateTime @default(now())
+
+  run AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@map("agent_steps")
+}
+
+// ─── Agent memory ─────────────────────────────────────────────────────────────
+
+model AgentMemory {
+  id         String   @id @default(uuid())
+  workflowId String
+  key        String
+  value      Json
+  updatedAt  DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, key])
+  @@map("agent_memory")
+}
