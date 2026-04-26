@@ -9,9 +9,10 @@ interface NodeLibraryProps {
 export default function NodeLibrary({ onAddNode }: NodeLibraryProps) {
   return (
     <div style={{
-      width: 220, background: 'var(--panel-bg)',
+      width: 220, background: 'var(--panel-wash), var(--panel-bg)',
       borderRight: '1px solid var(--border-subtle)',
       display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      boxShadow: 'inset -1px 0 0 var(--border-strong)',
     }}>
       <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid var(--border-subtle)' }}>
         <div style={{
@@ -75,9 +76,10 @@ function LibNode({ type, onAdd }: { type: NodeType; onAdd: () => void }) {
       onMouseLeave={() => setHover(false)}
       style={{
         borderRadius: 8,
-        border: `1px solid ${hover ? cfg.color + '50' : 'var(--border-subtle)'}`,
-        background: hover ? cfg.glowB : 'transparent',
+        border: `1px solid ${hover ? cfg.color + '70' : 'var(--border-subtle)'}`,
+        background: hover ? cfg.glowB : 'rgba(255,255,255,0.015)',
         padding: '10px 12px', cursor: 'grab',
+        boxShadow: hover ? `0 0 0 1px ${cfg.color}20, 0 10px 24px var(--shadow-node)` : 'inset 0 1px 0 rgba(255,255,255,0.035)',
         transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 10,
       }}
     >

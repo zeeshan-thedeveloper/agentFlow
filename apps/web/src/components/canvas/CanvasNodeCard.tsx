@@ -48,7 +48,7 @@ export default function CanvasNodeCard({
 
       {/* Card */}
       <div style={{
-        background: 'var(--panel-bg-strong)',
+        background: 'var(--card-wash), var(--panel-bg-strong)',
         border: `1px solid ${selected ? t.color : isRunning ? t.color + '80' : 'var(--border-strong)'}`,
         borderRadius: 10, padding: '11px 14px',
         display: 'flex', alignItems: 'center', gap: 11,
@@ -60,7 +60,7 @@ export default function CanvasNodeCard({
           ? `0 0 0 2px ${t.color}30, 0 8px 32px var(--shadow-node-strong)`
           : isRunning
           ? `0 0 0 1px ${t.color}30, 0 8px 32px var(--shadow-node)`
-          : '0 4px 20px var(--shadow-node)',
+          : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 30px var(--shadow-node)',
         animation: isRunning ? 'nodeRun 1.4s ease-in-out infinite' : 'none',
       } as React.CSSProperties}>
 

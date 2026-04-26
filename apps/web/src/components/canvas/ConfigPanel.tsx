@@ -44,8 +44,9 @@ export default function ConfigPanel({ node, onUpdate, onClose }: ConfigPanelProp
 
   return (
     <div style={{
-      width: 272, background: 'var(--panel-bg)', borderLeft: '1px solid var(--border-subtle)',
+      width: 272, background: 'var(--panel-wash), var(--panel-bg)', borderLeft: '1px solid var(--border-subtle)',
       display: 'flex', flexDirection: 'column',
+      boxShadow: 'inset 1px 0 0 var(--border-strong)',
       animation: 'fadeSlide 0.2s ease-out',
     }}>
       {/* Header */}

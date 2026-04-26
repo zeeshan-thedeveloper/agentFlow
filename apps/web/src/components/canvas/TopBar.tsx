@@ -43,9 +43,9 @@ export default function TopBar({ name, setName, runState, onRun, saved, onSave, 
 
   return (
     <div style={{
-      height: 52, background: 'var(--panel-bg)', borderBottom: '1px solid var(--border-subtle)',
+      height: 52, background: 'var(--panel-wash), var(--panel-bg)', borderBottom: '1px solid var(--border-subtle)',
       display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12,
-      flexShrink: 0, zIndex: 100,
+      flexShrink: 0, zIndex: 100, boxShadow: 'inset 0 -1px 0 var(--border-strong)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginRight: 8 }}>
         <div style={{

@@ -77,9 +77,9 @@ export default function CanvasBoard({
         flex: 1, position: 'relative', overflow: 'hidden',
         cursor: panning ? 'grabbing' : 'default',
         backgroundColor: 'var(--app-bg)',
-        backgroundImage: 'radial-gradient(circle, var(--grid-dot) 1px, transparent 1px)',
-        backgroundSize: '26px 26px',
-        backgroundPosition: `${pan.x % 26}px ${pan.y % 26}px`,
+        backgroundImage: 'var(--canvas-wash), radial-gradient(circle, var(--grid-dot) 1px, transparent 1px)',
+        backgroundSize: 'auto, 26px 26px',
+        backgroundPosition: `center, ${pan.x % 26}px ${pan.y % 26}px`,
       }}
     >
       {/* Vignette */}
