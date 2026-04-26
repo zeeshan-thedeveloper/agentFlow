@@ -27,9 +27,17 @@ const INITIAL_EDGES: FlowEdge[] = [
 
 const RUN_SEQUENCE = ['trigger-1', 'agent-1', 'skill-1', 'output-1'];
 
+interface AgentFlowCanvasProps {
+  user: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function AgentFlowCanvas() {
+export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   const [name, setName]         = useState('GitHub Issue Monitor');
   const [saved, setSaved]       = useState(false);
   const [runState, setRunState] = useState<RunState>('idle');
@@ -83,11 +91,12 @@ export default function AgentFlowCanvas() {
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--app-bg)' }}>
       <TopBar
         name={name} setName={setName}
         runState={runState} onRun={handleRun}
         saved={saved} onSave={handleSave}
+        user={user}
       />
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>

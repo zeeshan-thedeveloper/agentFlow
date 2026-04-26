@@ -76,7 +76,8 @@ export default function CanvasBoard({
       style={{
         flex: 1, position: 'relative', overflow: 'hidden',
         cursor: panning ? 'grabbing' : 'default',
-        backgroundImage: 'radial-gradient(circle, #22222E 1px, transparent 1px)',
+        backgroundColor: 'var(--app-bg)',
+        backgroundImage: 'radial-gradient(circle, var(--grid-dot) 1px, transparent 1px)',
         backgroundSize: '26px 26px',
         backgroundPosition: `${pan.x % 26}px ${pan.y % 26}px`,
       }}
@@ -84,7 +85,7 @@ export default function CanvasBoard({
       {/* Vignette */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1,
-        background: 'radial-gradient(ellipse at center, transparent 60%, rgba(13,13,15,0.5) 100%)',
+        background: 'radial-gradient(ellipse at center, transparent 60%, var(--vignette) 100%)',
       }} />
 
       {/* SVG edges */}
@@ -183,13 +184,13 @@ export default function CanvasBoard({
             onClick={btn.action}
             style={{
               width: 28, height: 28, borderRadius: 7,
-              border: '1px solid #2A2A35', background: 'rgba(18,18,26,0.9)',
-              color: '#888899', cursor: 'pointer',
+              border: '1px solid var(--border-strong)', background: 'var(--button-bg)',
+              color: 'var(--text-muted)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.12s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#3A3A48'; e.currentTarget.style.color = '#C0C0CF'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#2A2A35'; e.currentTarget.style.color = '#888899'; }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
           >
             {btn.icon}
           </button>
@@ -197,7 +198,7 @@ export default function CanvasBoard({
       </div>
 
       {/* Node / edge count */}
-      <div style={{ position: 'absolute', bottom: 20, left: 20, fontSize: 11, color: '#555566', zIndex: 20 }}>
+      <div style={{ position: 'absolute', bottom: 20, left: 20, fontSize: 11, color: 'var(--text-faint)', zIndex: 20 }}>
         {nodes.length} nodes · {edges.length} edges
       </div>
     </div>

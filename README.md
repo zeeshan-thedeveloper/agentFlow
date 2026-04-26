@@ -21,7 +21,7 @@ AgentFlow is a visual AI agent builder that lets you design, run, and monitor au
 ```
 agentflow/
 ├── apps/
-│   ├── web/               # Next.js frontend  → http://localhost:3000
+│   ├── web/               # Next.js frontend  → http://localhost:3100
 │   └── api/               # NestJS backend    → http://localhost:3001
 ├── packages/
 │   └── types/             # Shared TypeScript types
@@ -50,6 +50,23 @@ agentflow/
 2. **Set up environment variables**
    ```bash
    cp .env.example apps/api/.env
+   cp .env.example apps/web/.env.local
+   ```
+
+   For Google sign-in, create an OAuth client in Google Cloud Console with this authorized redirect URI:
+
+   ```text
+   http://localhost:3100/api/auth/callback/google
+   ```
+
+   Then fill these values in `apps/web/.env.local`:
+
+   ```env
+   NEXTAUTH_URL=http://localhost:3100
+   NEXTAUTH_SECRET=<random-secret>
+   GOOGLE_CLIENT_ID=<google-client-id>
+   GOOGLE_CLIENT_SECRET=<google-client-secret>
+   DATABASE_URL=postgresql://agent_user:agent_pass@localhost:15432/agentflow
    ```
 
 3. **Start infrastructure (Postgres + Redis)**
@@ -69,7 +86,7 @@ agentflow/
    pnpm dev
    ```
 
-   - Frontend: http://localhost:3000/canvas
+   - Frontend: http://localhost:3100/canvas
    - API: http://localhost:3001
 
 ## What's Coming

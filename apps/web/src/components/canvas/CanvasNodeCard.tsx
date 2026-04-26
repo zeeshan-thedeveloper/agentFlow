@@ -41,15 +41,15 @@ export default function CanvasNodeCard({
           position: 'absolute', left: -5, top: '50%',
           transform: 'translateY(-50%)',
           width: 10, height: 10, borderRadius: '50%',
-          background: '#0D0D0F', border: `2px solid ${t.color}`,
+          background: 'var(--app-bg)', border: `2px solid ${t.color}`,
           boxShadow: `0 0 6px ${t.color}60`, zIndex: 2,
         }} />
       )}
 
       {/* Card */}
       <div style={{
-        background: '#1A1A22',
-        border: `1px solid ${selected ? t.color : isRunning ? t.color + '80' : '#24242E'}`,
+        background: 'var(--panel-bg-strong)',
+        border: `1px solid ${selected ? t.color : isRunning ? t.color + '80' : 'var(--border-strong)'}`,
         borderRadius: 10, padding: '11px 14px',
         display: 'flex', alignItems: 'center', gap: 11,
         position: 'relative', overflow: 'hidden',
@@ -57,10 +57,10 @@ export default function CanvasNodeCard({
         '--glow':  t.glowA,
         '--glow2': t.glowB,
         boxShadow: selected
-          ? `0 0 0 2px ${t.color}30, 0 8px 32px rgba(0,0,0,0.6)`
+          ? `0 0 0 2px ${t.color}30, 0 8px 32px var(--shadow-node-strong)`
           : isRunning
-          ? `0 0 0 1px ${t.color}30, 0 8px 32px rgba(0,0,0,0.5)`
-          : '0 4px 20px rgba(0,0,0,0.4)',
+          ? `0 0 0 1px ${t.color}30, 0 8px 32px var(--shadow-node)`
+          : '0 4px 20px var(--shadow-node)',
         animation: isRunning ? 'nodeRun 1.4s ease-in-out infinite' : 'none',
       } as React.CSSProperties}>
 
@@ -101,14 +101,14 @@ export default function CanvasNodeCard({
             {t.label}
           </div>
           <div style={{
-            fontSize: 12, fontWeight: 600, color: '#F0F0F5',
+            fontSize: 12, fontWeight: 600, color: 'var(--text-primary)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {node.label}
           </div>
           {node.subtitle && (
             <div style={{
-              fontSize: 10, color: '#555566', marginTop: 1,
+              fontSize: 10, color: 'var(--text-faint)', marginTop: 1,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {node.subtitle}
@@ -134,7 +134,7 @@ export default function CanvasNodeCard({
           position: 'absolute', right: -5, top: '50%',
           transform: 'translateY(-50%)',
           width: 10, height: 10, borderRadius: '50%',
-          background: '#0D0D0F', border: `2px solid ${t.color}`,
+          background: 'var(--app-bg)', border: `2px solid ${t.color}`,
           boxShadow: `0 0 6px ${t.color}60`, zIndex: 2,
         }} />
       )}

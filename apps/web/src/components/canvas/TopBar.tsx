@@ -1,4 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { signOut } from 'next-auth/react';
+import ThemeToggle from '@/components/ThemeToggle';
 import type { RunState } from './types';
 
 interface TopBarProps {
@@ -8,11 +12,23 @@ interface TopBarProps {
   onRun: () => void;
   saved: boolean;
   onSave: () => void;
+  user: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
 }
 
-export default function TopBar({ name, setName, runState, onRun, saved, onSave }: TopBarProps) {
+export default function TopBar({ name, setName, runState, onRun, saved, onSave, user }: TopBarProps) {
   const [editingName, setEditingName] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const displayName = user.name ?? user.email ?? 'Signed in';
+  const initials = displayName
+    .split(/\s+/)
+    .map(part => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   useEffect(() => {
     if (editingName) inputRef.current?.select();
@@ -20,39 +36,37 @@ export default function TopBar({ name, setName, runState, onRun, saved, onSave }
 
   const statusStyle =
     runState === 'running'
-      ? { borderColor: 'rgba(108,99,255,0.4)', background: 'rgba(108,99,255,0.1)', color: '#8B87FF' }
+      ? { borderColor: 'rgba(108,99,255,0.4)', background: 'rgba(108,99,255,0.1)', color: 'var(--brand-text)' }
       : runState === 'success'
-      ? { borderColor: 'rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.1)', color: '#4ade80' }
-      : { borderColor: '#2A2A35', background: 'transparent', color: '#888899' };
+      ? { borderColor: 'rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.1)', color: 'var(--success-text)' }
+      : { borderColor: 'var(--border-strong)', background: 'transparent', color: 'var(--text-muted)' };
 
   return (
     <div style={{
-      height: 52, background: '#12121A', borderBottom: '1px solid #1E1E28',
+      height: 52, background: 'var(--panel-bg)', borderBottom: '1px solid var(--border-subtle)',
       display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12,
       flexShrink: 0, zIndex: 100,
     }}>
-      {/* ── Logo ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginRight: 8 }}>
         <div style={{
           width: 28, height: 28, borderRadius: 8,
-          background: 'rgba(108,99,255,0.2)', border: '1px solid rgba(108,99,255,0.35)',
+          background: 'var(--brand-soft)', border: '1px solid rgba(108,99,255,0.35)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M7 1.5C4 1.5 1.5 4 1.5 7S4 12.5 7 12.5 12.5 10 12.5 7 10 1.5 7 1.5z"
-              stroke="#8B87FF" strokeWidth="1.2" />
+              stroke="var(--brand-text)" strokeWidth="1.2" />
             <path d="M4.5 7h2m0 0V4.5m0 2.5L9 4.5"
-              stroke="#8B87FF" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              stroke="var(--brand-text)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <span style={{ fontSize: 14, fontWeight: 700, color: '#F0F0F5', letterSpacing: '-0.02em' }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: 0 }}>
           AgentFlow
         </span>
       </div>
 
-      <div style={{ width: 1, height: 20, background: '#1E1E28' }} />
+      <div style={{ width: 1, height: 20, background: 'var(--border-subtle)' }} />
 
-      {/* ── Workflow name + status pill ── */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
         {editingName ? (
           <input
@@ -63,7 +77,7 @@ export default function TopBar({ name, setName, runState, onRun, saved, onSave }
             onKeyDown={e => { if (e.key === 'Enter') setEditingName(false); }}
             style={{
               background: 'transparent', border: 'none', outline: 'none',
-              fontSize: 13, fontWeight: 500, color: '#F0F0F5',
+              fontSize: 13, fontWeight: 500, color: 'var(--text-primary)',
               textAlign: 'center', minWidth: 180, fontFamily: 'inherit',
             }}
           />
@@ -72,17 +86,16 @@ export default function TopBar({ name, setName, runState, onRun, saved, onSave }
             onClick={() => setEditingName(true)}
             style={{
               background: 'none', border: 'none', cursor: 'text',
-              fontSize: 13, fontWeight: 500, color: '#F0F0F5',
+              fontSize: 13, fontWeight: 500, color: 'var(--text-primary)',
               padding: '3px 8px', borderRadius: 5, fontFamily: 'inherit',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
           >
             {name}
           </button>
         )}
 
-        {/* Status pill */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 5,
           padding: '3px 9px', borderRadius: 99, border: '1px solid',
@@ -97,17 +110,16 @@ export default function TopBar({ name, setName, runState, onRun, saved, onSave }
         </div>
       </div>
 
-      {/* ── Actions ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <button
           style={{
             padding: '6px 13px', borderRadius: 7, background: 'transparent',
-            border: '1px solid #2A2A35', color: '#888899',
+            border: '1px solid var(--border-strong)', color: 'var(--text-muted)',
             fontSize: 12, fontWeight: 500, cursor: 'pointer',
             fontFamily: 'inherit', transition: 'all 0.15s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#3A3A48'; e.currentTarget.style.color = '#C0C0CF'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#2A2A35'; e.currentTarget.style.color = '#888899'; }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
         >
           Share
         </button>
@@ -116,14 +128,14 @@ export default function TopBar({ name, setName, runState, onRun, saved, onSave }
           onClick={onSave}
           style={{
             padding: '6px 13px', borderRadius: 7, background: 'transparent',
-            border: '1px solid #2A2A35', color: saved ? '#4ade80' : '#888899',
+            border: '1px solid var(--border-strong)', color: saved ? 'var(--success-text)' : 'var(--text-muted)',
             fontSize: 12, fontWeight: 500, cursor: 'pointer',
             fontFamily: 'inherit', transition: 'all 0.15s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#3A3A48'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#2A2A35'; }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
         >
-          {saved ? '✓ Saved' : 'Save'}
+          {saved ? 'Saved' : 'Save'}
         </button>
 
         <button
@@ -131,17 +143,17 @@ export default function TopBar({ name, setName, runState, onRun, saved, onSave }
           disabled={runState === 'running'}
           style={{
             padding: '6px 16px', borderRadius: 7,
-            background: runState === 'running' ? 'rgba(108,99,255,0.3)' : '#6C63FF',
+            background: runState === 'running' ? 'rgba(108,99,255,0.3)' : 'var(--brand)',
             border: '1px solid',
-            borderColor: runState === 'running' ? 'rgba(108,99,255,0.5)' : '#8B87FF',
-            color: '#fff', fontSize: 12, fontWeight: 600,
+            borderColor: runState === 'running' ? 'rgba(108,99,255,0.5)' : 'var(--brand-text)',
+            color: 'var(--text-inverse)', fontSize: 12, fontWeight: 600,
             cursor: runState === 'running' ? 'default' : 'pointer',
             fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 7,
             transition: 'all 0.15s',
             boxShadow: runState === 'running' ? 'none' : '0 2px 12px rgba(108,99,255,0.35)',
           }}
-          onMouseEnter={e => { if (runState !== 'running') e.currentTarget.style.background = '#7C74FF'; }}
-          onMouseLeave={e => { if (runState !== 'running') e.currentTarget.style.background = '#6C63FF'; }}
+          onMouseEnter={e => { if (runState !== 'running') e.currentTarget.style.background = 'var(--brand-hover)'; }}
+          onMouseLeave={e => { if (runState !== 'running') e.currentTarget.style.background = 'var(--brand)'; }}
         >
           {runState === 'running' ? (
             <>
@@ -161,6 +173,88 @@ export default function TopBar({ name, setName, runState, onRun, saved, onSave }
               Run
             </>
           )}
+        </button>
+
+        <ThemeToggle compact />
+
+        <div style={{ width: 1, height: 24, background: 'var(--border-subtle)', margin: '0 2px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+          {user.image ? (
+            <img
+              src={user.image}
+              alt=""
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                border: '1px solid var(--border-strong)',
+                objectFit: 'cover',
+              }}
+            />
+          ) : (
+            <div
+              aria-hidden="true"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                border: '1px solid var(--border-strong)',
+                background: 'var(--surface-muted)',
+                color: 'var(--text-secondary)',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: 10,
+                fontWeight: 800,
+              }}
+            >
+              {initials}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gap: 1, maxWidth: 170, minWidth: 0 }}>
+            <span style={{
+              color: 'var(--text-primary)',
+              fontSize: 12,
+              fontWeight: 700,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {displayName}
+            </span>
+            {user.email && (
+              <span style={{
+                color: 'var(--text-faint)',
+                fontSize: 10,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {user.email}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          style={{
+            padding: '6px 13px',
+            borderRadius: 7,
+            background: 'transparent',
+            border: '1px solid var(--border-strong)',
+            color: 'var(--text-muted)',
+            fontSize: 12,
+            fontWeight: 500,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+        >
+          Log out
         </button>
       </div>
     </div>
