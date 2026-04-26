@@ -44,9 +44,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [runPhases, setRunPhases] = useState<RunPhasesMap>({});
   const [nodes, setNodes]       = useState<FlowNode[]>(INITIAL_NODES);
-
-  // Edges are static for this scaffold; extend later when edge-drawing is added
-  const edges = INITIAL_EDGES;
+  const [edges, setEdges]       = useState<FlowEdge[]>(INITIAL_EDGES);
 
   const selNode = nodes.find(n => n.id === selected) ?? null;
 
@@ -104,7 +102,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
 
         <CanvasBoard
           nodes={nodes} setNodes={setNodes}
-          edges={edges}
+          edges={edges} setEdges={setEdges}
           selected={selected} setSelected={setSelected}
           runPhases={runPhases}
         />

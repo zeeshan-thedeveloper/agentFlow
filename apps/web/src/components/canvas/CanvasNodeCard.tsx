@@ -16,10 +16,12 @@ interface CanvasNodeCardProps {
   runPhase: RunPhase | undefined;
   onMouseDown: (e: React.MouseEvent) => void;
   onClick: () => void;
+  onInputHandleMouseUp?: (e: React.MouseEvent) => void;
+  onOutputHandleMouseDown?: (e: React.MouseEvent) => void;
 }
 
 export default function CanvasNodeCard({
-  node, selected, runPhase, onMouseDown, onClick,
+  node, selected, runPhase, onMouseDown, onClick, onInputHandleMouseUp, onOutputHandleMouseDown,
 }: CanvasNodeCardProps) {
   const t = NODE_TYPES[node.type];
   const isRunning = runPhase === 'running';
@@ -37,13 +39,19 @@ export default function CanvasNodeCard({
     >
       {/* Input handle */}
       {node.type !== 'trigger' && (
-        <div style={{
-          position: 'absolute', left: -5, top: '50%',
-          transform: 'translateY(-50%)',
-          width: 10, height: 10, borderRadius: '50%',
-          background: 'var(--app-bg)', border: `2px solid ${t.color}`,
-          boxShadow: `0 0 6px ${t.color}60`, zIndex: 2,
-        }} />
+        <div
+          onMouseDown={e => e.stopPropagation()}
+          onMouseUp={onInputHandleMouseUp}
+          title="Connect here"
+          style={{
+            position: 'absolute', left: -7, top: '50%',
+            transform: 'translateY(-50%)',
+            width: 14, height: 14, borderRadius: '50%',
+            background: 'var(--app-bg)', border: `2px solid ${t.color}`,
+            boxShadow: `0 0 6px ${t.color}60`, zIndex: 3,
+            cursor: 'crosshair',
+          }}
+        />
       )}
 
       {/* Card */}
@@ -130,13 +138,18 @@ export default function CanvasNodeCard({
 
       {/* Output handle */}
       {node.type !== 'output' && (
-        <div style={{
-          position: 'absolute', right: -5, top: '50%',
-          transform: 'translateY(-50%)',
-          width: 10, height: 10, borderRadius: '50%',
-          background: 'var(--app-bg)', border: `2px solid ${t.color}`,
-          boxShadow: `0 0 6px ${t.color}60`, zIndex: 2,
-        }} />
+        <div
+          onMouseDown={onOutputHandleMouseDown}
+          title="Drag to connect"
+          style={{
+            position: 'absolute', right: -7, top: '50%',
+            transform: 'translateY(-50%)',
+            width: 14, height: 14, borderRadius: '50%',
+            background: 'var(--app-bg)', border: `2px solid ${t.color}`,
+            boxShadow: `0 0 6px ${t.color}60`, zIndex: 3,
+            cursor: 'crosshair',
+          }}
+        />
       )}
     </div>
   );
