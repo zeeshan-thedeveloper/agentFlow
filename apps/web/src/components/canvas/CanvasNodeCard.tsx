@@ -16,12 +16,13 @@ interface CanvasNodeCardProps {
   runPhase: RunPhase | undefined;
   onMouseDown: (e: React.MouseEvent) => void;
   onClick: () => void;
+  onDelete?: (e: React.MouseEvent) => void;
   onInputHandleMouseUp?: (e: React.MouseEvent) => void;
   onOutputHandleMouseDown?: (e: React.MouseEvent) => void;
 }
 
 export default function CanvasNodeCard({
-  node, selected, runPhase, onMouseDown, onClick, onInputHandleMouseUp, onOutputHandleMouseDown,
+  node, selected, runPhase, onMouseDown, onClick, onDelete, onInputHandleMouseUp, onOutputHandleMouseDown,
 }: CanvasNodeCardProps) {
   const t = NODE_TYPES[node.type];
   const isRunning = runPhase === 'running';
@@ -71,6 +72,26 @@ export default function CanvasNodeCard({
           : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 30px var(--shadow-node)',
         animation: isRunning ? 'nodeRun 1.4s ease-in-out infinite' : 'none',
       } as React.CSSProperties}>
+        {selected && (
+          <button
+            type="button"
+            title="Delete node"
+            onMouseDown={e => e.stopPropagation()}
+            onClick={onDelete}
+            style={{
+              position: 'absolute', top: 7, right: 8,
+              width: 22, height: 22, borderRadius: 6,
+              border: '1px solid var(--border-strong)',
+              background: 'var(--button-bg)', color: 'var(--text-muted)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', zIndex: 4,
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <path d="M2.5 2.5l6 6M8.5 2.5l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
 
         {/* Left colour strip */}
         <div style={{

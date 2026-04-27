@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FlowNode, FlowEdge, RunPhasesMap } from './types';
 import { NODE_TYPES, NW, NH } from './constants';
 import CanvasNodeCard from './CanvasNodeCard';
@@ -42,18 +42,41 @@ export default function CanvasBoard({
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
+  const removeNode = useCallback((id: string) => {
+    setNodes(prev => prev.filter(node => node.id !== id));
+    setEdges(prev => prev.filter(edge => edge.from !== id && edge.to !== id));
+    setSelected(null);
+    setSelectedEdge(null);
+    setDragging(current => current?.id === id ? null : current);
+    setConnecting(current => current?.from === id ? null : current);
+  }, [setEdges, setNodes, setSelected]);
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (!selectedEdge || (e.key !== 'Delete' && e.key !== 'Backspace')) return;
+      const target = e.target as HTMLElement | null;
+      const isEditing =
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable;
+
+      if (isEditing || (e.key !== 'Delete' && e.key !== 'Backspace')) return;
+      if (!selectedEdge && !selected) return;
+
       e.preventDefault();
-      const [from, to] = selectedEdge.split('->');
-      setEdges(prev => prev.filter(edge => edge.from !== from || edge.to !== to));
-      setSelectedEdge(null);
+
+      if (selectedEdge) {
+        const [from, to] = selectedEdge.split('->');
+        setEdges(prev => prev.filter(edge => edge.from !== from || edge.to !== to));
+        setSelectedEdge(null);
+        return;
+      }
+
+      if (selected) removeNode(selected);
     }
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedEdge, setEdges]);
+  }, [removeNode, selected, selectedEdge, setEdges]);
 
   function startNodeDrag(e: React.MouseEvent, id: string) {
     e.stopPropagation();
@@ -158,7 +181,7 @@ export default function CanvasBoard({
 
       <svg style={{
         position: 'absolute', inset: 0, width: '100%', height: '100%',
-        pointerEvents: 'none', zIndex: 3,
+        pointerEvents: 'auto', zIndex: 3,
       }}>
         <defs>
           {(Object.keys(NODE_TYPES) as Array<keyof typeof NODE_TYPES>).map(type => (
@@ -243,6 +266,10 @@ export default function CanvasBoard({
             onClick={() => {
               setSelectedEdge(null);
               setSelected(selected === node.id ? null : node.id);
+            }}
+            onDelete={e => {
+              e.stopPropagation();
+              removeNode(node.id);
             }}
             onInputHandleMouseUp={e => finishConnection(e, node.id)}
             onOutputHandleMouseDown={e => startConnection(e, node.id)}
