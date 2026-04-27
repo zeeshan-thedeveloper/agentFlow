@@ -112,6 +112,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             node={selNode}
             onClose={() => setSelected(null)}
             onUpdate={patch => updateNode(selNode.id, patch)}
+            onRun={handleRun}
           />
         )}
       </div>

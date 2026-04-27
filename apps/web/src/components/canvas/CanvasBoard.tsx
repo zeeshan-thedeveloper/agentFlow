@@ -42,6 +42,16 @@ export default function CanvasBoard({
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
+  function getCanvasPoint(e: Pick<React.MouseEvent, 'clientX' | 'clientY'>) {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return { x: e.clientX, y: e.clientY };
+
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+  }
+
   const removeNode = useCallback((id: string) => {
     setNodes(prev => prev.filter(node => node.id !== id));
     setEdges(prev => prev.filter(edge => edge.from !== id && edge.to !== id));
@@ -97,7 +107,8 @@ export default function CanvasBoard({
 
   function onMouseMove(e: React.MouseEvent) {
     if (connecting) {
-      setConnecting(current => current ? { ...current, x: e.clientX, y: e.clientY } : null);
+      const point = getCanvasPoint(e);
+      setConnecting(current => current ? { ...current, ...point } : null);
       return;
     }
 
@@ -121,11 +132,12 @@ export default function CanvasBoard({
   function startConnection(e: React.MouseEvent, from: string) {
     e.preventDefault();
     e.stopPropagation();
+    const point = getCanvasPoint(e);
     setSelected(null);
     setSelectedEdge(null);
     setDragging(null);
     setPanning(null);
-    setConnecting({ from, x: e.clientX, y: e.clientY });
+    setConnecting({ from, ...point });
   }
 
   function finishConnection(e: React.MouseEvent, to: string) {

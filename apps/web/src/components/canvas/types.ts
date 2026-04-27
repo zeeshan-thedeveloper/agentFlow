@@ -17,6 +17,7 @@ export interface FlowNode {
   temp?: number;
   prompt?: string;
   skillType?: string;
+  attachedSkills?: string[];
   destination?: string;
 }
 

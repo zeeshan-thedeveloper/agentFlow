@@ -6,6 +6,7 @@ interface ConfigPanelProps {
   node: FlowNode;
   onUpdate: (patch: Partial<FlowNode>) => void;
   onClose: () => void;
+  onRun?: () => void;
 }
 
 function IcoChevron({ d = 'down', size = 10 }: { d?: 'down' | 'up'; size?: number }) {
@@ -33,7 +34,11 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-export default function ConfigPanel({ node, onUpdate, onClose }: ConfigPanelProps) {
+function getTriggerSubtitle(triggerType: string) {
+  return triggerType === 'Cron Schedule' ? 'Cron · Scheduled' : 'Manual';
+}
+
+export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPanelProps) {
   const t = NODE_TYPES[node.type];
   const [model, setModel]             = useState(node.model ?? 'claude');
   const [temp, setTemp]               = useState(node.temp ?? 0.7);
@@ -186,29 +191,54 @@ export default function ConfigPanel({ node, onUpdate, onClose }: ConfigPanelProp
 
         {/* Trigger: trigger type */}
         {node.type === 'trigger' && (
-          <Section label="Trigger Type">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {['Manual', 'Cron Schedule', 'Webhook'].map(opt => {
-                const active = (node.triggerType ?? 'Manual') === opt;
-                return (
-                  <label key={opt} style={{
-                    display: 'flex', alignItems: 'center', gap: 9,
-                    padding: '7px 10px', borderRadius: 7, cursor: 'pointer',
-                    border: `1px solid ${active ? '#F59E0B50' : 'var(--border-subtle)'}`,
-                    background: active ? 'rgba(245,158,11,0.06)' : 'transparent',
-                  }}>
-                    <input
-                      type="radio"
-                      checked={active}
-                      onChange={() => onUpdate({ triggerType: opt })}
-                      style={{ accentColor: '#F59E0B', margin: 0 }}
-                    />
-                    <span style={{ fontSize: 12, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>{opt}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </Section>
+          <>
+            <Section label="Trigger Type">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {NODE_TYPES.trigger.lib.options.map(opt => {
+                  const active = (node.triggerType ?? 'Manual') === opt;
+                  return (
+                    <label key={opt} style={{
+                      display: 'flex', alignItems: 'center', gap: 9,
+                      padding: '7px 10px', borderRadius: 7, cursor: 'pointer',
+                      border: `1px solid ${active ? '#F59E0B50' : 'var(--border-subtle)'}`,
+                      background: active ? 'rgba(245,158,11,0.06)' : 'transparent',
+                    }}>
+                      <input
+                        type="radio"
+                        checked={active}
+                        onChange={() => onUpdate({ triggerType: opt, subtitle: getTriggerSubtitle(opt) })}
+                        style={{ accentColor: '#F59E0B', margin: 0 }}
+                      />
+                      <span style={{ fontSize: 12, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>{opt}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </Section>
+
+            {(node.triggerType ?? 'Manual') === 'Manual' && (
+              <Section label="Manual Trigger">
+                <button
+                  type="button"
+                  onClick={onRun}
+                  style={{
+                    width: '100%', height: 34, borderRadius: 7,
+                    border: '1px solid #F59E0B55',
+                    background: 'rgba(245,158,11,0.12)',
+                    color: '#F59E0B',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor" aria-hidden="true">
+                    <path d="M3 2.1v6.8l5.4-3.4L3 2.1z" />
+                  </svg>
+                  Run now
+                </button>
+              </Section>
+            )}
+          </>
         )}
 
         {/* Skill: skill type */}

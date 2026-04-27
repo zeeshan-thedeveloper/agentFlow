@@ -26,7 +26,7 @@ export const NODE_TYPES: Record<NodeType, NodeTypeConfig> = {
           stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
-    lib: { desc: 'Starts the workflow', options: ['Manual', 'Cron Schedule', 'Webhook', 'File Upload'] },
+    lib: { desc: 'Starts the workflow', options: ['Manual', 'Cron Schedule'] },
   },
   agent: {
     label: 'Agent',
