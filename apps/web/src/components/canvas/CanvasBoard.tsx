@@ -155,6 +155,23 @@ export default function CanvasBoard({
     return `M ${x1} ${y1} C ${x1 + cx} ${y1} ${x2 - cx} ${y2} ${x2} ${y2}`;
   }
 
+  function edgeControlPosition(a: FlowNode, b: FlowNode) {
+    const x1 = a.x + NW + pan.x;
+    const y1 = a.y + NH / 2 + pan.y;
+    const x2 = b.x + pan.x;
+    const y2 = b.y + NH / 2 + pan.y;
+    const cx = Math.max(60, (x2 - x1) * 0.45);
+    const c1x = x1 + cx;
+    const c2x = x2 - cx;
+    const t = 0.5;
+    const mt = 1 - t;
+
+    return {
+      x: mt ** 3 * x1 + 3 * mt ** 2 * t * c1x + 3 * mt * t ** 2 * c2x + t ** 3 * x2,
+      y: mt ** 3 * y1 + 3 * mt ** 2 * t * y1 + 3 * mt * t ** 2 * y2 + t ** 3 * y2,
+    };
+  }
+
   const nodeMap = Object.fromEntries(nodes.map(node => [node.id, node]));
   const connectingNode = connecting ? nodeMap[connecting.from] : null;
 
@@ -205,14 +222,33 @@ export default function CanvasBoard({
           const edgeKey = `${edge.from}->${edge.to}`;
           const isSelected = selectedEdge === edgeKey;
           const isActive = runPhases[edge.from] === 'running' || runPhases[edge.from] === 'done';
+          const control = edgeControlPosition(a, b);
 
           return (
             <g key={edgeKey}>
+              <path d={path} fill="none" stroke={t.color}
+                strokeWidth={isSelected ? 7 : isActive ? 6 : 3}
+                strokeOpacity={isSelected ? 0.28 : isActive ? 0.18 : 0.07}
+                filter={`url(#glow-${a.type})`}
+                style={{ pointerEvents: 'none' }} />
+              <path d={path} fill="none" stroke={t.color}
+                strokeWidth={isSelected ? 2.5 : 1.5}
+                strokeOpacity={isSelected ? 0.95 : isActive ? 0.7 : 0.3}
+                style={{ pointerEvents: 'none' }} />
+              <path d={path} fill="none" stroke={t.color}
+                strokeWidth={1.5} strokeOpacity={isActive ? 1 : 0.4}
+                strokeDasharray="12 8"
+                style={{ animation: `flowEdge ${isActive ? 0.9 : 1.8}s linear infinite`, pointerEvents: 'none' }} />
+              <circle
+                cx={b.x + pan.x}
+                cy={b.y + NH / 2 + pan.y}
+                r={isSelected ? 4 : 3} fill={t.color} opacity={isActive || isSelected ? 0.9 : 0.4}
+                style={{ pointerEvents: 'none' }} />
               <path
                 d={path}
                 fill="none"
                 stroke="transparent"
-                strokeWidth={16}
+                strokeWidth={18}
                 style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
                 onMouseDown={e => {
                   e.stopPropagation();
@@ -224,21 +260,20 @@ export default function CanvasBoard({
                   removeEdge(edge);
                 }}
               />
-              <path d={path} fill="none" stroke={t.color}
-                strokeWidth={isSelected ? 7 : isActive ? 6 : 3}
-                strokeOpacity={isSelected ? 0.28 : isActive ? 0.18 : 0.07}
-                filter={`url(#glow-${a.type})`} />
-              <path d={path} fill="none" stroke={t.color}
-                strokeWidth={isSelected ? 2.5 : 1.5}
-                strokeOpacity={isSelected ? 0.95 : isActive ? 0.7 : 0.3} />
-              <path d={path} fill="none" stroke={t.color}
-                strokeWidth={1.5} strokeOpacity={isActive ? 1 : 0.4}
-                strokeDasharray="12 8"
-                style={{ animation: `flowEdge ${isActive ? 0.9 : 1.8}s linear infinite` }} />
-              <circle
-                cx={b.x + pan.x}
-                cy={b.y + NH / 2 + pan.y}
-                r={isSelected ? 4 : 3} fill={t.color} opacity={isActive || isSelected ? 0.9 : 0.4} />
+              {isSelected && (
+                <g
+                  transform={`translate(${control.x} ${control.y})`}
+                  style={{ cursor: 'pointer' }}
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={e => {
+                    e.stopPropagation();
+                    removeEdge(edge);
+                  }}
+                >
+                  <circle r="10" fill="var(--panel-bg)" stroke={t.color} strokeWidth="1.5" />
+                  <path d="M-3.5 -3.5L3.5 3.5M3.5 -3.5L-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </g>
+              )}
             </g>
           );
         })}
@@ -255,7 +290,7 @@ export default function CanvasBoard({
         )}
       </svg>
 
-      <div style={{ position: 'absolute', inset: 0, zIndex: 5 }}>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none' }}>
         {nodes.map(node => (
           <CanvasNodeCard
             key={node.id}

@@ -36,6 +36,7 @@ export default function CanvasNodeCard({
         position: 'absolute', left: node.x, top: node.y,
         width: 200, userSelect: 'none', cursor: 'grab',
         zIndex: selected ? 20 : 10,
+        pointerEvents: 'auto',
       }}
     >
       {/* Input handle */}
