@@ -1,50 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import type { FlowNode, FlowEdge, RunState, RunPhasesMap, NodeType } from './types';
+import { useEffect, useState } from 'react';
+import type { FlowNode, FlowEdge, RunState, RunPhasesMap, NodeType, PersistedWorkflow } from './types';
 import { NODE_TYPES } from './constants';
 import TopBar from './TopBar';
 import NodeLibrary from './NodeLibrary';
 import CanvasBoard from './CanvasBoard';
 import ConfigPanel from './ConfigPanel';
-
-const INITIAL_NODES: FlowNode[] = [
-  {
-    id: 'trigger-1',
-    type: 'trigger',
-    label: 'Start',
-    subtitle: 'Manual · No input',
-    x: 80,
-    y: 240,
-    triggerType: 'Manual',
-    triggerInputMode: 'none',
-  },
-  {
-    id: 'agent-1',
-    type: 'agent',
-    label: 'GitHub Agent',
-    subtitle: 'Prompt only',
-    x: 380,
-    y: 240,
-    prompt: '',
-  },
-  {
-    id: 'output-1',
-    type: 'output',
-    label: 'Return Output',
-    subtitle: 'Receives result',
-    x: 680,
-    y: 240,
-    outputMode: 'Return output',
-  },
-];
-
-const INITIAL_EDGES: FlowEdge[] = [
-  { from: 'trigger-1', to: 'agent-1' },
-  { from: 'agent-1', to: 'output-1' },
-];
+import { DEFAULT_EDGES, DEFAULT_NODES, DEFAULT_WORKFLOW_NAME } from './defaultWorkflow';
 
 const RUN_SEQUENCE = ['trigger-1', 'agent-1', 'output-1'];
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 interface AgentFlowCanvasProps {
   user: {
@@ -55,15 +21,43 @@ interface AgentFlowCanvasProps {
 }
 
 export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
-  const [name, setName] = useState('GitHub Issue Monitor');
-  const [saved, setSaved] = useState(false);
+  const [workflowId, setWorkflowId] = useState<string | null>(null);
+  const [name, setName] = useState(DEFAULT_WORKFLOW_NAME);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   const [runState, setRunState] = useState<RunState>('idle');
   const [selected, setSelected] = useState<string | null>(null);
   const [runPhases, setRunPhases] = useState<RunPhasesMap>({});
-  const [nodes, setNodes] = useState<FlowNode[]>(INITIAL_NODES);
-  const [edges, setEdges] = useState<FlowEdge[]>(INITIAL_EDGES);
+  const [nodes, setNodes] = useState<FlowNode[]>(DEFAULT_NODES);
+  const [edges, setEdges] = useState<FlowEdge[]>(DEFAULT_EDGES);
 
   const selNode = nodes.find(n => n.id === selected) ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWorkflow() {
+      try {
+        const response = await fetch('/api/workflows/current', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Unable to load workflow');
+
+        const workflow = (await response.json()) as PersistedWorkflow;
+        if (cancelled) return;
+
+        setWorkflowId(workflow.id);
+        setName(workflow.name);
+        setNodes(workflow.canvasJson.nodes);
+        setEdges(workflow.canvasJson.edges);
+      } catch {
+        if (!cancelled) setSaveState('error');
+      }
+    }
+
+    loadWorkflow();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleRun() {
     setRunState('running');
@@ -82,9 +76,32 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     }, total + 3000);
   }
 
-  function handleSave() {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  async function handleSave() {
+    setSaveState('saving');
+
+    try {
+      const response = await fetch('/api/workflows/current', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: workflowId,
+          name,
+          canvasJson: { nodes, edges },
+        }),
+      });
+
+      if (!response.ok) throw new Error('Unable to save workflow');
+
+      const workflow = (await response.json()) as PersistedWorkflow;
+      setWorkflowId(workflow.id);
+      setName(workflow.name);
+      setNodes(workflow.canvasJson.nodes);
+      setEdges(workflow.canvasJson.edges);
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 2500);
+    } catch {
+      setSaveState('error');
+    }
   }
 
   function addNode(type: NodeType) {
@@ -92,7 +109,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     const cfg = NODE_TYPES[type];
     const typeDefaults: Partial<FlowNode> =
       type === 'trigger'
-        ? { triggerType: 'Manual', triggerInputMode: 'none', subtitle: 'Manual · No input' }
+        ? { triggerType: 'Manual', triggerInputMode: 'none', subtitle: 'Manual - No input' }
         : type === 'agent'
         ? { subtitle: 'Prompt only', prompt: '' }
         : type === 'output'
@@ -122,7 +139,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         setName={setName}
         runState={runState}
         onRun={handleRun}
-        saved={saved}
+        saveState={saveState}
         onSave={handleSave}
         user={user}
       />

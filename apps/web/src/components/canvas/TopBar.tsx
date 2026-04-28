@@ -5,12 +5,14 @@ import { signOut } from 'next-auth/react';
 import ThemeToggle from '@/components/ThemeToggle';
 import type { RunState } from './types';
 
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
 interface TopBarProps {
   name: string;
   setName: (name: string) => void;
   runState: RunState;
   onRun: () => void;
-  saved: boolean;
+  saveState: SaveState;
   onSave: () => void;
   user: {
     name?: string | null;
@@ -19,7 +21,7 @@ interface TopBarProps {
   };
 }
 
-export default function TopBar({ name, setName, runState, onRun, saved, onSave, user }: TopBarProps) {
+export default function TopBar({ name, setName, runState, onRun, saveState, onSave, user }: TopBarProps) {
   const [editingName, setEditingName] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const displayName = user.name ?? user.email ?? 'Signed in';
@@ -126,16 +128,23 @@ export default function TopBar({ name, setName, runState, onRun, saved, onSave, 
 
         <button
           onClick={onSave}
+          disabled={saveState === 'saving'}
           style={{
             padding: '6px 13px', borderRadius: 7, background: 'transparent',
-            border: '1px solid var(--border-strong)', color: saved ? 'var(--success-text)' : 'var(--text-muted)',
-            fontSize: 12, fontWeight: 500, cursor: 'pointer',
+            border: '1px solid var(--border-strong)',
+            color:
+              saveState === 'saved'
+                ? 'var(--success-text)'
+                : saveState === 'error'
+                ? '#ef4444'
+                : 'var(--text-muted)',
+            fontSize: 12, fontWeight: 500, cursor: saveState === 'saving' ? 'default' : 'pointer',
             fontFamily: 'inherit', transition: 'all 0.15s',
           }}
           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
         >
-          {saved ? 'Saved' : 'Save'}
+          {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : saveState === 'error' ? 'Save failed' : 'Save'}
         </button>
 
         <button

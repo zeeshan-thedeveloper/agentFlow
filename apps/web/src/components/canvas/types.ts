@@ -24,6 +24,19 @@ export interface FlowEdge {
   to: string;
 }
 
+export interface WorkflowCanvasJson {
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+}
+
+export interface PersistedWorkflow {
+  id: string;
+  name: string;
+  canvasJson: WorkflowCanvasJson;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface NodeTypeConfig {
   label: string;
   color: string;
