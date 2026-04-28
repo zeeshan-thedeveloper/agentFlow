@@ -16,6 +16,8 @@ export interface FlowNode {
   triggerInputMode?: 'none' | 'input';
   triggerInput?: string;
   prompt?: string;
+  provider?: 'openai';
+  model?: string;
   outputMode?: string;
 }
 

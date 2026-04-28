@@ -20,6 +20,8 @@ export const DEFAULT_NODES: FlowNode[] = [
     subtitle: 'Prompt only',
     x: 380,
     y: 240,
+    provider: 'openai',
+    model: 'gpt-4.1-mini',
     prompt: '',
   },
   {

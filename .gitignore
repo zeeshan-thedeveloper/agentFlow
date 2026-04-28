@@ -27,9 +27,6 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Prisma
-apps/api/prisma/migrations/
-
 # ─── Python ───────────────────────────────────────────────────────────────────
 
 # Byte-compiled / optimized / DLL files

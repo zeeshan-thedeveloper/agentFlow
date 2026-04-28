@@ -65,7 +65,7 @@ export async function GET() {
       data: {
         userId,
         name: DEFAULT_WORKFLOW_NAME,
-        canvasJson: DEFAULT_CANVAS_JSON,
+        canvasJson: DEFAULT_CANVAS_JSON as unknown as Prisma.InputJsonValue,
       },
     }));
 
@@ -104,14 +104,14 @@ export async function PUT(request: Request) {
         where: { id: existing.id },
         data: {
           name,
-          canvasJson: body.canvasJson as Prisma.InputJsonValue,
+          canvasJson: body.canvasJson as unknown as Prisma.InputJsonValue,
         },
       })
     : await prisma.workflow.create({
         data: {
           userId,
           name,
-          canvasJson: body.canvasJson as Prisma.InputJsonValue,
+          canvasJson: body.canvasJson as unknown as Prisma.InputJsonValue,
         },
       });
 

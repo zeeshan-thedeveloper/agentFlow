@@ -8,6 +8,17 @@ interface ConfigPanelProps {
   onRun?: () => void;
 }
 
+const OPENAI_MODELS = [
+  { id: 'gpt-4.1', label: 'GPT-4.1' },
+  { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+  { id: 'gpt-4o', label: 'GPT-4o' },
+  { id: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+];
+
+function getModelLabel(modelId: string) {
+  return OPENAI_MODELS.find(model => model.id === modelId)?.label ?? modelId;
+}
+
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 20 }}>
@@ -196,23 +207,48 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPa
         )}
 
         {node.type === 'agent' && (
-          <Section label="Prompt">
-            <textarea
-              value={node.prompt ?? ''}
-              onChange={e => onUpdate({ prompt: e.target.value })}
-              rows={8}
-              placeholder="Tell this agent what it should do..."
-              style={{
-                width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
-                borderRadius: 7, padding: '8px 10px', fontSize: 11,
-                fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-secondary)',
-                outline: 'none', resize: 'vertical', lineHeight: 1.6,
-                transition: 'border-color 0.15s',
-              }}
-              onFocus={e => (e.target.style.borderColor = 'var(--brand)')}
-              onBlur={e => (e.target.style.borderColor = 'var(--border-strong)')}
-            />
-          </Section>
+          <>
+            <Section label="Model">
+              <select
+                value={node.model ?? 'gpt-4.1-mini'}
+                onChange={e => {
+                  const model = e.target.value;
+                  onUpdate({
+                    provider: 'openai',
+                    model,
+                    subtitle: `OpenAI - ${getModelLabel(model)}`,
+                  });
+                }}
+                style={{
+                  width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
+                  borderRadius: 7, padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)',
+                  outline: 'none', fontFamily: 'inherit',
+                }}
+              >
+                {OPENAI_MODELS.map(model => (
+                  <option key={model.id} value={model.id}>{model.label}</option>
+                ))}
+              </select>
+            </Section>
+
+            <Section label="Prompt">
+              <textarea
+                value={node.prompt ?? ''}
+                onChange={e => onUpdate({ prompt: e.target.value })}
+                rows={8}
+                placeholder="Tell this agent what it should do..."
+                style={{
+                  width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
+                  borderRadius: 7, padding: '8px 10px', fontSize: 11,
+                  fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-secondary)',
+                  outline: 'none', resize: 'vertical', lineHeight: 1.6,
+                  transition: 'border-color 0.15s',
+                }}
+                onFocus={e => (e.target.style.borderColor = 'var(--brand)')}
+                onBlur={e => (e.target.style.borderColor = 'var(--border-strong)')}
+              />
+            </Section>
+          </>
         )}
 
         {node.type === 'output' && (
