@@ -1,23 +1,11 @@
-import { useState } from 'react';
 import type { FlowNode } from './types';
-import { NODE_TYPES, MODELS, SKILLS_LIST } from './constants';
+import { NODE_TYPES } from './constants';
 
 interface ConfigPanelProps {
   node: FlowNode;
   onUpdate: (patch: Partial<FlowNode>) => void;
   onClose: () => void;
   onRun?: () => void;
-}
-
-function IcoChevron({ d = 'down', size = 10 }: { d?: 'down' | 'up'; size?: number }) {
-  return (
-    <svg
-      width={size} height={size} viewBox="0 0 10 10" fill="none"
-      style={{ transform: d === 'up' ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
-    >
-      <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
 }
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
@@ -34,18 +22,14 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function getTriggerSubtitle(triggerType: string) {
-  return triggerType === 'Cron Schedule' ? 'Cron · Scheduled' : 'Manual';
+function getTriggerSubtitle(triggerType: string, inputMode: FlowNode['triggerInputMode']) {
+  const mode = inputMode === 'input' ? 'Input' : 'No input';
+  return `${triggerType} · ${mode}`;
 }
 
 export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPanelProps) {
   const t = NODE_TYPES[node.type];
-  const [model, setModel]             = useState(node.model ?? 'claude');
-  const [temp, setTemp]               = useState(node.temp ?? 0.7);
-  const [prompt, setPrompt]           = useState(node.prompt ?? '');
-  const [showModelPicker, setShowPicker] = useState(false);
-
-  const selModel = MODELS.find(m => m.id === model) ?? MODELS[0];
+  const triggerInputMode = node.triggerInputMode ?? 'none';
 
   return (
     <div style={{
@@ -54,7 +38,6 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPa
       boxShadow: 'inset 1px 0 0 var(--border-strong)',
       animation: 'fadeSlide 0.2s ease-out',
     }}>
-      {/* Header */}
       <div style={{
         padding: '13px 16px', borderBottom: '1px solid var(--border-subtle)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -85,13 +68,12 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPa
           }}
           onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
           onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
-        >✕</button>
+        >
+          x
+        </button>
       </div>
 
-      {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-
-        {/* Name */}
         <Section label="Name">
           <input
             value={node.label}
@@ -106,90 +88,6 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPa
           />
         </Section>
 
-        {/* Agent: model picker */}
-        {node.type === 'agent' && (
-          <Section label="Model">
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={() => setShowPicker(p => !p)}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '8px 10px', background: 'var(--surface-bg)',
-                  border: `1px solid ${showModelPicker ? 'var(--brand)' : 'var(--border-strong)'}`,
-                  borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit',
-                  transition: 'border-color 0.15s',
-                }}
-              >
-                <div style={{
-                  width: 22, height: 22, borderRadius: 5,
-                  background: 'var(--brand-soft)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                    <rect x="1" y="1" width="9" height="9" rx="1.5" stroke="var(--brand-text)" strokeWidth="1.1" />
-                    <path d="M3.5 5.5h4M3.5 3.5h4M3.5 7.5h2.5" stroke="var(--brand-text)" strokeWidth="1.1" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <div style={{ flex: 1, textAlign: 'left' }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{selModel.label}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{selModel.sub}</div>
-                </div>
-                <IcoChevron d={showModelPicker ? 'up' : 'down'} />
-              </button>
-
-              {showModelPicker && (
-                <div style={{
-                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                  background: 'var(--panel-bg-strong)', border: '1px solid var(--border-strong)',
-                  borderRadius: 8, overflow: 'hidden', zIndex: 50,
-                  boxShadow: '0 12px 36px var(--shadow-node-strong)',
-                  animation: 'popIn 0.15s ease-out',
-                }}>
-                  {MODELS.map(m => (
-                    <button
-                      key={m.id}
-                      onClick={() => { setModel(m.id); setShowPicker(false); onUpdate({ model: m.id }); }}
-                      style={{
-                        width: '100%', display: 'flex', alignItems: 'center',
-                        justifyContent: 'space-between', padding: '9px 12px',
-                        background: model === m.id ? 'rgba(108,99,255,0.12)' : 'transparent',
-                        border: 'none', borderBottom: '1px solid var(--border-subtle)',
-                        cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.1s',
-                      }}
-                      onMouseEnter={e => { if (model !== m.id) e.currentTarget.style.background = 'var(--hover-bg)'; }}
-                      onMouseLeave={e => { if (model !== m.id) e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 500, color: model === m.id ? 'var(--brand-text)' : 'var(--text-primary)', textAlign: 'left' }}>
-                          {m.label}
-                        </div>
-                        <div style={{ fontSize: 10, color: 'var(--text-faint)', textAlign: 'left' }}>{m.sub}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {m.badge && (
-                          <span style={{
-                            fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 99,
-                            background: 'var(--brand-soft)', color: 'var(--brand-text)',
-                            border: '1px solid rgba(108,99,255,0.3)',
-                          }}>
-                            {m.badge}
-                          </span>
-                        )}
-                        {model === m.id && (
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M2.5 6l2.5 2.5 4.5-5" stroke="var(--brand)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Section>
-        )}
-
-        {/* Trigger: trigger type */}
         {node.type === 'trigger' && (
           <>
             <Section label="Trigger Type">
@@ -206,7 +104,10 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPa
                       <input
                         type="radio"
                         checked={active}
-                        onChange={() => onUpdate({ triggerType: opt, subtitle: getTriggerSubtitle(opt) })}
+                        onChange={() => onUpdate({
+                          triggerType: opt,
+                          subtitle: getTriggerSubtitle(opt, triggerInputMode),
+                        })}
                         style={{ accentColor: '#F59E0B', margin: 0 }}
                       />
                       <span style={{ fontSize: 12, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>{opt}</span>
@@ -215,6 +116,59 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPa
                 })}
               </div>
             </Section>
+
+            <Section label="Input">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[
+                  { value: 'none', label: 'Without input' },
+                  { value: 'input', label: 'With input' },
+                ].map(option => {
+                  const active = triggerInputMode === option.value;
+                  return (
+                    <label key={option.value} style={{
+                      display: 'flex', alignItems: 'center', gap: 9,
+                      padding: '7px 10px', borderRadius: 7, cursor: 'pointer',
+                      border: `1px solid ${active ? '#F59E0B50' : 'var(--border-subtle)'}`,
+                      background: active ? 'rgba(245,158,11,0.06)' : 'transparent',
+                    }}>
+                      <input
+                        type="radio"
+                        checked={active}
+                        onChange={() => {
+                          const nextMode = option.value as FlowNode['triggerInputMode'];
+                          onUpdate({
+                            triggerInputMode: nextMode,
+                            subtitle: getTriggerSubtitle(node.triggerType ?? 'Manual', nextMode),
+                          });
+                        }}
+                        style={{ accentColor: '#F59E0B', margin: 0 }}
+                      />
+                      <span style={{ fontSize: 12, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>{option.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </Section>
+
+            {triggerInputMode === 'input' && (
+              <Section label="Input Value">
+                <textarea
+                  value={node.triggerInput ?? ''}
+                  onChange={e => onUpdate({ triggerInput: e.target.value })}
+                  rows={4}
+                  placeholder="Payload or instruction to pass into the agent..."
+                  style={{
+                    width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
+                    borderRadius: 7, padding: '8px 10px', fontSize: 11,
+                    fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-secondary)',
+                    outline: 'none', resize: 'vertical', lineHeight: 1.6,
+                    transition: 'border-color 0.15s',
+                  }}
+                  onFocus={e => (e.target.style.borderColor = '#F59E0B')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border-strong)')}
+                />
+              </Section>
+            )}
 
             {(node.triggerType ?? 'Manual') === 'Manual' && (
               <Section label="Manual Trigger">
@@ -241,88 +195,13 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPa
           </>
         )}
 
-        {/* Skill: skill type */}
-        {node.type === 'skill' && (
-          <Section label="Skill Type">
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {SKILLS_LIST.map(s => {
-                const active = (node.skillType ?? 'Code Review') === s;
-                return (
-                  <button
-                    key={s}
-                    onClick={() => onUpdate({ skillType: s })}
-                    style={{
-                      padding: '5px 10px', borderRadius: 6, fontFamily: 'inherit',
-                      border: `1px solid ${active ? '#22C55E60' : 'var(--border-subtle)'}`,
-                      background: active ? 'rgba(34,197,94,0.1)' : 'transparent',
-                      color: active ? 'var(--success-text)' : 'var(--text-muted)',
-                      fontSize: 11, fontWeight: 500, cursor: 'pointer',
-                      transition: 'all 0.12s',
-                    }}
-                  >
-                    {s}
-                  </button>
-                );
-              })}
-            </div>
-          </Section>
-        )}
-
-        {/* Output: destination */}
-        {node.type === 'output' && (
-          <Section label="Destination">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              {['Slack', 'Email', 'Dashboard', 'Webhook'].map(d => {
-                const active = (node.destination ?? 'Slack') === d;
-                return (
-                  <button
-                    key={d}
-                    onClick={() => onUpdate({ destination: d })}
-                    style={{
-                      padding: 8, borderRadius: 7, fontFamily: 'inherit', textAlign: 'center',
-                      border: `1px solid ${active ? '#3B82F660' : 'var(--border-subtle)'}`,
-                      background: active ? 'rgba(59,130,246,0.1)' : 'transparent',
-                      color: active ? '#2563eb' : 'var(--text-muted)',
-                      fontSize: 11, fontWeight: 500, cursor: 'pointer',
-                      transition: 'all 0.12s',
-                    }}
-                  >
-                    {d}
-                  </button>
-                );
-              })}
-            </div>
-          </Section>
-        )}
-
-        {/* Agent: temperature */}
         {node.type === 'agent' && (
-          <Section label={`Temperature · ${temp.toFixed(1)}`}>
-            <input
-              type="range" min="0" max="1" step="0.1" value={temp}
-              onChange={e => {
-                const v = parseFloat(e.target.value);
-                setTemp(v);
-                onUpdate({ temp: v });
-              }}
-              style={{
-                background: `linear-gradient(to right, var(--brand) ${temp * 100}%, var(--border-strong) ${temp * 100}%)`,
-              }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 10, color: 'var(--text-faint)' }}>
-              <span>Precise</span><span>Creative</span>
-            </div>
-          </Section>
-        )}
-
-        {/* Agent: system prompt */}
-        {node.type === 'agent' && (
-          <Section label="System Prompt">
+          <Section label="Prompt">
             <textarea
-              value={prompt}
-              onChange={e => { setPrompt(e.target.value); onUpdate({ prompt: e.target.value }); }}
-              rows={4}
-              placeholder="You are an expert code reviewer analyzing GitHub issues for priority and impact…"
+              value={node.prompt ?? ''}
+              onChange={e => onUpdate({ prompt: e.target.value })}
+              rows={8}
+              placeholder="Tell this agent what it should do..."
               style={{
                 width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
                 borderRadius: 7, padding: '8px 10px', fontSize: 11,
@@ -336,7 +215,22 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPa
           </Section>
         )}
 
-        {/* Node ID */}
+        {node.type === 'output' && (
+          <Section label="Output">
+            <div style={{
+              width: '100%',
+              border: '1px solid var(--border-strong)',
+              background: 'var(--surface-bg)',
+              borderRadius: 7,
+              padding: '8px 10px',
+              color: 'var(--text-secondary)',
+              fontSize: 12,
+            }}>
+              {node.outputMode ?? 'Return output'}
+            </div>
+          </Section>
+        )}
+
         <Section label="Node ID">
           <div style={{
             fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'var(--text-faint)',
@@ -349,4 +243,3 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPa
     </div>
   );
 }
-

@@ -1,18 +1,7 @@
-import type { NodeType, NodeTypeConfig, Model } from './types';
+import type { NodeType, NodeTypeConfig } from './types';
 
 export const NW = 200;
 export const NH = 74;
-
-export const MODELS: Model[] = [
-  { id: 'claude', label: 'Claude 3.7 Sonnet', sub: 'Anthropic', badge: 'Recommended' },
-  { id: 'gpt4o',  label: 'GPT-4o',            sub: 'OpenAI' },
-  { id: 'llama',  label: 'Llama 3.3 70B',     sub: 'Meta · Local' },
-  { id: 'gemini', label: 'Gemini 1.5 Pro',    sub: 'Google' },
-];
-
-export const SKILLS_LIST = [
-  'Code Review', 'Summarise', 'Debug', 'Security Audit', 'Test Generator', 'Doc Writer',
-];
 
 export const NODE_TYPES: Record<NodeType, NodeTypeConfig> = {
   trigger: {
@@ -43,20 +32,7 @@ export const NODE_TYPES: Record<NodeType, NodeTypeConfig> = {
         <path d="M6 11.5s.8.8 2 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
       </svg>
     ),
-    lib: { desc: 'AI model reasoning step', options: ['Claude 3.7', 'GPT-4o', 'Llama 3.3', 'Gemini 1.5'] },
-  },
-  skill: {
-    label: 'Skill',
-    color: '#22C55E',
-    glowA: 'rgba(34,197,94,0.22)',
-    glowB: 'rgba(34,197,94,0.08)',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 1.5 10.2 6H15l-4 2.8 1.5 4.7L8 10.5 3.5 13.5 5 8.8 1 6h4.8L8 1.5z"
-          stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-      </svg>
-    ),
-    lib: { desc: 'Built-in capability', options: ['Code Review', 'Summarise', 'Debug', 'Security Audit'] },
+    lib: { desc: 'Runs the prompt', options: ['Prompt only'] },
   },
   output: {
     label: 'Output',
@@ -69,6 +45,6 @@ export const NODE_TYPES: Record<NodeType, NodeTypeConfig> = {
           stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
-    lib: { desc: 'Delivers results', options: ['Slack', 'Email', 'Dashboard', 'Webhook'] },
+    lib: { desc: 'Receives agent output', options: ['Return output'] },
   },
 };

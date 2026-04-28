@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 
-export type NodeType = 'trigger' | 'agent' | 'skill' | 'output';
+export type NodeType = 'trigger' | 'agent' | 'output';
 export type RunPhase = 'running' | 'done';
 export type RunState = 'idle' | 'running' | 'success';
 
@@ -13,12 +13,10 @@ export interface FlowNode {
   y: number;
   // Type-specific config
   triggerType?: string;
-  model?: string;
-  temp?: number;
+  triggerInputMode?: 'none' | 'input';
+  triggerInput?: string;
   prompt?: string;
-  skillType?: string;
-  attachedSkills?: string[];
-  destination?: string;
+  outputMode?: string;
 }
 
 export interface FlowEdge {
@@ -36,13 +34,6 @@ export interface NodeTypeConfig {
     desc: string;
     options: string[];
   };
-}
-
-export interface Model {
-  id: string;
-  label: string;
-  sub: string;
-  badge?: string;
 }
 
 export type RunPhasesMap = Partial<Record<string, RunPhase>>;

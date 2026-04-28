@@ -1,5 +1,5 @@
 import type { FlowNode, RunPhase } from './types';
-import { NODE_TYPES } from './constants';
+import { NH, NODE_TYPES } from './constants';
 
 function IcoCheck() {
   return (
@@ -14,15 +14,16 @@ interface CanvasNodeCardProps {
   node: FlowNode & { x: number; y: number };
   selected: boolean;
   runPhase: RunPhase | undefined;
+  scale?: number;
   onMouseDown: (e: React.MouseEvent) => void;
   onClick: () => void;
   onDelete?: (e: React.MouseEvent) => void;
   onInputHandleMouseUp?: (e: React.MouseEvent) => void;
-  onOutputHandleMouseDown?: (e: React.MouseEvent) => void;
+  onStartConnection?: (e: React.MouseEvent) => void;
 }
 
 export default function CanvasNodeCard({
-  node, selected, runPhase, onMouseDown, onClick, onDelete, onInputHandleMouseUp, onOutputHandleMouseDown,
+  node, selected, runPhase, scale = 1, onMouseDown, onClick, onDelete, onInputHandleMouseUp, onStartConnection,
 }: CanvasNodeCardProps) {
   const t = NODE_TYPES[node.type];
   const isRunning = runPhase === 'running';
@@ -37,6 +38,8 @@ export default function CanvasNodeCard({
         width: 200, userSelect: 'none', cursor: 'grab',
         zIndex: selected ? 20 : 10,
         pointerEvents: 'auto',
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
       }}
     >
       {/* Input handle */}
@@ -46,7 +49,7 @@ export default function CanvasNodeCard({
           onMouseUp={onInputHandleMouseUp}
           title="Connect here"
           style={{
-            position: 'absolute', left: -7, top: '50%',
+            position: 'absolute', left: -7, top: NH / 2,
             transform: 'translateY(-50%)',
             width: 14, height: 14, borderRadius: '50%',
             background: 'var(--app-bg)', border: `2px solid ${t.color}`,
@@ -158,13 +161,13 @@ export default function CanvasNodeCard({
         )}
       </div>
 
-      {/* Output handle */}
+      {/* Connection handle */}
       {node.type !== 'output' && (
         <div
-          onMouseDown={onOutputHandleMouseDown}
+          onMouseDown={onStartConnection}
           title="Drag to connect"
           style={{
-            position: 'absolute', right: -7, top: '50%',
+            position: 'absolute', right: -7, top: NH / 2,
             transform: 'translateY(-50%)',
             width: 14, height: 14, borderRadius: '50%',
             background: 'var(--app-bg)', border: `2px solid ${t.color}`,

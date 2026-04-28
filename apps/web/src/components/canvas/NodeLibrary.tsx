@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { NodeType } from './types';
 import { NODE_TYPES } from './constants';
 
+const ACTIVE_NODE_TYPES: NodeType[] = ['trigger', 'agent', 'output'];
+
 interface NodeLibraryProps {
   onAddNode: (type: NodeType) => void;
 }
@@ -27,40 +29,9 @@ export default function NodeLibrary({ onAddNode }: NodeLibraryProps) {
         flex: 1, overflowY: 'auto', padding: 10,
         display: 'flex', flexDirection: 'column', gap: 6,
       }}>
-        {(Object.keys(NODE_TYPES) as NodeType[]).map(type => (
+        {ACTIVE_NODE_TYPES.map(type => (
           <LibNode key={type} type={type} onAdd={() => onAddNode(type)} />
         ))}
-
-        {/* Templates */}
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
-          <div style={{
-            fontSize: 10, fontWeight: 600, color: 'var(--text-muted)',
-            textTransform: 'uppercase', letterSpacing: '0.08em',
-            marginBottom: 8, paddingLeft: 4,
-          }}>
-            Templates
-          </div>
-          {['GitHub Monitor', 'PR Reviewer', 'Issue Triage', 'Deploy Guard'].map(t => (
-            <button
-              key={t}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 9,
-                padding: '8px 10px', borderRadius: 7, border: 'none',
-                background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer',
-                fontFamily: 'inherit', fontSize: 12, marginBottom: 2,
-                transition: 'all 0.12s', textAlign: 'left',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.1" />
-                <path d="M3.5 6h5M3.5 4h5M3.5 8h3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
-              </svg>
-              {t}
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );

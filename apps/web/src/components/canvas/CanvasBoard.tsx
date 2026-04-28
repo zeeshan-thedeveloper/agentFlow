@@ -32,17 +32,21 @@ interface ConnectState {
   y: number;
 }
 
+const MIN_ZOOM = 0.55;
+const MAX_ZOOM = 1.8;
+
 export default function CanvasBoard({
   nodes, setNodes, edges, setEdges, selected, setSelected, runPhases,
 }: CanvasBoardProps) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const [dragging, setDragging] = useState<DragState | null>(null);
   const [panning, setPanning] = useState<PanState | null>(null);
   const [connecting, setConnecting] = useState<ConnectState | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  function getCanvasPoint(e: Pick<React.MouseEvent, 'clientX' | 'clientY'>) {
+  function getCanvasPoint(e: Pick<React.MouseEvent | WheelEvent, 'clientX' | 'clientY'>) {
     const rect = ref.current?.getBoundingClientRect();
     if (!rect) return { x: e.clientX, y: e.clientY };
 
@@ -50,6 +54,35 @@ export default function CanvasBoard({
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
     };
+  }
+
+  function screenX(x: number) {
+    return x * zoom + pan.x;
+  }
+
+  function screenY(y: number) {
+    return y * zoom + pan.y;
+  }
+
+  function clampZoom(value: number) {
+    return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+  }
+
+  function setZoomAroundPoint(nextZoom: number, point: { x: number; y: number }) {
+    setZoom(currentZoom => {
+      const clampedZoom = clampZoom(nextZoom);
+      const worldPoint = {
+        x: (point.x - pan.x) / currentZoom,
+        y: (point.y - pan.y) / currentZoom,
+      };
+
+      setPan({
+        x: point.x - worldPoint.x * clampedZoom,
+        y: point.y - worldPoint.y * clampedZoom,
+      });
+
+      return clampedZoom;
+    });
   }
 
   const removeNode = useCallback((id: string) => {
@@ -116,12 +149,28 @@ export default function CanvasBoard({
       const dx = e.clientX - dragging.sx;
       const dy = e.clientY - dragging.sy;
       setNodes(prev => prev.map(node =>
-        node.id === dragging.id ? { ...node, x: dragging.ox + dx, y: dragging.oy + dy } : node,
+        node.id === dragging.id ? { ...node, x: dragging.ox + dx / zoom, y: dragging.oy + dy / zoom } : node,
       ));
     }
 
     if (panning) setPan({ x: e.clientX - panning.sx, y: e.clientY - panning.sy });
   }
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      const point = getCanvasPoint(e);
+      const zoomDelta = Math.exp(-e.deltaY * 0.01);
+      setZoomAroundPoint(zoom * zoomDelta, point);
+    }
+
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, [pan.x, pan.y, zoom]);
+
 
   function onMouseUp() {
     setDragging(null);
@@ -159,19 +208,19 @@ export default function CanvasBoard({
   }
 
   function edgePath(a: FlowNode, b: FlowNode): string {
-    const x1 = a.x + NW + pan.x;
-    const y1 = a.y + NH / 2 + pan.y;
-    const x2 = b.x + pan.x;
-    const y2 = b.y + NH / 2 + pan.y;
+    const x1 = screenX(a.x + NW);
+    const y1 = screenY(a.y + NH / 2);
+    const x2 = screenX(b.x);
+    const y2 = screenY(b.y + NH / 2);
     const cx = Math.max(60, (x2 - x1) * 0.45);
     return `M ${x1} ${y1} C ${x1 + cx} ${y1} ${x2 - cx} ${y2} ${x2} ${y2}`;
   }
 
   function edgeControlPosition(a: FlowNode, b: FlowNode) {
-    const x1 = a.x + NW + pan.x;
-    const y1 = a.y + NH / 2 + pan.y;
-    const x2 = b.x + pan.x;
-    const y2 = b.y + NH / 2 + pan.y;
+    const x1 = screenX(a.x + NW);
+    const y1 = screenY(a.y + NH / 2);
+    const x2 = screenX(b.x);
+    const y2 = screenY(b.y + NH / 2);
     const cx = Math.max(60, (x2 - x1) * 0.45);
     const c1x = x1 + cx;
     const c2x = x2 - cx;
@@ -199,8 +248,8 @@ export default function CanvasBoard({
         cursor: connecting ? 'crosshair' : panning ? 'grabbing' : 'default',
         backgroundColor: 'var(--app-bg)',
         backgroundImage: 'var(--canvas-wash), radial-gradient(circle, var(--grid-dot) 1px, transparent 1px)',
-        backgroundSize: 'auto, 26px 26px',
-        backgroundPosition: `center, ${pan.x % 26}px ${pan.y % 26}px`,
+        backgroundSize: `auto, ${26 * zoom}px ${26 * zoom}px`,
+        backgroundPosition: `center, ${pan.x % (26 * zoom)}px ${pan.y % (26 * zoom)}px`,
       }}
     >
       <div style={{
@@ -252,8 +301,8 @@ export default function CanvasBoard({
                 strokeDasharray="12 8"
                 style={{ animation: `flowEdge ${isActive ? 0.9 : 1.8}s linear infinite`, pointerEvents: 'none' }} />
               <circle
-                cx={b.x + pan.x}
-                cy={b.y + NH / 2 + pan.y}
+                cx={screenX(b.x)}
+                cy={screenY(b.y + NH / 2)}
                 r={isSelected ? 4 : 3} fill={t.color} opacity={isActive || isSelected ? 0.9 : 0.4}
                 style={{ pointerEvents: 'none' }} />
               <path
@@ -292,10 +341,10 @@ export default function CanvasBoard({
 
         {connecting && connectingNode && (
           <path
-            d={`M ${connectingNode.x + NW + pan.x} ${connectingNode.y + NH / 2 + pan.y} C ${connectingNode.x + NW + pan.x + 80} ${connectingNode.y + NH / 2 + pan.y} ${connecting.x - 80} ${connecting.y} ${connecting.x} ${connecting.y}`}
+            d={`M ${screenX(connectingNode.x + NW)} ${screenY(connectingNode.y + NH / 2)} C ${screenX(connectingNode.x + NW) + 80 * zoom} ${screenY(connectingNode.y + NH / 2)} ${connecting.x - 80 * zoom} ${connecting.y} ${connecting.x} ${connecting.y}`}
             fill="none"
             stroke={NODE_TYPES[connectingNode.type].color}
-            strokeWidth={2}
+            strokeWidth={2 * zoom}
             strokeDasharray="8 6"
             strokeOpacity={0.85}
           />
@@ -306,7 +355,8 @@ export default function CanvasBoard({
         {nodes.map(node => (
           <CanvasNodeCard
             key={node.id}
-            node={{ ...node, x: node.x + pan.x, y: node.y + pan.y }}
+            node={{ ...node, x: screenX(node.x), y: screenY(node.y) }}
+            scale={zoom}
             selected={selected === node.id}
             runPhase={runPhases[node.id]}
             onMouseDown={e => startNodeDrag(e, node.id)}
@@ -319,7 +369,7 @@ export default function CanvasBoard({
               removeNode(node.id);
             }}
             onInputHandleMouseUp={e => finishConnection(e, node.id)}
-            onOutputHandleMouseDown={e => startConnection(e, node.id)}
+            onStartConnection={e => startConnection(e, node.id)}
           />
         ))}
       </div>
@@ -331,14 +381,14 @@ export default function CanvasBoard({
             icon: <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M5 1v8M1 5h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>,
-            action: undefined,
+            action: () => setZoomAroundPoint(zoom * 1.15, { x: ref.current?.clientWidth ? ref.current.clientWidth / 2 : 0, y: ref.current?.clientHeight ? ref.current.clientHeight / 2 : 0 }),
           },
           {
             label: 'Zoom out',
             icon: <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M1 5h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>,
-            action: undefined,
+            action: () => setZoomAroundPoint(zoom / 1.15, { x: ref.current?.clientWidth ? ref.current.clientWidth / 2 : 0, y: ref.current?.clientHeight ? ref.current.clientHeight / 2 : 0 }),
           },
           {
             label: 'Fit',
@@ -346,7 +396,7 @@ export default function CanvasBoard({
               <path d="M3 1H1v2M7 1h2v2M1 7v2h2M9 7v2H7"
                 stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>,
-            action: () => setPan({ x: 0, y: 0 }),
+            action: () => { setPan({ x: 0, y: 0 }); setZoom(1); },
           },
         ].map(btn => (
           <button
@@ -369,7 +419,7 @@ export default function CanvasBoard({
       </div>
 
       <div style={{ position: 'absolute', bottom: 20, left: 20, fontSize: 11, color: 'var(--text-faint)', zIndex: 20 }}>
-        {nodes.length} nodes - {edges.length} edges
+        {nodes.length} nodes - {edges.length} edges - {Math.round(zoom * 100)}%
       </div>
     </div>
   );
