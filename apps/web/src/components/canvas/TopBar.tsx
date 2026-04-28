@@ -43,6 +43,8 @@ export default function TopBar({ name, setName, runState, onRun, saveState, onSa
       ? { borderColor: 'rgba(108,99,255,0.4)', background: 'rgba(108,99,255,0.1)', color: 'var(--brand-text)' }
       : runState === 'success'
       ? { borderColor: 'rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.1)', color: 'var(--success-text)' }
+      : runState === 'error'
+      ? { borderColor: 'rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }
       : { borderColor: 'var(--border-strong)', background: 'transparent', color: 'var(--text-muted)' };
 
   return (
@@ -110,7 +112,7 @@ export default function TopBar({ name, setName, runState, onRun, saveState, onSa
             background: 'currentColor', display: 'inline-block',
             animation: runState === 'running' ? 'pulseGlow 1s infinite' : 'none',
           }} />
-          {runState === 'running' ? 'Running' : runState === 'success' ? 'Success' : 'Draft'}
+          {runState === 'running' ? 'Running' : runState === 'success' ? 'Success' : runState === 'error' ? 'Failed' : 'Draft'}
         </div>
       </div>
 

@@ -22,12 +22,22 @@ interface CanvasNodeCardProps {
   onStartConnection?: (e: React.MouseEvent) => void;
 }
 
+function IcoFailed() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+      <circle cx="6.5" cy="6.5" r="6" fill="#EF4444" />
+      <path d="M4.4 4.4l4.2 4.2M8.6 4.4 4.4 8.6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function CanvasNodeCard({
   node, selected, runPhase, scale = 1, onMouseDown, onClick, onDelete, onInputHandleMouseUp, onStartConnection,
 }: CanvasNodeCardProps) {
   const t = NODE_TYPES[node.type];
   const isRunning = runPhase === 'running';
   const isDone    = runPhase === 'done';
+  const isFailed  = runPhase === 'failed';
 
   return (
     <div
@@ -62,7 +72,7 @@ export default function CanvasNodeCard({
       {/* Card */}
       <div style={{
         background: 'var(--card-wash), var(--panel-bg-strong)',
-        border: `1px solid ${selected ? t.color : isRunning ? t.color + '80' : 'var(--border-strong)'}`,
+        border: `1px solid ${selected ? t.color : isFailed ? '#EF444480' : isRunning ? t.color + '80' : 'var(--border-strong)'}`,
         borderRadius: 10, padding: '11px 14px',
         display: 'flex', alignItems: 'center', gap: 11,
         position: 'relative', overflow: 'hidden',
@@ -71,6 +81,8 @@ export default function CanvasNodeCard({
         '--glow2': t.glowB,
         boxShadow: selected
           ? `0 0 0 2px ${t.color}30, 0 8px 32px var(--shadow-node-strong)`
+          : isFailed
+          ? '0 0 0 1px rgba(239,68,68,0.25), 0 8px 32px var(--shadow-node)'
           : isRunning
           ? `0 0 0 1px ${t.color}30, 0 8px 32px var(--shadow-node)`
           : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 30px var(--shadow-node)',
@@ -101,7 +113,7 @@ export default function CanvasNodeCard({
         <div style={{
           position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
           background: t.color, borderRadius: '10px 0 0 10px',
-          opacity: isRunning ? 1 : selected ? 1 : 0.5,
+          opacity: isRunning || isFailed ? 1 : selected ? 1 : 0.5,
         }} />
 
         {/* Icon */}
@@ -111,7 +123,9 @@ export default function CanvasNodeCard({
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: t.color, flexShrink: 0, marginLeft: 4, position: 'relative',
         }}>
-          {isDone ? (
+          {isFailed ? (
+            <div style={{ animation: 'checkDone 0.4s ease-out' }}><IcoFailed /></div>
+          ) : isDone ? (
             <div style={{ animation: 'checkDone 0.4s ease-out' }}><IcoCheck /></div>
           ) : isRunning ? (
             <span style={{

@@ -6,6 +6,7 @@ interface ConfigPanelProps {
   onUpdate: (patch: Partial<FlowNode>) => void;
   onClose: () => void;
   onRun?: () => void;
+  runOutput?: unknown;
 }
 
 const OPENAI_MODELS = [
@@ -38,7 +39,14 @@ function getTriggerSubtitle(triggerType: string, inputMode: FlowNode['triggerInp
   return `${triggerType} · ${mode}`;
 }
 
-export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPanelProps) {
+function formatRunOutput(output: unknown) {
+  if (output === undefined) return 'No run output yet.';
+  if (typeof output === 'string') return output;
+
+  return JSON.stringify(output, null, 2);
+}
+
+export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput }: ConfigPanelProps) {
   const t = NODE_TYPES[node.type];
   const triggerInputMode = node.triggerInputMode ?? 'none';
 
@@ -252,19 +260,42 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun }: ConfigPa
         )}
 
         {node.type === 'output' && (
-          <Section label="Output">
-            <div style={{
-              width: '100%',
-              border: '1px solid var(--border-strong)',
-              background: 'var(--surface-bg)',
-              borderRadius: 7,
-              padding: '8px 10px',
-              color: 'var(--text-secondary)',
-              fontSize: 12,
-            }}>
-              {node.outputMode ?? 'Return output'}
-            </div>
-          </Section>
+          <>
+            <Section label="Output">
+              <div style={{
+                width: '100%',
+                border: '1px solid var(--border-strong)',
+                background: 'var(--surface-bg)',
+                borderRadius: 7,
+                padding: '8px 10px',
+                color: 'var(--text-secondary)',
+                fontSize: 12,
+              }}>
+                {node.outputMode ?? 'Return output'}
+              </div>
+            </Section>
+
+            <Section label="Latest Result">
+              <pre style={{
+                width: '100%',
+                maxHeight: 220,
+                overflow: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                border: '1px solid var(--border-strong)',
+                background: 'var(--surface-bg)',
+                borderRadius: 7,
+                padding: '9px 10px',
+                color: runOutput === undefined ? 'var(--text-faint)' : 'var(--text-secondary)',
+                fontSize: 11,
+                lineHeight: 1.55,
+                fontFamily: "'JetBrains Mono', monospace",
+                margin: 0,
+              }}>
+                {formatRunOutput(runOutput)}
+              </pre>
+            </Section>
+          </>
         )}
 
         <Section label="Node ID">
