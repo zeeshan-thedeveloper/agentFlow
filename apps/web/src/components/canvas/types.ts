@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 
 export type NodeType = 'trigger' | 'agent' | 'output';
-export type RunPhase = 'running' | 'done' | 'failed';
+export type RunPhase = 'queued' | 'running' | 'done' | 'failed';
 export type RunState = 'idle' | 'running' | 'success' | 'error';
 
 export interface FlowNode {

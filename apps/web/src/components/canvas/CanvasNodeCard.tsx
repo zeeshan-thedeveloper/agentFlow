@@ -35,6 +35,7 @@ export default function CanvasNodeCard({
   node, selected, runPhase, scale = 1, onMouseDown, onClick, onDelete, onInputHandleMouseUp, onStartConnection,
 }: CanvasNodeCardProps) {
   const t = NODE_TYPES[node.type];
+  const isQueued = runPhase === 'queued';
   const isRunning = runPhase === 'running';
   const isDone    = runPhase === 'done';
   const isFailed  = runPhase === 'failed';
@@ -52,6 +53,21 @@ export default function CanvasNodeCard({
         transformOrigin: 'top left',
       }}
     >
+      {isRunning && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: -8,
+            borderRadius: 16,
+            border: `1px solid ${t.color}70`,
+            boxShadow: `0 0 0 1px ${t.color}20, 0 0 34px ${t.glowA}`,
+            animation: 'nodeActiveHalo 1.1s ease-in-out infinite',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
       {/* Input handle */}
       {node.type !== 'trigger' && (
         <div
@@ -72,11 +88,12 @@ export default function CanvasNodeCard({
       {/* Card */}
       <div style={{
         background: 'var(--card-wash), var(--panel-bg-strong)',
-        border: `1px solid ${selected ? t.color : isFailed ? '#EF444480' : isRunning ? t.color + '80' : 'var(--border-strong)'}`,
+        border: `1px solid ${selected ? t.color : isFailed ? '#EF444480' : isRunning ? t.color : isQueued ? t.color + '35' : 'var(--border-strong)'}`,
         borderRadius: 10, padding: '11px 14px',
         display: 'flex', alignItems: 'center', gap: 11,
         position: 'relative', overflow: 'hidden',
-        transition: 'border-color 0.2s, box-shadow 0.2s',
+        transition: 'border-color 0.2s, box-shadow 0.2s, opacity 0.2s',
+        opacity: isQueued ? 0.72 : 1,
         '--glow':  t.glowA,
         '--glow2': t.glowB,
         boxShadow: selected
@@ -84,7 +101,9 @@ export default function CanvasNodeCard({
           : isFailed
           ? '0 0 0 1px rgba(239,68,68,0.25), 0 8px 32px var(--shadow-node)'
           : isRunning
-          ? `0 0 0 1px ${t.color}30, 0 8px 32px var(--shadow-node)`
+          ? `0 0 0 1px ${t.color}55, 0 8px 32px var(--shadow-node), 0 0 36px ${t.glowA}`
+          : isQueued
+          ? `0 0 0 1px ${t.color}12, 0 8px 26px var(--shadow-node)`
           : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 30px var(--shadow-node)',
         animation: isRunning ? 'nodeRun 1.4s ease-in-out infinite' : 'none',
       } as React.CSSProperties}>
@@ -164,14 +183,32 @@ export default function CanvasNodeCard({
         </div>
 
         {/* Running pulse */}
-        {isRunning && (
-          <div style={{ position: 'absolute', top: 7, right: 9 }}>
+        {(isQueued || isRunning) && (
+          <div style={{
+            position: 'absolute', right: 8, bottom: 7,
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '2px 6px', borderRadius: 99,
+            background: isRunning ? t.glowA : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${isRunning ? t.color + '55' : 'var(--border-subtle)'}`,
+            color: isRunning ? t.color : 'var(--text-faint)',
+            fontSize: 9, fontWeight: 700, lineHeight: 1,
+          }}>
             <span style={{
               width: 5, height: 5, borderRadius: '50%',
-              background: t.color, animation: 'pulseGlow 0.8s infinite',
+              background: 'currentColor',
+              animation: isRunning ? 'pulseGlow 0.8s infinite' : 'none',
               display: 'inline-block',
             }} />
+            {isRunning ? 'Running' : 'Queued'}
           </div>
+        )}
+
+        {isRunning && (
+          <div style={{
+            position: 'absolute', left: 3, right: 0, bottom: 0, height: 2,
+            background: `linear-gradient(90deg, transparent, ${t.color}, transparent)`,
+            animation: 'nodeProgressSweep 1s linear infinite',
+          }} />
         )}
       </div>
 

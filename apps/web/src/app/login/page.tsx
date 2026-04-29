@@ -4,8 +4,16 @@ import { authOptions } from '@/lib/auth';
 import ThemeToggle from '@/components/ThemeToggle';
 import GoogleSignInButton from './GoogleSignInButton';
 
+function hasGoogleOAuth() {
+  return Boolean(process.env.GOOGLE_CLIENT_ID) &&
+    Boolean(process.env.GOOGLE_CLIENT_SECRET) &&
+    process.env.GOOGLE_CLIENT_ID !== 'replace-with-google-oauth-client-id' &&
+    process.env.GOOGLE_CLIENT_SECRET !== 'replace-with-google-oauth-client-secret';
+}
+
 export default async function LoginPage() {
   const session = await getServerSession(authOptions);
+  const useGoogle = hasGoogleOAuth();
 
   if (session?.user) {
     redirect('/canvas');
@@ -74,7 +82,10 @@ export default async function LoginPage() {
           Use Google to enter the authenticated app shell and start building workflows.
         </p>
 
-        <GoogleSignInButton />
+        <GoogleSignInButton
+          providerId={useGoogle ? 'google' : 'demo'}
+          label={useGoogle ? 'Continue with Google' : 'Continue in dev'}
+        />
       </section>
     </main>
   );

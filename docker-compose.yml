@@ -1,4 +1,23 @@
 services:
+  deps:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: agentflow-node-dev
+    working_dir: /app
+    command: sh -lc "corepack enable && corepack pnpm install && corepack pnpm --filter @agentflow/api exec prisma generate"
+    environment:
+      DATABASE_URL: postgresql://agent_user:agent_pass@postgres:5432/agentflow
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - api_node_modules:/app/apps/api/node_modules
+      - web_node_modules:/app/apps/web/node_modules
+      - types_node_modules:/app/packages/types/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -10,6 +29,11 @@ services:
       - '15432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U agent_user -d agentflow']
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   redis:
     image: redis:7-alpine
@@ -18,7 +42,82 @@ services:
       - '16379:6379'
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: agentflow-node-dev
+    working_dir: /app
+    command: sh -lc "corepack enable && corepack pnpm --filter @agentflow/api exec prisma migrate deploy && corepack pnpm --filter @agentflow/api dev"
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://agent_user:agent_pass@postgres:5432/agentflow
+      REDIS_URL: redis://redis:6379
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-replace-with-a-random-32-byte-secret}
+      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-replace-with-a-random-32-byte-secret}
+    ports:
+      - '3001:3001'
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - api_node_modules:/app/apps/api/node_modules
+      - web_node_modules:/app/apps/web/node_modules
+      - types_node_modules:/app/packages/types/node_modules
+    depends_on:
+      deps:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: agentflow-node-dev
+    working_dir: /app
+    command: sh -lc "find apps/web/.next -mindepth 1 -exec rm -rf {} + && corepack enable && corepack pnpm --filter @agentflow/web dev --hostname 0.0.0.0"
+    restart: unless-stopped
+    env_file:
+      - apps/web/.env.local
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://agent_user:agent_pass@postgres:5432/agentflow
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXTAUTH_URL: http://localhost:3100
+      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-replace-with-a-random-32-byte-secret}
+      WATCHPACK_POLLING: 'true'
+    ports:
+      - '3100:3100'
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - api_node_modules:/app/apps/api/node_modules
+      - web_node_modules:/app/apps/web/node_modules
+      - types_node_modules:/app/packages/types/node_modules
+      - web_next:/app/apps/web/.next
+    depends_on:
+      deps:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
 
 volumes:
   postgres_data:
   redis_data:
+  node_modules:
+  api_node_modules:
+  web_node_modules:
+  types_node_modules:
+  web_next:

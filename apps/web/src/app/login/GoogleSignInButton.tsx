@@ -2,11 +2,16 @@
 
 import { signIn } from 'next-auth/react';
 
-export default function GoogleSignInButton() {
+interface GoogleSignInButtonProps {
+  providerId: 'google' | 'demo';
+  label: string;
+}
+
+export default function GoogleSignInButton({ providerId, label }: GoogleSignInButtonProps) {
   return (
     <button
       type="button"
-      onClick={() => signIn('google', { callbackUrl: '/canvas' })}
+      onClick={() => signIn(providerId, { callbackUrl: '/canvas' })}
       style={{
         width: '100%',
         minHeight: 46,
@@ -43,7 +48,7 @@ export default function GoogleSignInButton() {
           d="M9 3.58c1.32 0 2.5.45 3.43 1.35l2.58-2.58C13.46.9 11.42 0 9 0A9 9 0 0 0 .96 4.96l3 2.33C4.67 5.16 6.66 3.58 9 3.58z"
         />
       </svg>
-      Continue with Google
+      {label}
     </button>
   );
 }

@@ -92,6 +92,16 @@ body {
   50%       { box-shadow: 0 0 0 5px var(--glow), 0 8px 40px var(--glow2), 0 0 48px var(--glow2); }
 }
 
+@keyframes nodeActiveHalo {
+  0%, 100% { opacity: 0.45; transform: scale(0.98); }
+  50%      { opacity: 1; transform: scale(1.02); }
+}
+
+@keyframes nodeProgressSweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
