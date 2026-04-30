@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "Bash(git -C d:/Personal/agentic-ai-orchestration-platform add .gitignore)",
+      "Bash(git -C d:/Personal/agentic-ai-orchestration-platform commit -m ' *)"
     ]
   }
 }
