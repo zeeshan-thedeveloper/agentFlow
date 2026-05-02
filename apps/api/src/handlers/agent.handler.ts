@@ -2,8 +2,10 @@ import { createDecipheriv, createHash } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import OpenAI from 'openai';
 import type { NodeHandler } from './base.handler';
+import { resolveTools } from './tools/registry';
 
 const ALGORITHM = 'aes-256-gcm';
+const DEFAULT_MAX_ITERATIONS = 10;
 
 function getEncryptionKey() {
   const secret = process.env.API_KEY_ENCRYPTION_SECRET ?? process.env.NEXTAUTH_SECRET;
@@ -39,59 +41,102 @@ export class AgentHandler implements NodeHandler {
   constructor(private readonly prisma = new PrismaClient()) {}
 
   async execute(params: Record<string, unknown>, input: unknown): Promise<unknown> {
-    // The executor injects the workflow owner id into params before dispatch.
     const userId = params.userId ?? params.workflowOwnerId;
     const model = params.model ?? 'gpt-4o-mini';
     const prompt = params.prompt;
+    const maxIterations =
+      typeof params.maxIterations === 'number' ? params.maxIterations : DEFAULT_MAX_ITERATIONS;
+
+    // tools param: array of tool names the canvas node opted in to, e.g. ['http_request']
+    const enabledToolNames = Array.isArray(params.tools)
+      ? (params.tools as string[]).filter(t => typeof t === 'string')
+      : [];
 
     if (typeof userId !== 'string' || !userId) {
       throw new Error('Agent node requires workflow owner userId.');
     }
-
     if (typeof model !== 'string' || !model) {
       throw new Error('Agent node model must be a non-empty string.');
     }
-
     if (typeof prompt !== 'string' || !prompt) {
       throw new Error('Agent node prompt must be a non-empty string.');
     }
 
-    // API keys stay encrypted at rest and are decrypted only for the API call.
     const apiKey = await this.prisma.userApiKey.findUnique({
-      where: {
-        userId_provider: {
-          userId,
-          provider: 'OPENAI',
-        },
-      },
-      select: {
-        encryptedKey: true,
-      },
+      where: { userId_provider: { userId, provider: 'OPENAI' } },
+      select: { encryptedKey: true },
     });
 
     if (!apiKey) {
       throw new Error('No OpenAI API key configured for workflow owner.');
     }
 
-    const client = new OpenAI({
-      apiKey: decryptApiKey(apiKey.encryptedKey),
-    });
+    const client = new OpenAI({ apiKey: decryptApiKey(apiKey.encryptedKey) });
+    const tools = resolveTools(enabledToolNames);
 
-    // Treat the node prompt as the instruction and prior node output as user data.
-    const completion = await client.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: prompt,
-        },
-        {
-          role: 'user',
-          content: typeof input === 'string' ? input : JSON.stringify(input ?? ''),
-        },
-      ],
-    });
+    // ── Working memory: full conversation lives here for the duration of the run ──
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: 'system', content: prompt },
+      {
+        role: 'user',
+        content: typeof input === 'string' ? input : JSON.stringify(input ?? ''),
+      },
+    ];
 
-    return completion.choices[0]?.message?.content ?? '';
+    // ── ReAct loop ────────────────────────────────────────────────────────────────
+    // Each iteration: call LLM → if tool call, run tool + append result → repeat.
+    // Loop exits when the LLM returns a plain text response (finish_reason: 'stop')
+    // or we hit the max iterations guard.
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+      const response = await client.chat.completions.create({
+        model,
+        messages,
+        ...(tools.length > 0
+          ? { tools: tools.map(t => ({ type: 'function' as const, function: t.definition })) }
+          : {}),
+      });
+
+      const choice = response.choices[0];
+      if (!choice) throw new Error('LLM returned no choices.');
+
+      const assistantMessage = choice.message;
+      // Append the assistant turn to working memory so the next iteration has full context.
+      messages.push(assistantMessage);
+
+      // LLM is done — no tool calls, just a final answer.
+      if (choice.finish_reason === 'stop' || !assistantMessage.tool_calls?.length) {
+        return assistantMessage.content ?? '';
+      }
+
+      // LLM wants to call one or more tools — execute each and feed results back.
+      for (const toolCall of assistantMessage.tool_calls) {
+        const toolName = toolCall.function.name;
+        const tool = tools.find(t => t.definition.name === toolName);
+
+        let toolResult: string;
+        if (!tool) {
+          toolResult = `Error: tool "${toolName}" is not available on this agent node.`;
+        } else {
+          try {
+            const args = JSON.parse(toolCall.function.arguments || '{}') as Record<string, unknown>;
+            toolResult = await tool.run(args);
+          } catch (err) {
+            toolResult = `Error running tool "${toolName}": ${err instanceof Error ? err.message : String(err)}`;
+          }
+        }
+
+        // Append tool result to working memory before next LLM call.
+        messages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content: toolResult,
+        });
+      }
+    }
+
+    // Max iterations reached — return whatever the last assistant message was.
+    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+    const content = lastAssistant && 'content' in lastAssistant ? lastAssistant.content : null;
+    return typeof content === 'string' ? content : 'Agent reached max iterations without a final answer.';
   }
 }

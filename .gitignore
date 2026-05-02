@@ -1,6 +1,11 @@
 # ─── Claude Code ─────────────────────────────────────────────────────────────
 .claude/settings.local.json
 
+# ─── Local planning docs ──────────────────────────────────────────────────────
+STATUS.md
+PLAN.md
+TASKS.md
+
 # ─── Node.js ──────────────────────────────────────────────────────────────────
 node_modules/
 .pnpm-store/
