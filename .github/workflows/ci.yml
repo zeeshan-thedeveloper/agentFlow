@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Type-check, Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm exec prisma generate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+
+      - name: Type check (API)
+        working-directory: apps/api
+        run: pnpm exec tsc --noEmit
+
+      - name: Type check (Web)
+        working-directory: apps/web
+        run: pnpm exec tsc --noEmit
+
+      - name: Lint (Web)
+        working-directory: apps/web
+        run: pnpm lint
+
+      - name: Build (API)
+        working-directory: apps/api
+        run: pnpm build
+
+      - name: Build (Web)
+        working-directory: apps/web
+        run: pnpm build
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          NEXTAUTH_URL: http://localhost:3100
+          NEXTAUTH_SECRET: ci-nextauth-secret-placeholder-32ch
+          API_KEY_ENCRYPTION_SECRET: ci-api-key-encrypt-placeholder-32c
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          GOOGLE_CLIENT_ID: placeholder
+          GOOGLE_CLIENT_SECRET: placeholder

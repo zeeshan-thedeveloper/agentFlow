@@ -58,13 +58,13 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: development
-      PORT: 3001
+      PORT: 18001
       DATABASE_URL: postgresql://agent_user:agent_pass@postgres:5432/agentflow
       REDIS_URL: redis://redis:6379
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-replace-with-a-random-32-byte-secret}
-      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-replace-with-a-random-32-byte-secret}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-uwxfYwnAWLwQgHwSfyYCnoBIVop2PV269LVm90qhcz4=}
+      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-uwxfYwnAWLwQgHwSfyYCnoBIVop2PV269LVm90qhcz4=}
     ports:
-      - '3001:3001'
+      - '18001:18001'
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -92,12 +92,12 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://agent_user:agent_pass@postgres:5432/agentflow
-      NEXT_PUBLIC_API_URL: http://localhost:3001
-      NEXTAUTH_URL: http://localhost:3100
-      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-replace-with-a-random-32-byte-secret}
+      NEXT_PUBLIC_API_URL: http://localhost:18001
+      NEXTAUTH_URL: http://localhost:18100
+      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-uwxfYwnAWLwQgHwSfyYCnoBIVop2PV269LVm90qhcz4=}
       WATCHPACK_POLLING: 'true'
     ports:
-      - '3100:3100'
+      - '18100:18100'
     volumes:
       - .:/app
       - node_modules:/app/node_modules
