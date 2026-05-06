@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git stash *)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter 'sed \"/Co-Authored-By: Claude/d\"' 3b8789d03848fb8ca67bebcce30a0426605e6061..HEAD)"
+    ]
+  }
+}
