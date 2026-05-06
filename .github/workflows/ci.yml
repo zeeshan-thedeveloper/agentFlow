@@ -34,12 +34,6 @@ jobs:
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
 
-      - name: Generate Prisma client (Web)
-        working-directory: apps/web
-        run: pnpm exec prisma generate --schema=../api/prisma/schema.prisma
-        env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-
       - name: Type check (API)
         working-directory: apps/api
         run: pnpm exec tsc --noEmit
