@@ -3,7 +3,24 @@
     "allow": [
       "WebSearch",
       "Bash(git -C d:/Personal/agentic-ai-orchestration-platform add .gitignore)",
-      "Bash(git -C d:/Personal/agentic-ai-orchestration-platform commit -m ' *)"
+      "Bash(git -C d:/Personal/agentic-ai-orchestration-platform commit -m ' *)",
+      "Bash(Get-ChildItem -Force)",
+      "Bash(Select-Object Name, Mode)",
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(pnpm --filter web tsc --noEmit)",
+      "Bash(gh auth *)",
+      "Bash(dir \"d:\\\\Personal\\\\agentic-ai-orchestration-platform\\\\*.md\" /b)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Personal\\\\agentic-ai-orchestration-platform\" -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(gh issue create --title 'feat: Integration Framework — connect external platforms as canvas nodes' --body ' *)",
+      "Bash(gh issue *)"
+    ],
+    "additionalDirectories": [
+      "d:\\Personal\\agentic-ai-orchestration-platform"
     ]
   }
 }

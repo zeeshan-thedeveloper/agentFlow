@@ -18,6 +18,7 @@ export interface FlowNode {
   prompt?: string;
   provider?: 'openai';
   model?: string;
+  tools?: string[];
   outputMode?: string;
 }
 

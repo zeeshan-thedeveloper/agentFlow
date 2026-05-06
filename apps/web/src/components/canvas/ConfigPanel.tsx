@@ -9,6 +9,14 @@ interface ConfigPanelProps {
   runOutput?: unknown;
 }
 
+const AVAILABLE_TOOLS: { name: string; label: string; description: string }[] = [
+  {
+    name: 'http_request',
+    label: 'HTTP Request',
+    description: 'Fetch data from any URL (GET, POST, …)',
+  },
+];
+
 const OPENAI_MODELS = [
   { id: 'gpt-4.1', label: 'GPT-4.1' },
   { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
@@ -255,6 +263,48 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput 
                 onFocus={e => (e.target.style.borderColor = 'var(--brand)')}
                 onBlur={e => (e.target.style.borderColor = 'var(--border-strong)')}
               />
+            </Section>
+
+            <Section label="Tools">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {AVAILABLE_TOOLS.map(tool => {
+                  const enabled = (node.tools ?? []).includes(tool.name);
+                  return (
+                    <label
+                      key={tool.name}
+                      style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 9,
+                        padding: '8px 10px', borderRadius: 7, cursor: 'pointer',
+                        border: `1px solid ${enabled ? 'var(--brand)40' : 'var(--border-subtle)'}`,
+                        background: enabled ? 'rgba(99,102,241,0.06)' : 'transparent',
+                        transition: 'border-color 0.15s, background 0.15s',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={() => {
+                          const current = node.tools ?? [];
+                          onUpdate({
+                            tools: enabled
+                              ? current.filter(t => t !== tool.name)
+                              : [...current, tool.name],
+                          });
+                        }}
+                        style={{ accentColor: 'var(--brand)', margin: 0, marginTop: 2, flexShrink: 0 }}
+                      />
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: enabled ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                          {tool.label}
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>
+                          {tool.description}
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
             </Section>
           </>
         )}
