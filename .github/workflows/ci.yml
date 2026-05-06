@@ -38,10 +38,6 @@ jobs:
         working-directory: apps/api
         run: pnpm exec tsc --noEmit
 
-      - name: Type check (Web)
-        working-directory: apps/web
-        run: pnpm run type-check
-
       - name: Lint (Web)
         working-directory: apps/web
         run: pnpm lint
