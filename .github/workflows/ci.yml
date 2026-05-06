@@ -40,7 +40,7 @@ jobs:
 
       - name: Type check (Web)
         working-directory: apps/web
-        run: pnpm exec tsc --noEmit
+        run: pnpm run type-check
 
       - name: Lint (Web)
         working-directory: apps/web
