@@ -40,7 +40,11 @@ export function decryptApiKey(encryptedApiKey: string) {
 export function maskApiKey(apiKey: string) {
   const trimmed = apiKey.trim();
   const suffix = trimmed.slice(-4);
-  const prefix = trimmed.startsWith('sk-proj-') ? 'sk-proj' : 'sk';
 
+  if (trimmed.startsWith('sk-proj-')) return `sk-proj-...${suffix}`;
+  if (trimmed.startsWith('sk-')) return `sk-...${suffix}`;
+  if (trimmed.startsWith('tvly-')) return `tvly-...${suffix}`;
+
+  const prefix = trimmed.slice(0, 4);
   return `${prefix}-...${suffix}`;
 }

@@ -15,6 +15,11 @@ const AVAILABLE_TOOLS: { name: string; label: string; description: string }[] = 
     label: 'HTTP Request',
     description: 'Fetch data from any URL (GET, POST, …)',
   },
+  {
+    name: 'web_search',
+    label: 'Web Search',
+    description: 'Search current web results by query.',
+  },
 ];
 
 const OPENAI_MODELS = [
@@ -300,6 +305,11 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput 
                         <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>
                           {tool.description}
                         </div>
+                        {tool.name === 'web_search' && enabled && (
+                          <div style={{ fontSize: 10, color: '#F59E0B', marginTop: 4 }}>
+                            Requires a Tavily API key. Add one via Keys in the toolbar.
+                          </div>
+                        )}
                       </div>
                     </label>
                   );

@@ -4,7 +4,11 @@ export interface ToolDefinition {
   parameters: Record<string, unknown>;
 }
 
+export interface ToolContext {
+  userId?: string;
+}
+
 export interface Tool {
   definition: ToolDefinition;
-  run(args: Record<string, unknown>): Promise<string>;
+  run(args: Record<string, unknown>, context?: ToolContext): Promise<string>;
 }
