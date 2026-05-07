@@ -1,4 +1,5 @@
 import { createDecipheriv, createHash } from 'crypto';
+import { Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import OpenAI from 'openai';
 import type { NodeHandler } from './base.handler';
@@ -38,6 +39,8 @@ function decryptApiKey(encryptedApiKey: string) {
 }
 
 export class AgentHandler implements NodeHandler {
+  private readonly logger = new Logger(AgentHandler.name);
+
   constructor(private readonly prisma = new PrismaClient()) {}
 
   async execute(params: Record<string, unknown>, input: unknown): Promise<unknown> {
@@ -51,6 +54,10 @@ export class AgentHandler implements NodeHandler {
     const enabledToolNames = Array.isArray(params.tools)
       ? (params.tools as string[]).filter(t => typeof t === 'string')
       : [];
+
+    this.logger.log(
+      `Starting agent node: model=${String(model)} enabledTools=${enabledToolNames.join(',') || 'none'} input=${formatLogValue(input)}`,
+    );
 
     if (typeof userId !== 'string' || !userId) {
       throw new Error('Agent node requires workflow owner userId.');
@@ -74,9 +81,20 @@ export class AgentHandler implements NodeHandler {
     const client = new OpenAI({ apiKey: decryptApiKey(apiKey.encryptedKey) });
     const tools = resolveTools(enabledToolNames);
 
+    this.logger.log(`Resolved tools: ${tools.map(tool => tool.definition.name).join(',') || 'none'}`);
+
     // ── Working memory: full conversation lives here for the duration of the run ──
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: prompt },
+      ...(tools.length > 0
+        ? [
+            {
+              role: 'system' as const,
+              content:
+                'You have access to enabled runtime tools. Use them when they are relevant. If the user asks to search, browse, look up current information, find URLs, or verify recent facts, call the web_search tool before answering.',
+            },
+          ]
+        : []),
       {
         role: 'user',
         content: typeof input === 'string' ? input : JSON.stringify(input ?? ''),
@@ -100,6 +118,9 @@ export class AgentHandler implements NodeHandler {
       if (!choice) throw new Error('LLM returned no choices.');
 
       const assistantMessage = choice.message;
+      this.logger.log(
+        `Agent iteration ${iteration + 1}: finishReason=${choice.finish_reason ?? 'unknown'} toolCalls=${assistantMessage.tool_calls?.map(toolCall => toolCall.function.name).join(',') || 'none'}`,
+      );
       // Append the assistant turn to working memory so the next iteration has full context.
       messages.push(assistantMessage);
 
@@ -116,12 +137,16 @@ export class AgentHandler implements NodeHandler {
         let toolResult: string;
         if (!tool) {
           toolResult = `Error: tool "${toolName}" is not available on this agent node.`;
+          this.logger.warn(toolResult);
         } else {
           try {
             const args = JSON.parse(toolCall.function.arguments || '{}') as Record<string, unknown>;
-            toolResult = await tool.run(args);
+            this.logger.log(`Running tool "${toolName}" with args=${formatLogValue(args)}`);
+            toolResult = await tool.run(args, { userId });
+            this.logger.log(`Tool "${toolName}" completed with result=${formatLogValue(toolResult)}`);
           } catch (err) {
             toolResult = `Error running tool "${toolName}": ${err instanceof Error ? err.message : String(err)}`;
+            this.logger.error(toolResult);
           }
         }
 
@@ -139,4 +164,13 @@ export class AgentHandler implements NodeHandler {
     const content = lastAssistant && 'content' in lastAssistant ? lastAssistant.content : null;
     return typeof content === 'string' ? content : 'Agent reached max iterations without a final answer.';
   }
+}
+
+function formatLogValue(value: unknown): string {
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  if (!text) {
+    return 'undefined';
+  }
+
+  return text.length > 500 ? `${text.slice(0, 500)}...` : text;
 }
