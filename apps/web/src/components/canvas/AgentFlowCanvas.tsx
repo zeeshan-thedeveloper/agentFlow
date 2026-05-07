@@ -176,6 +176,17 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     let progressTimer: ReturnType<typeof setInterval> | undefined;
     let progressIndex = 0;
 
+    console.info('[AgentFlow] Run clicked', {
+      workflowId,
+      executionNodeIds,
+      nodes: nodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        label: node.label,
+        tools: node.tools ?? [],
+      })),
+    });
+
     setRunState('running');
     setRunError(null);
     setRunPhases(executionNodeIds.length > 0 ? buildProgressPhases(executionNodeIds, 0) : {});
@@ -190,12 +201,27 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
       }
 
       const workflow = await saveWorkflow();
+      console.info('[AgentFlow] Workflow saved before run', {
+        workflowId: workflow.id,
+        nodes: workflow.canvasJson.nodes.map(node => ({
+          id: node.id,
+          type: node.type,
+          label: node.label,
+          tools: node.tools ?? [],
+        })),
+      });
       setSaveState('saved');
       setTimeout(() => setSaveState('idle'), 2500);
 
       const triggerNode = workflow.canvasJson.nodes.find(node => node.type === 'trigger');
       const triggerInput =
         triggerNode?.triggerInputMode === 'input' ? triggerNode.triggerInput ?? '' : undefined;
+
+      console.info('[AgentFlow] Sending run request', {
+        workflowId: workflow.id,
+        apiBaseUrl: API_BASE_URL,
+        triggerInput,
+      });
 
       // Execute the saved workflow through the Nest backend instead of the old mock timer.
       const response = await fetch(`${API_BASE_URL}/workflows/${workflow.id}/run`, {
@@ -205,6 +231,16 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
       });
 
       const runResult = (await response.json().catch(() => null)) as RunResponse | null;
+      console.info('[AgentFlow] Run response received', {
+        ok: response.ok,
+        status: response.status,
+        runStatus: runResult?.run.status,
+        steps: runResult?.steps.map(step => ({
+          nodeId: step.nodeId,
+          status: step.status,
+          output: typeof step.output === 'string' ? step.output.slice(0, 500) : step.output,
+        })),
+      });
       if (!response.ok || !runResult) {
         throw new Error(getErrorMessage(runResult, 'Workflow run failed'));
       }
@@ -252,6 +288,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         if (!hasFailure) setRunError(null);
       }, total + 3000);
     } catch (error) {
+      console.error('[AgentFlow] Run failed', error);
       if (progressTimer) clearInterval(progressTimer);
       const message = error instanceof Error ? error.message : 'Workflow run failed';
       setSaveState('error');

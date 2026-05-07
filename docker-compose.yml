@@ -56,6 +56,8 @@ services:
     working_dir: /app
     command: sh -lc "corepack enable && corepack pnpm --filter @agentflow/api exec prisma migrate deploy && corepack pnpm --filter @agentflow/api dev"
     restart: unless-stopped
+    env_file:
+      - apps/api/.env
     environment:
       NODE_ENV: development
       PORT: 18001
