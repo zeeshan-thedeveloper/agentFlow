@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { registry } from '../handlers/registry';
 
 type FlowNode = {
@@ -32,6 +33,8 @@ export type StepResult = {
   output: unknown;
   status: 'COMPLETED' | 'FAILED';
 };
+
+const logger = new Logger('WorkflowExecutor');
 
 function assertCanvasJson(canvasJson: unknown): asserts canvasJson is WorkflowCanvasJson {
   if (
@@ -128,6 +131,10 @@ export async function executeWorkflow(
   // Seed the trigger node with request input, then pass each output forward.
   let previousOutput: unknown = context.initialInput;
 
+  logger.log(
+    `Execution order: ${sortedNodes.map(node => `${node.id}:${node.type}`).join(' -> ')}`,
+  );
+
   for (const node of sortedNodes) {
     const handler = registry[node.type];
 
@@ -138,7 +145,12 @@ export async function executeWorkflow(
     const input = previousOutput;
 
     try {
-      const output = await handler.execute(buildNodeParams(node, context), input);
+      const params = buildNodeParams(node, context);
+      logger.log(
+        `Starting node ${node.id} (${node.type}) input=${formatLogValue(input)} params=${formatNodeParams(params)}`,
+      );
+      const output = await handler.execute(params, input);
+      logger.log(`Completed node ${node.id} (${node.type}) output=${formatLogValue(output)}`);
 
       results.push({
         nodeId: node.id,
@@ -149,6 +161,9 @@ export async function executeWorkflow(
 
       previousOutput = output;
     } catch (error) {
+      logger.error(
+        `Failed node ${node.id} (${node.type}): ${error instanceof Error ? error.message : String(error)}`,
+      );
       // Return the failed node as a step result so RunsService can persist it.
       results.push({
         nodeId: node.id,
@@ -162,4 +177,23 @@ export async function executeWorkflow(
   }
 
   return results;
+}
+
+function formatNodeParams(params: Record<string, unknown>): string {
+  const { prompt, userId, workflowOwnerId, ...safeParams } = params;
+  return formatLogValue({
+    ...safeParams,
+    hasPrompt: typeof prompt === 'string' && prompt.length > 0,
+    userId: typeof userId === 'string' ? userId : undefined,
+    workflowOwnerId: typeof workflowOwnerId === 'string' ? workflowOwnerId : undefined,
+  });
+}
+
+function formatLogValue(value: unknown): string {
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  if (!text) {
+    return 'undefined';
+  }
+
+  return text.length > 500 ? `${text.slice(0, 500)}...` : text;
 }
