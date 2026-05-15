@@ -19,6 +19,7 @@ export interface FlowNode {
   provider?: 'openai';
   model?: string;
   tools?: string[];
+  maxIterations?: number;
   outputMode?: string;
 }
 

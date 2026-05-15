@@ -23,6 +23,7 @@ export const DEFAULT_NODES: FlowNode[] = [
     provider: 'openai',
     model: 'gpt-4.1-mini',
     prompt: '',
+    maxIterations: 10,
   },
   {
     id: 'output-1',
