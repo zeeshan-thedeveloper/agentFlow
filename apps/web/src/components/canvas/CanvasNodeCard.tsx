@@ -1,5 +1,5 @@
 import type { FlowNode, RunPhase } from './types';
-import { NH, NODE_TYPES } from './constants';
+import { NODE_TYPES } from './constants';
 
 function IcoCheck() {
   return (
@@ -34,6 +34,11 @@ function IcoFailed() {
 export default function CanvasNodeCard({
   node, selected, runPhase, scale = 1, onMouseDown, onClick, onDelete, onInputHandleMouseUp, onStartConnection,
 }: CanvasNodeCardProps) {
+  const TOOL_LABELS: Record<string, string> = {
+    http_request: 'HTTP',
+    web_search: 'Search',
+    scrape_page: 'Scrape',
+  };
   const t = NODE_TYPES[node.type];
   const isQueued = runPhase === 'queued';
   const isRunning = runPhase === 'running';
@@ -75,7 +80,7 @@ export default function CanvasNodeCard({
           onMouseUp={onInputHandleMouseUp}
           title="Connect here"
           style={{
-            position: 'absolute', left: -7, top: NH / 2,
+            position: 'absolute', left: -7, top: '50%',
             transform: 'translateY(-50%)',
             width: 14, height: 14, borderRadius: '50%',
             background: 'var(--app-bg)', border: `2px solid ${t.color}`,
@@ -180,6 +185,30 @@ export default function CanvasNodeCard({
               {node.subtitle}
             </div>
           )}
+          {node.type === 'agent' && node.tools && node.tools.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 5 }}>
+              {node.tools.map(toolName => (
+                <span
+                  key={toolName}
+                  style={{
+                    fontSize: 8,
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: '#6C63FF',
+                    background: 'rgba(108,99,255,0.12)',
+                    border: '1px solid rgba(108,99,255,0.25)',
+                    borderRadius: 4,
+                    padding: '1px 5px',
+                    lineHeight: 1.6,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {TOOL_LABELS[toolName] ?? toolName}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Running pulse */}
@@ -218,7 +247,7 @@ export default function CanvasNodeCard({
           onMouseDown={onStartConnection}
           title="Drag to connect"
           style={{
-            position: 'absolute', right: -7, top: NH / 2,
+            position: 'absolute', right: -7, top: '50%',
             transform: 'translateY(-50%)',
             width: 14, height: 14, borderRadius: '50%',
             background: 'var(--app-bg)', border: `2px solid ${t.color}`,
