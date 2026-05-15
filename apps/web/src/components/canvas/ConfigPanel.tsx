@@ -20,6 +20,11 @@ const AVAILABLE_TOOLS: { name: string; label: string; description: string }[] = 
     label: 'Web Search',
     description: 'Search current web results by query.',
   },
+  {
+    name: 'scrape_page',
+    label: 'Scrape Page',
+    description: 'Fetch a URL and extract its readable text content.',
+  },
 ];
 
 const OPENAI_MODELS = [
@@ -314,6 +319,38 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput 
                     </label>
                   );
                 })}
+              </div>
+            </Section>
+
+            <Section label="Max Iterations">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={node.maxIterations ?? 10}
+                  onChange={e => {
+                    const val = Math.max(1, Math.min(50, Math.floor(Number(e.target.value))));
+                    onUpdate({ maxIterations: Number.isFinite(val) ? val : 10 });
+                  }}
+                  style={{
+                    width: 72,
+                    background: 'var(--surface-bg)',
+                    border: '1px solid var(--border-strong)',
+                    borderRadius: 7,
+                    padding: '8px 10px',
+                    fontSize: 12,
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    transition: 'border-color 0.15s',
+                  }}
+                  onFocus={e => (e.target.style.borderColor = 'var(--brand)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border-strong)')}
+                />
+                <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+                  max 50 · default 10
+                </span>
               </div>
             </Section>
           </>
