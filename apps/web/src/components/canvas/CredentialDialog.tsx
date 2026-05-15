@@ -6,6 +6,7 @@ import { saveCredential, testDatabaseConnection } from '@/lib/integrations-api';
 interface Props {
   integrationId: string;
   integrationName: string;
+  credentialName?: string;
   onConnected: (maskedHint: string) => void;
   onClose: () => void;
 }
@@ -19,7 +20,7 @@ function summarizeServerVersion(serverVersion: string) {
   return serverVersion.split(' ').slice(0, 2).join(' ');
 }
 
-export function CredentialDialog({ integrationId, integrationName, onConnected, onClose }: Props) {
+export function CredentialDialog({ integrationId, integrationName, credentialName, onConnected, onClose }: Props) {
   const [connectionString, setConnectionString] = useState('');
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,7 +52,7 @@ export function CredentialDialog({ integrationId, integrationName, onConnected, 
     setError(null);
 
     try {
-      const result = await saveCredential(integrationId, trimmedConnectionString);
+      const result = await saveCredential(integrationId, trimmedConnectionString, credentialName);
       onConnected(result.maskedHint);
       onClose();
     } catch (err: unknown) {

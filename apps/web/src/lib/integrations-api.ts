@@ -10,11 +10,24 @@ export async function fetchCredentialStatus(integrationId: string) {
   return res.json() as Promise<{ connected: boolean; maskedHint: string | null }>;
 }
 
-export async function saveCredential(integrationId: string, connectionString: string) {
+export interface NamedConnection {
+  integrationId: string;
+  name: string;
+  maskedHint: string | null;
+  updatedAt: string;
+}
+
+export async function listDatabaseConnections(): Promise<NamedConnection[]> {
+  const res = await fetch('/api/integrations/database/credentials');
+  if (!res.ok) throw new Error('Failed to list database connections');
+  return res.json();
+}
+
+export async function saveCredential(integrationId: string, connectionString: string, name?: string) {
   const res = await fetch(`/api/integrations/${integrationId}/credentials`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ connectionString }),
+    body: JSON.stringify({ connectionString, name }),
   });
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { message?: string };
@@ -27,6 +40,13 @@ export async function deleteCredential(integrationId: string) {
   const res = await fetch(`/api/integrations/${integrationId}/credentials`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to disconnect');
   return res.json();
+}
+
+export async function deleteNamedCredential(integrationId: string): Promise<void> {
+  const res = await fetch(`/api/integrations/database/credentials/${encodeURIComponent(integrationId)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete connection');
 }
 
 export async function testDatabaseConnection(connectionString: string) {

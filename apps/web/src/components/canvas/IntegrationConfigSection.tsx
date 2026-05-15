@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from 'react';
 import { useCredentialStatus, useIntegrations } from '@/hooks/useIntegrations';
 import { deleteCredential } from '@/lib/integrations-api';
 import { CredentialDialog } from './CredentialDialog';
+import { DatabaseConnectionSelector } from './DatabaseConnectionSelector';
 import type { FlowNode } from './types';
 
 interface Props {
@@ -33,8 +34,10 @@ export function IntegrationConfigSection({ node, onUpdate }: Props) {
   const [showDialog, setShowDialog] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
-  const selectedIntegration = integrations.find(integration => integration.id === node.integrationId);
+  const selectedIntegrationId = node.integrationId?.startsWith('database') ? 'database' : node.integrationId;
+  const selectedIntegration = integrations.find(integration => integration.id === selectedIntegrationId);
   const selectedAction = selectedIntegration?.actions.find(action => action.id === node.actionId);
+  const isDatabaseIntegration = node.integrationId?.startsWith('database') || node.integrationId === undefined;
 
   function updateParam(name: string, value: unknown) {
     onUpdate({
@@ -70,7 +73,7 @@ export function IntegrationConfigSection({ node, onUpdate }: Props) {
           Integration
         </label>
         <select
-          value={node.integrationId ?? ''}
+          value={node.integrationId?.startsWith('database') ? 'database' : node.integrationId ?? ''}
           onChange={event => onUpdate({ integrationId: event.target.value || undefined, actionId: undefined, actionParams: {} })}
           style={inputStyle}
         >
@@ -83,58 +86,65 @@ export function IntegrationConfigSection({ node, onUpdate }: Props) {
         </select>
       </div>
 
-      {node.integrationId && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-          <span
-            aria-hidden="true"
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: status?.connected ? '#22c55e' : '#ef4444',
-              flexShrink: 0,
-            }}
-          />
-          <span style={{ color: 'var(--text-secondary)', flex: 1, minWidth: 0, wordBreak: 'break-word' }}>
-            {status?.connected ? status.maskedHint ?? 'Connected' : 'Not connected'}
-          </span>
-          {status?.connected ? (
-            <button
-              type="button"
-              onClick={handleDisconnect}
-              disabled={disconnecting}
+      {isDatabaseIntegration ? (
+        <DatabaseConnectionSelector
+          selectedIntegrationId={node.integrationId}
+          onSelect={id => onUpdate({ integrationId: id || undefined, actionId: undefined, actionParams: {} })}
+        />
+      ) : (
+        node.integrationId && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+            <span
+              aria-hidden="true"
               style={{
-                border: 0,
-                background: 'transparent',
-                color: disconnecting ? 'var(--text-faint)' : '#ef4444',
-                cursor: disconnecting ? 'default' : 'pointer',
-                fontFamily: 'inherit',
-                fontSize: 11,
-                fontWeight: 700,
-                padding: 0,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: status?.connected ? '#22c55e' : '#ef4444',
+                flexShrink: 0,
               }}
-            >
-              {disconnecting ? 'Disconnecting' : 'Disconnect'}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowDialog(true)}
-              style={{
-                border: 0,
-                background: 'transparent',
-                color: 'var(--brand-text)',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                fontSize: 11,
-                fontWeight: 700,
-                padding: 0,
-              }}
-            >
-              Connect
-            </button>
-          )}
-        </div>
+            />
+            <span style={{ color: 'var(--text-secondary)', flex: 1, minWidth: 0, wordBreak: 'break-word' }}>
+              {status?.connected ? status.maskedHint ?? 'Connected' : 'Not connected'}
+            </span>
+            {status?.connected ? (
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+                style={{
+                  border: 0,
+                  background: 'transparent',
+                  color: disconnecting ? 'var(--text-faint)' : '#ef4444',
+                  cursor: disconnecting ? 'default' : 'pointer',
+                  fontFamily: 'inherit',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: 0,
+                }}
+              >
+                {disconnecting ? 'Disconnecting' : 'Disconnect'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowDialog(true)}
+                style={{
+                  border: 0,
+                  background: 'transparent',
+                  color: 'var(--brand-text)',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: 0,
+                }}
+              >
+                Connect
+              </button>
+            )}
+          </div>
+        )
       )}
 
       {selectedIntegration && (
