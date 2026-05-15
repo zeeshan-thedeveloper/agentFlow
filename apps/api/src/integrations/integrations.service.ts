@@ -40,14 +40,39 @@ export class IntegrationsService {
     return { connected: !!record, maskedHint: record?.maskedHint ?? null };
   }
 
-  async saveCredential(userId: string, integrationId: string, connectionString: string) {
+  async listDatabaseConnections(userId: string) {
+    const records = await this.prisma.userIntegrationCredential.findMany({
+      where: {
+        userId,
+        integrationId: { startsWith: 'database' },
+      },
+      select: { integrationId: true, name: true, maskedHint: true, updatedAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return records.map((record) => ({
+      integrationId: record.integrationId,
+      name: record.name ?? record.integrationId,
+      maskedHint: record.maskedHint,
+      updatedAt: record.updatedAt,
+    }));
+  }
+
+  async saveCredential(userId: string, integrationId: string, connectionString: string, name?: string) {
     const maskedHint = maskConnectionString(connectionString);
     const encryptedData = encryptCredential(JSON.stringify({ connectionString }));
 
     await this.prisma.userIntegrationCredential.upsert({
       where: { userId_integrationId: { userId, integrationId } },
-      update: { encryptedData, maskedHint, authType: 'connection_string' },
-      create: { userId, integrationId, authType: 'connection_string', encryptedData, maskedHint },
+      update: { encryptedData, maskedHint, authType: 'connection_string', name: name ?? null },
+      create: {
+        userId,
+        integrationId,
+        name: name ?? null,
+        authType: 'connection_string',
+        encryptedData,
+        maskedHint,
+      },
     });
 
     return { ok: true, maskedHint };

@@ -50,13 +50,24 @@ export class IntegrationsController {
     return this.service.getCredentialStatus(requireUserId(req), id);
   }
 
+  @Get('database/credentials')
+  listDatabaseConnections(@Req() req: AuthenticatedRequest) {
+    return this.service.listDatabaseConnections(requireUserId(req));
+  }
+
   @Post(':id/credentials')
   saveCredential(
     @Param('id') id: string,
-    @Body() body: { connectionString: string },
+    @Body() body: { connectionString: string; name?: string },
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.service.saveCredential(requireUserId(req), id, body.connectionString);
+    return this.service.saveCredential(requireUserId(req), id, body.connectionString, body.name);
+  }
+
+  @Delete('database/credentials/:integrationId')
+  @HttpCode(200)
+  deleteDatabaseCredential(@Param('integrationId') integrationId: string, @Req() req: AuthenticatedRequest) {
+    return this.service.deleteCredential(requireUserId(req), integrationId);
   }
 
   @Delete(':id/credentials')

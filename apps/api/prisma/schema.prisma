@@ -58,6 +58,9 @@ model UserIntegrationCredential {
   //   'slack'
   //   'github'
 
+  name          String?
+  // Human label for named connections, such as "Production DB".
+
   authType      String
   // 'connection_string' for database
   // 'api_key' for Slack/GitHub
