@@ -329,7 +329,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
       type === 'trigger'
         ? { triggerType: 'Manual', triggerInputMode: 'none', subtitle: 'Manual - No input' }
         : type === 'agent'
-        ? { subtitle: 'OpenAI - GPT-4.1 Mini', provider: 'openai', model: 'gpt-4.1-mini', prompt: '' }
+        ? { subtitle: 'OpenAI - GPT-4.1 Mini', provider: 'openai', model: 'gpt-4.1-mini', prompt: '', maxIterations: 10 }
         : type === 'output'
         ? { subtitle: 'Receives result', outputMode: 'Return output' }
         : {};
