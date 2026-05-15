@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { NodeType } from './types';
 import { NODE_TYPES } from './constants';
 
-const ACTIVE_NODE_TYPES: NodeType[] = ['trigger', 'agent', 'output'];
+const ACTIVE_NODE_TYPES: NodeType[] = ['trigger', 'agent', 'integration', 'output'];
 
 interface NodeLibraryProps {
   onAddNode: (type: NodeType) => void;

@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 
-export type NodeType = 'trigger' | 'agent' | 'output';
+export type NodeType = 'trigger' | 'agent' | 'output' | 'integration';
 export type RunPhase = 'queued' | 'running' | 'done' | 'failed';
 export type RunState = 'idle' | 'running' | 'success' | 'error';
 
@@ -20,6 +20,9 @@ export interface FlowNode {
   model?: string;
   tools?: string[];
   outputMode?: string;
+  integrationId?: string;
+  actionId?: string;
+  actionParams?: Record<string, unknown>;
 }
 
 export interface FlowEdge {
