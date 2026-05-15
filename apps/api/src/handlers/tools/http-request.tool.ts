@@ -1,4 +1,4 @@
-import type { Tool, ToolDefinition } from './base.tool';
+import type { Tool, ToolContext, ToolDefinition } from './base.tool';
 
 export class HttpRequestTool implements Tool {
   definition: ToolDefinition = {
@@ -31,7 +31,7 @@ export class HttpRequestTool implements Tool {
     },
   };
 
-  async run(args: Record<string, unknown>): Promise<string> {
+  async run(args: Record<string, unknown>, _context?: ToolContext): Promise<string> {
     const url = args.url;
     const method = typeof args.method === 'string' ? args.method.toUpperCase() : 'GET';
     const headers =

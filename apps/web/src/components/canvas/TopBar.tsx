@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { signOut } from 'next-auth/react';
 import ThemeToggle from '@/components/ThemeToggle';
-import OpenAISettingsDialog from './OpenAISettingsDialog';
+import KeysSettingsDialog from './KeysSettingsDialog';
 import type { RunState } from './types';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -24,7 +24,7 @@ interface TopBarProps {
 
 export default function TopBar({ name, setName, runState, onRun, saveState, onSave, user }: TopBarProps) {
   const [editingName, setEditingName] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [keysOpen, setKeysOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const displayName = user.name ?? user.email ?? 'Signed in';
   const initials = displayName
@@ -191,37 +191,38 @@ export default function TopBar({ name, setName, runState, onRun, saveState, onSa
         <ThemeToggle compact />
 
         <button
-          onClick={() => setSettingsOpen(true)}
-          aria-label="OpenAI settings"
-          title="OpenAI settings"
+          onClick={() => setKeysOpen(true)}
+          aria-label="Keys"
+          title="Keys"
           style={{
-            width: 30,
             height: 30,
+            padding: '0 10px',
             borderRadius: 7,
             background: 'transparent',
             border: '1px solid var(--border-strong)',
             color: 'var(--text-muted)',
             cursor: 'pointer',
-            display: 'grid',
-            placeItems: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
             transition: 'all 0.15s',
+            fontFamily: 'inherit',
+            fontSize: 12,
+            fontWeight: 600,
           }}
           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path
-              d="M7 9.1A2.1 2.1 0 1 0 7 4.9a2.1 2.1 0 0 0 0 4.2Z"
-              stroke="currentColor"
-              strokeWidth="1.2"
-            />
-            <path
-              d="M11.7 7.7v-1.4l-1.35-.35a3.8 3.8 0 0 0-.38-.9l.7-1.2-.99-.99-1.2.7a3.8 3.8 0 0 0-.9-.38L7.24 1.8H5.86l-.35 1.38c-.32.09-.62.22-.9.38l-1.2-.7-.99.99.7 1.2c-.16.28-.29.58-.38.9l-1.38.35v1.4l1.38.35c.09.32.22.62.38.9l-.7 1.2.99.99 1.2-.7c.28.16.58.29.9.38l.35 1.38h1.38l.35-1.38c.32-.09.62-.22.9-.38l1.2.7.99-.99-.7-1.2c.16-.28.29-.58.38-.9l1.35-.35Z"
+              d="M5.5 7.5A3 3 0 1 1 7.2 4.8L12 9.6V12h-2.4l-.9-.9H7.5v-1.2l-.9-.9a3 3 0 0 1-1.1.2Z"
               stroke="currentColor"
               strokeWidth="1.2"
               strokeLinejoin="round"
             />
+            <path d="M4 4.2h.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
+          Keys
         </button>
 
         <div style={{ width: 1, height: 24, background: 'var(--border-subtle)', margin: '0 2px' }} />
@@ -305,7 +306,7 @@ export default function TopBar({ name, setName, runState, onRun, saveState, onSa
         </button>
       </div>
 
-      <OpenAISettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <KeysSettingsDialog open={keysOpen} onClose={() => setKeysOpen(false)} />
     </div>
   );
 }
