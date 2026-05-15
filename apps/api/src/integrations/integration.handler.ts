@@ -1,6 +1,7 @@
 import type { NodeHandler } from '../handlers/base.handler';
 import { CredentialResolver } from './credential.resolver';
 import { integrationRegistry } from './integration.registry';
+import { interpolateParams } from './template.interpolator';
 
 export class IntegrationHandler implements NodeHandler {
   constructor(private readonly credentialResolver: CredentialResolver) {}
@@ -9,7 +10,7 @@ export class IntegrationHandler implements NodeHandler {
     const integrationId = String(params.integrationId ?? '');
     const actionId = String(params.actionId ?? '');
     const userId = String(params.userId ?? '');
-    const actionParams = (params.actionParams ?? {}) as Record<string, unknown>;
+    const rawActionParams = (params.actionParams ?? {}) as Record<string, unknown>;
 
     if (!integrationId) throw new Error('integrationId is required on integration nodes.');
     if (!actionId) throw new Error('actionId is required on integration nodes.');
@@ -17,6 +18,8 @@ export class IntegrationHandler implements NodeHandler {
 
     const integration = integrationRegistry.get(integrationId);
     if (!integration) throw new Error(`Unknown integration: "${integrationId}".`);
+
+    const actionParams = interpolateParams(rawActionParams, input);
 
     const credentials = await this.credentialResolver.resolve(userId, integrationId);
 
