@@ -6,6 +6,7 @@ STATUS.md
 PLAN.md
 TASKS.md
 docs/deployment-options.md
+docs/tasks/
 
 # ─── Node.js ──────────────────────────────────────────────────────────────────
 node_modules/
