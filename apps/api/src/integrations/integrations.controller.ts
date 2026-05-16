@@ -45,14 +45,26 @@ export class IntegrationsController {
     return this.service.getAll();
   }
 
-  @Get(':id/credentials/status')
-  getStatus(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
-    return this.service.getCredentialStatus(requireUserId(req), id);
-  }
-
   @Get('database/credentials')
   listDatabaseConnections(@Req() req: AuthenticatedRequest) {
     return this.service.listDatabaseConnections(requireUserId(req));
+  }
+
+  @Post('database/credentials/test')
+  testConnection(@Body() body: { connectionString: string; engine?: string }, @Req() req: AuthenticatedRequest) {
+    requireUserId(req);
+    return this.service.testDatabaseConnection(body.connectionString, body.engine);
+  }
+
+  @Delete('database/credentials/:integrationId')
+  @HttpCode(200)
+  deleteDatabaseCredential(@Param('integrationId') integrationId: string, @Req() req: AuthenticatedRequest) {
+    return this.service.deleteCredential(requireUserId(req), integrationId);
+  }
+
+  @Get(':id/credentials/status')
+  getStatus(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.service.getCredentialStatus(requireUserId(req), id);
   }
 
   @Post(':id/credentials')
@@ -64,21 +76,9 @@ export class IntegrationsController {
     return this.service.saveCredential(requireUserId(req), id, body.connectionString, body.name);
   }
 
-  @Delete('database/credentials/:integrationId')
-  @HttpCode(200)
-  deleteDatabaseCredential(@Param('integrationId') integrationId: string, @Req() req: AuthenticatedRequest) {
-    return this.service.deleteCredential(requireUserId(req), integrationId);
-  }
-
   @Delete(':id/credentials')
   @HttpCode(200)
   deleteCredential(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.service.deleteCredential(requireUserId(req), id);
-  }
-
-  @Post('database/credentials/test')
-  testConnection(@Body() body: { connectionString: string; engine?: string }, @Req() req: AuthenticatedRequest) {
-    requireUserId(req);
-    return this.service.testDatabaseConnection(body.connectionString, body.engine);
   }
 }

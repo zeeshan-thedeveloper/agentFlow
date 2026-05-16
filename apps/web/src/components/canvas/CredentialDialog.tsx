@@ -17,12 +17,66 @@ type TestResult = {
   message: string;
 };
 
+type ConnectionFields = {
+  host: string;
+  port: string;
+  database: string;
+  username: string;
+  password: string;
+  ssl: boolean;
+  srv: boolean;
+  authSource: string;
+};
+
 function summarizeServerVersion(serverVersion: string) {
   return serverVersion.split(' ').slice(0, 2).join(' ');
 }
 
+function encodePart(value: string) {
+  return encodeURIComponent(value.trim());
+}
+
+function buildConnectionString(fields: ConnectionFields, engine: Props['engine']) {
+  const host = fields.host.trim();
+  const database = fields.database.trim();
+  if (!host) throw new Error('Host is required.');
+  if (engine === 'postgresql' && !database) throw new Error('Database name is required.');
+
+  const username = fields.username.trim();
+  const password = fields.password;
+  const auth = username
+    ? `${encodePart(username)}${password ? `:${encodePart(password)}` : ''}@`
+    : '';
+
+  if (engine === 'mongodb') {
+    const scheme = fields.srv ? 'mongodb+srv' : 'mongodb';
+    const port = fields.srv || !fields.port.trim() ? '' : `:${fields.port.trim()}`;
+    const path = database ? `/${encodePart(database)}` : '';
+    const params = new URLSearchParams();
+    if (fields.authSource.trim()) params.set('authSource', fields.authSource.trim());
+    const query = params.toString();
+    return `${scheme}://${auth}${host}${port}${path}${query ? `?${query}` : ''}`;
+  }
+
+  const port = fields.port.trim() || '5432';
+  const params = new URLSearchParams();
+  if (fields.ssl) params.set('sslmode', 'require');
+  const query = params.toString();
+  return `postgresql://${auth}${host}:${port}/${encodePart(database)}${query ? `?${query}` : ''}`;
+}
+
 export function CredentialDialog({ integrationId, integrationName, credentialName, engine, onConnected, onClose }: Props) {
   const [connectionString, setConnectionString] = useState('');
+  const [fields, setFields] = useState<ConnectionFields>({
+    host: '',
+    port: engine === 'mongodb' ? '27017' : '5432',
+    database: '',
+    username: '',
+    password: '',
+    ssl: engine !== 'mongodb',
+    srv: false,
+    authSource: '',
+  });
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
@@ -30,7 +84,18 @@ export function CredentialDialog({ integrationId, integrationName, credentialNam
 
   const trimmedConnectionString = connectionString.trim();
   const busy = testing || saving;
-  const actionsDisabled = !trimmedConnectionString || busy;
+  const canBuildFromFields = fields.host.trim() && (engine !== 'postgresql' || fields.database.trim());
+  const actionsDisabled = (!trimmedConnectionString && !canBuildFromFields) || busy;
+
+  function updateField(name: keyof ConnectionFields, value: string | boolean) {
+    setFields(previous => ({ ...previous, [name]: value }));
+    setTestResult(null);
+    setError(null);
+  }
+
+  function resolveConnectionString() {
+    return trimmedConnectionString || buildConnectionString(fields, engine);
+  }
 
   async function handleTest() {
     setTesting(true);
@@ -38,7 +103,7 @@ export function CredentialDialog({ integrationId, integrationName, credentialNam
     setError(null);
 
     try {
-      const result = await testDatabaseConnection(trimmedConnectionString, engine);
+      const result = await testDatabaseConnection(resolveConnectionString(), engine);
       const server = result.serverVersion ? ` Server: ${summarizeServerVersion(result.serverVersion)}` : '';
       setTestResult({ ok: true, message: `Connected.${server}` });
     } catch (err: unknown) {
@@ -53,7 +118,7 @@ export function CredentialDialog({ integrationId, integrationName, credentialNam
     setError(null);
 
     try {
-      const result = await saveCredential(integrationId, trimmedConnectionString, credentialName);
+      const result = await saveCredential(integrationId, resolveConnectionString(), credentialName);
       onConnected(result.maskedHint);
       onClose();
     } catch (err: unknown) {
@@ -132,9 +197,184 @@ export function CredentialDialog({ integrationId, integrationName, credentialNam
         </div>
 
         <div style={{ padding: 16, display: 'grid', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 96px', gap: 10 }}>
+            <label style={{ display: 'grid', gap: 7 }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Host
+              </span>
+              <input
+                type="text"
+                value={fields.host}
+                onChange={event => updateField('host', event.target.value)}
+                placeholder={engine === 'mongodb' ? 'cluster.example.net' : 'db.example.com'}
+                autoComplete="off"
+                spellCheck={false}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  background: 'var(--surface-bg)',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: 7,
+                  color: 'var(--text-primary)',
+                  fontSize: 13,
+                  outline: 'none',
+                  padding: '10px 11px',
+                }}
+              />
+            </label>
+
+            <label style={{ display: 'grid', gap: 7 }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Port
+              </span>
+              <input
+                type="text"
+                value={fields.port}
+                onChange={event => updateField('port', event.target.value)}
+                disabled={engine === 'mongodb' && fields.srv}
+                placeholder={engine === 'mongodb' ? '27017' : '5432'}
+                inputMode="numeric"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  background: 'var(--surface-bg)',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: 7,
+                  color: fields.srv ? 'var(--text-faint)' : 'var(--text-primary)',
+                  fontSize: 13,
+                  outline: 'none',
+                  padding: '10px 11px',
+                }}
+              />
+            </label>
+          </div>
+
           <label style={{ display: 'grid', gap: 7 }}>
             <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Connection String
+              Database
+            </span>
+            <input
+              type="text"
+              value={fields.database}
+              onChange={event => updateField('database', event.target.value)}
+              placeholder={engine === 'mongodb' ? 'app' : 'postgres'}
+              autoComplete="off"
+              spellCheck={false}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                background: 'var(--surface-bg)',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 7,
+                color: 'var(--text-primary)',
+                fontSize: 13,
+                outline: 'none',
+                padding: '10px 11px',
+              }}
+            />
+          </label>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10 }}>
+            <label style={{ display: 'grid', gap: 7 }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Username
+              </span>
+              <input
+                type="text"
+                value={fields.username}
+                onChange={event => updateField('username', event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  background: 'var(--surface-bg)',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: 7,
+                  color: 'var(--text-primary)',
+                  fontSize: 13,
+                  outline: 'none',
+                  padding: '10px 11px',
+                }}
+              />
+            </label>
+
+            <label style={{ display: 'grid', gap: 7 }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Password
+              </span>
+              <input
+                type="password"
+                value={fields.password}
+                onChange={event => updateField('password', event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  background: 'var(--surface-bg)',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: 7,
+                  color: 'var(--text-primary)',
+                  fontSize: 13,
+                  outline: 'none',
+                  padding: '10px 11px',
+                }}
+              />
+            </label>
+          </div>
+
+          {engine === 'mongodb' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', gap: 10, alignItems: 'end' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, minHeight: 38 }}>
+                <input
+                  type="checkbox"
+                  checked={fields.srv}
+                  onChange={event => updateField('srv', event.target.checked)}
+                  style={{ accentColor: 'var(--brand)', margin: 0 }}
+                />
+                SRV
+              </label>
+              <label style={{ display: 'grid', gap: 7 }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Auth Source
+                </span>
+                <input
+                  type="text"
+                  value={fields.authSource}
+                  onChange={event => updateField('authSource', event.target.value)}
+                  placeholder="admin"
+                  autoComplete="off"
+                  spellCheck={false}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    background: 'var(--surface-bg)',
+                    border: '1px solid var(--border-strong)',
+                    borderRadius: 7,
+                    color: 'var(--text-primary)',
+                    fontSize: 13,
+                    outline: 'none',
+                    padding: '10px 11px',
+                  }}
+                />
+              </label>
+            </div>
+          ) : (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>
+              <input
+                type="checkbox"
+                checked={fields.ssl}
+                onChange={event => updateField('ssl', event.target.checked)}
+                style={{ accentColor: 'var(--brand)', margin: 0 }}
+              />
+              Require SSL
+            </label>
+          )}
+
+          <label style={{ display: 'grid', gap: 7 }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Connection String (Optional)
             </span>
             <input
               type="password"
@@ -144,7 +384,9 @@ export function CredentialDialog({ integrationId, integrationName, credentialNam
                 setTestResult(null);
                 setError(null);
               }}
-              placeholder="postgresql://user:password@host:5432/dbname"
+              placeholder={engine === 'mongodb'
+                ? 'mongodb://user:password@host:27017/dbname'
+                : 'postgresql://user:password@host:5432/dbname'}
               autoComplete="off"
               spellCheck={false}
               style={{
@@ -161,10 +403,6 @@ export function CredentialDialog({ integrationId, integrationName, credentialNam
               }}
             />
           </label>
-
-          <div style={{ color: 'var(--text-faint)', fontSize: 12, lineHeight: 1.45 }}>
-            Add <code style={{ color: 'var(--text-secondary)' }}>?sslmode=require</code> for SSL. The connection string is encrypted before storage.
-          </div>
 
           {testResult && (
             <div style={{ color: testResult.ok ? 'var(--success-text)' : '#ef4444', fontSize: 12, lineHeight: 1.45 }}>
