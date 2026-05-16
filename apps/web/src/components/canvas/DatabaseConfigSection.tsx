@@ -53,14 +53,6 @@ function getEngineConfig(dbType: FlowNode['dbType']) {
   return null;
 }
 
-function isConnectionForEngine(integrationId: string | undefined, dbType: FlowNode['dbType']) {
-  if (!integrationId || !dbType) return false;
-  if (dbType === 'postgresql') {
-    return integrationId === 'database' || integrationId.startsWith('database:pg');
-  }
-  return integrationId.startsWith('database:mongo');
-}
-
 export function DatabaseConfigSection({ node, onUpdate }: Props) {
   const { integrations, loading } = useIntegrations();
   const engineConfig = getEngineConfig(node.dbType);
@@ -70,7 +62,6 @@ export function DatabaseConfigSection({ node, onUpdate }: Props) {
   const allowedActions = node.dbType ? ENGINE_ACTIONS[node.dbType] : [];
   const actions = selectedIntegration?.actions.filter(action => allowedActions.includes(action.id)) ?? [];
   const selectedAction = actions.find(action => action.id === node.actionId);
-  const hasSelectedConnection = isConnectionForEngine(node.integrationId, node.dbType);
 
   function updateParam(name: string, value: unknown) {
     onUpdate({
@@ -115,26 +106,6 @@ export function DatabaseConfigSection({ node, onUpdate }: Props) {
           integrationName={engineConfig.connectionName}
           onSelect={id => onUpdate({ integrationId: id || 'database', actionId: undefined, actionParams: {} })}
         />
-      )}
-
-      {engineConfig && hasSelectedConnection && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Action
-          </label>
-          <select
-            value={node.actionId ?? ''}
-            onChange={event => onUpdate({ actionId: event.target.value || undefined, actionParams: {} })}
-            style={inputStyle}
-          >
-            <option value="">Select action...</option>
-            {actions.map(action => (
-              <option key={action.id} value={action.id}>
-                {action.name}
-              </option>
-            ))}
-          </select>
-        </div>
       )}
 
       {selectedAction && (
