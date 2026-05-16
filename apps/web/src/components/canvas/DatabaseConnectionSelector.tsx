@@ -146,7 +146,6 @@ export function DatabaseConnectionSelector({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
   const [editingIntegrationId, setEditingIntegrationId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [connectionString, setConnectionString] = useState('');
@@ -205,10 +204,9 @@ export function DatabaseConnectionSelector({
   const formBusy = testing || saving;
   const passwordRequiredForEdit = Boolean(editingIntegrationId && !trimmedConnectionString && !fields.password);
   const actionsDisabled = (!trimmedConnectionString && !canBuildFromFields) || passwordRequiredForEdit || formBusy;
-  const showForm = formOpen || !selectedConnection;
+  const showForm = Boolean(editingIntegrationId) || !selectedConnection;
 
   function resetForm() {
-    setFormOpen(false);
     setEditingIntegrationId(null);
     setNewName('');
     setConnectionString('');
@@ -228,7 +226,6 @@ export function DatabaseConnectionSelector({
     });
     setTestResult(null);
     setFormError(null);
-    setFormOpen(true);
   }
 
   function updateField(name: keyof ConnectionFields, value: string | boolean) {
@@ -292,10 +289,14 @@ export function DatabaseConnectionSelector({
                 key={connection.integrationId}
                 role="button"
                 tabIndex={0}
-                onClick={() => onSelect(connection.integrationId)}
+                onClick={() => {
+                  resetForm();
+                  onSelect(connection.integrationId);
+                }}
                 onKeyDown={event => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
+                  resetForm();
                   onSelect(connection.integrationId);
                 }}
                 style={{
@@ -430,7 +431,7 @@ export function DatabaseConnectionSelector({
                 fontWeight: 800,
               }}
             >
-              Configure
+              Edit configuration
             </button>
             <button
               type="button"
