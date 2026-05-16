@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { FlowNode, FlowEdge, RunState, RunPhasesMap, NodeType, PersistedWorkflow } from './types';
+import type { FlowNode, FlowEdge, RunState, RunPhasesMap, LibraryNodeType, PersistedWorkflow } from './types';
 import { NODE_TYPES } from './constants';
 import TopBar from './TopBar';
 import NodeLibrary from './NodeLibrary';
@@ -322,22 +322,25 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     }
   }
 
-  function addNode(type: NodeType) {
+  function addNode(type: LibraryNodeType) {
+    const nodeType = type === 'database' ? 'integration' : type;
     const id = `${type}-${Date.now()}`;
     const cfg = NODE_TYPES[type];
     const typeDefaults: Partial<FlowNode> =
-      type === 'trigger'
+      nodeType === 'trigger'
         ? { triggerType: 'Manual', triggerInputMode: 'none', subtitle: 'Manual - No input' }
-        : type === 'agent'
+        : nodeType === 'agent'
         ? { subtitle: 'OpenAI - GPT-4.1 Mini', provider: 'openai', model: 'gpt-4.1-mini', prompt: '' }
-        : type === 'output'
+        : nodeType === 'output'
         ? { subtitle: 'Receives result', outputMode: 'Return output' }
+        : type === 'database'
+        ? { integrationId: 'database', label: 'Database', actionParams: {} }
         : {};
 
     setNodes(p => [...p, {
       id,
-      type,
-      label: `New ${cfg.label}`,
+      type: nodeType,
+      label: typeDefaults.label ?? `New ${cfg.label}`,
       subtitle: cfg.lib.options[0],
       x: 160 + Math.random() * 300,
       y: 140 + Math.random() * 220,

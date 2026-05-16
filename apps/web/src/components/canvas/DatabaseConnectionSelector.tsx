@@ -10,6 +10,10 @@ import { CredentialDialog } from './CredentialDialog';
 
 interface Props {
   selectedIntegrationId: string | undefined;
+  filterPrefix?: string;
+  enginePrefix?: string;
+  engine?: 'postgresql' | 'mongodb';
+  integrationName?: string;
   onSelect: (integrationId: string) => void;
 }
 
@@ -21,7 +25,22 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-export function DatabaseConnectionSelector({ selectedIntegrationId, onSelect }: Props) {
+function matchesPrefix(integrationId: string, filterPrefix: string | undefined) {
+  if (!filterPrefix) return true;
+  if (filterPrefix === 'database:pg') {
+    return integrationId === 'database' || integrationId.startsWith('database:pg');
+  }
+  return integrationId.startsWith(filterPrefix);
+}
+
+export function DatabaseConnectionSelector({
+  selectedIntegrationId,
+  filterPrefix,
+  enginePrefix = 'database',
+  engine,
+  integrationName = 'Database',
+  onSelect,
+}: Props) {
   const [connections, setConnections] = useState<NamedConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,22 +81,27 @@ export function DatabaseConnectionSelector({ selectedIntegrationId, onSelect }: 
   }
 
   const trimmedName = newName.trim();
+  const filteredConnections = useMemo(
+    () => connections.filter(connection => matchesPrefix(connection.integrationId, filterPrefix)),
+    [connections, filterPrefix],
+  );
+
   const newIntegrationId = useMemo(() => {
     const slug = slugify(trimmedName);
-    return slug ? `database:${slug}` : 'database';
-  }, [trimmedName]);
+    return slug ? `${enginePrefix}:${slug}` : enginePrefix;
+  }, [enginePrefix, trimmedName]);
 
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       {loading ? (
         <div style={{ color: 'var(--text-faint)', fontSize: 12 }}>Loading connections...</div>
-      ) : connections.length === 0 ? (
+      ) : filteredConnections.length === 0 ? (
         <p style={{ color: 'var(--text-faint)', fontSize: 12, lineHeight: 1.45, margin: 0 }}>
           No connections saved yet.
         </p>
       ) : (
         <div style={{ display: 'grid', gap: 6 }}>
-          {connections.map(connection => {
+          {filteredConnections.map(connection => {
             const selected = selectedIntegrationId === connection.integrationId;
             const deleting = deletingId === connection.integrationId;
 
@@ -238,8 +262,9 @@ export function DatabaseConnectionSelector({ selectedIntegrationId, onSelect }: 
       {showDialog && (
         <CredentialDialog
           integrationId={newIntegrationId}
-          integrationName={trimmedName ? `Database (${trimmedName})` : 'Database'}
+          integrationName={trimmedName ? `${integrationName} (${trimmedName})` : integrationName}
           credentialName={trimmedName || undefined}
+          engine={engine}
           onConnected={() => {
             void loadConnections();
             onSelect(newIntegrationId);

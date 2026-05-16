@@ -1,11 +1,8 @@
 'use client';
 
-import { useState, type CSSProperties } from 'react';
-import { useCredentialStatus, useIntegrations } from '@/hooks/useIntegrations';
-import { deleteCredential } from '@/lib/integrations-api';
-import { CredentialDialog } from './CredentialDialog';
+import type { CSSProperties } from 'react';
+import { useIntegrations } from '@/hooks/useIntegrations';
 import { DatabaseConnectionSelector } from './DatabaseConnectionSelector';
-import { DatabaseConfigSection } from './DatabaseConfigSection';
 import type { FlowNode } from './types';
 
 interface Props {
@@ -25,28 +22,55 @@ const inputStyle = {
   fontFamily: 'inherit',
 } satisfies CSSProperties;
 
+const ENGINE_ACTIONS = {
+  postgresql: ['query', 'insert', 'update', 'execute'],
+  mongodb: ['find', 'insertOne', 'updateOne', 'deleteOne'],
+} satisfies Record<NonNullable<FlowNode['dbType']>, string[]>;
+
 function getActionParam(node: FlowNode, name: string) {
   return node.actionParams?.[name];
 }
 
-export function IntegrationConfigSection({ node, onUpdate }: Props) {
-  if (node.integrationId?.startsWith('database')) {
-    return <DatabaseConfigSection node={node} onUpdate={onUpdate} />;
+function getEngineConfig(dbType: FlowNode['dbType']) {
+  if (dbType === 'postgresql') {
+    return {
+      metadataId: 'database',
+      filterPrefix: 'database:pg',
+      enginePrefix: 'database:pg',
+      connectionName: 'PostgreSQL',
+    };
   }
 
-  return <GenericIntegrationConfigSection node={node} onUpdate={onUpdate} />;
+  if (dbType === 'mongodb') {
+    return {
+      metadataId: 'database:mongo',
+      filterPrefix: 'database:mongo',
+      enginePrefix: 'database:mongo',
+      connectionName: 'MongoDB',
+    };
+  }
+
+  return null;
 }
 
-function GenericIntegrationConfigSection({ node, onUpdate }: Props) {
-  const { integrations, loading } = useIntegrations();
-  const { status, refresh } = useCredentialStatus(node.integrationId);
-  const [showDialog, setShowDialog] = useState(false);
-  const [disconnecting, setDisconnecting] = useState(false);
+function isConnectionForEngine(integrationId: string | undefined, dbType: FlowNode['dbType']) {
+  if (!integrationId || !dbType) return false;
+  if (dbType === 'postgresql') {
+    return integrationId === 'database' || integrationId.startsWith('database:pg');
+  }
+  return integrationId.startsWith('database:mongo');
+}
 
-  const selectedIntegrationId = node.integrationId?.startsWith('database') ? 'database' : node.integrationId;
-  const selectedIntegration = integrations.find(integration => integration.id === selectedIntegrationId);
-  const selectedAction = selectedIntegration?.actions.find(action => action.id === node.actionId);
-  const isDatabaseIntegration = node.integrationId?.startsWith('database') || node.integrationId === undefined;
+export function DatabaseConfigSection({ node, onUpdate }: Props) {
+  const { integrations, loading } = useIntegrations();
+  const engineConfig = getEngineConfig(node.dbType);
+  const selectedIntegration = engineConfig
+    ? integrations.find(integration => integration.id === engineConfig.metadataId)
+    : undefined;
+  const allowedActions = node.dbType ? ENGINE_ACTIONS[node.dbType] : [];
+  const actions = selectedIntegration?.actions.filter(action => allowedActions.includes(action.id)) ?? [];
+  const selectedAction = actions.find(action => action.id === node.actionId);
+  const hasSelectedConnection = isConnectionForEngine(node.integrationId, node.dbType);
 
   function updateParam(name: string, value: unknown) {
     onUpdate({
@@ -57,20 +81,6 @@ function GenericIntegrationConfigSection({ node, onUpdate }: Props) {
     });
   }
 
-  async function handleDisconnect() {
-    if (!node.integrationId || disconnecting) return;
-
-    setDisconnecting(true);
-    try {
-      await deleteCredential(node.integrationId);
-      refresh();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setDisconnecting(false);
-    }
-  }
-
   if (loading) {
     return <div style={{ color: 'var(--text-faint)', fontSize: 12 }}>Loading integrations...</div>;
   }
@@ -79,84 +89,35 @@ function GenericIntegrationConfigSection({ node, onUpdate }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
         <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          Integration
+          DB Engine
         </label>
         <select
-          value={node.integrationId?.startsWith('database') ? 'database' : node.integrationId ?? ''}
-          onChange={event => onUpdate({ integrationId: event.target.value || undefined, actionId: undefined, actionParams: {} })}
+          value={node.dbType ?? ''}
+          onChange={event => onUpdate({
+            dbType: (event.target.value || undefined) as FlowNode['dbType'],
+            actionId: undefined,
+            actionParams: {},
+          })}
           style={inputStyle}
         >
-          <option value="">Select integration...</option>
-          {integrations.map(integration => (
-            <option key={integration.id} value={integration.id}>
-              {integration.name}
-            </option>
-          ))}
+          <option value="">Select database type...</option>
+          <option value="postgresql">PostgreSQL</option>
+          <option value="mongodb">MongoDB</option>
         </select>
       </div>
 
-      {isDatabaseIntegration ? (
+      {engineConfig && (
         <DatabaseConnectionSelector
           selectedIntegrationId={node.integrationId}
-          onSelect={id => onUpdate({ integrationId: id || undefined, actionId: undefined, actionParams: {} })}
+          filterPrefix={engineConfig.filterPrefix}
+          enginePrefix={engineConfig.enginePrefix}
+          engine={node.dbType}
+          integrationName={engineConfig.connectionName}
+          onSelect={id => onUpdate({ integrationId: id || 'database', actionId: undefined, actionParams: {} })}
         />
-      ) : (
-        node.integrationId && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-            <span
-              aria-hidden="true"
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: status?.connected ? '#22c55e' : '#ef4444',
-                flexShrink: 0,
-              }}
-            />
-            <span style={{ color: 'var(--text-secondary)', flex: 1, minWidth: 0, wordBreak: 'break-word' }}>
-              {status?.connected ? status.maskedHint ?? 'Connected' : 'Not connected'}
-            </span>
-            {status?.connected ? (
-              <button
-                type="button"
-                onClick={handleDisconnect}
-                disabled={disconnecting}
-                style={{
-                  border: 0,
-                  background: 'transparent',
-                  color: disconnecting ? 'var(--text-faint)' : '#ef4444',
-                  cursor: disconnecting ? 'default' : 'pointer',
-                  fontFamily: 'inherit',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: 0,
-                }}
-              >
-                {disconnecting ? 'Disconnecting' : 'Disconnect'}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowDialog(true)}
-                style={{
-                  border: 0,
-                  background: 'transparent',
-                  color: 'var(--brand-text)',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: 0,
-                }}
-              >
-                Connect
-              </button>
-            )}
-          </div>
-        )
       )}
 
-      {selectedIntegration && (
+      {engineConfig && hasSelectedConnection && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
           <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             Action
@@ -167,7 +128,7 @@ function GenericIntegrationConfigSection({ node, onUpdate }: Props) {
             style={inputStyle}
           >
             <option value="">Select action...</option>
-            {selectedIntegration.actions.map(action => (
+            {actions.map(action => (
               <option key={action.id} value={action.id}>
                 {action.name}
               </option>
@@ -249,18 +210,6 @@ function GenericIntegrationConfigSection({ node, onUpdate }: Props) {
             </div>
           ))}
         </div>
-      )}
-
-      {showDialog && node.integrationId && selectedIntegration && (
-        <CredentialDialog
-          integrationId={node.integrationId}
-          integrationName={selectedIntegration.name}
-          onConnected={() => {
-            refresh();
-            setShowDialog(false);
-          }}
-          onClose={() => setShowDialog(false)}
-        />
       )}
     </div>
   );

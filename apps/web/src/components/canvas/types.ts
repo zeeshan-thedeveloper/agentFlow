@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 
 export type NodeType = 'trigger' | 'agent' | 'output' | 'integration';
+export type LibraryNodeType = NodeType | 'database';
 export type RunPhase = 'queued' | 'running' | 'done' | 'failed';
 export type RunState = 'idle' | 'running' | 'success' | 'error';
 
@@ -21,6 +22,7 @@ export interface FlowNode {
   tools?: string[];
   outputMode?: string;
   integrationId?: string;
+  dbType?: 'postgresql' | 'mongodb';
   actionId?: string;
   actionParams?: Record<string, unknown>;
 }
@@ -46,12 +48,14 @@ export interface PersistedWorkflow {
 export interface NodeTypeConfig {
   label: string;
   color: string;
+  bgColor?: string;
   glowA: string;
   glowB: string;
   icon: ReactElement;
   lib: {
     desc: string;
     options: string[];
+    category?: string;
   };
 }
 

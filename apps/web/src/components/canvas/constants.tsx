@@ -1,9 +1,10 @@
-import type { NodeType, NodeTypeConfig } from './types';
+import { DatabaseIcon } from 'lucide-react';
+import type { LibraryNodeType, NodeTypeConfig } from './types';
 
 export const NW = 200;
 export const NH = 74;
 
-export const NODE_TYPES: Record<NodeType, NodeTypeConfig> = {
+export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
   trigger: {
     label: 'Trigger',
     color: '#F59E0B',
@@ -63,5 +64,18 @@ export const NODE_TYPES: Record<NodeType, NodeTypeConfig> = {
       </svg>
     ),
     lib: { desc: 'Connect to an external database or service', options: ['Database query'] },
+  },
+  database: {
+    label: 'Database',
+    color: '#10B981',
+    bgColor: '#ECFDF5',
+    glowA: 'rgba(16,185,129,0.22)',
+    glowB: 'rgba(16,185,129,0.08)',
+    icon: <DatabaseIcon size={16} strokeWidth={1.8} />,
+    lib: {
+      desc: 'Query or write to PostgreSQL or MongoDB',
+      options: ['Database query'],
+      category: 'integrations',
+    },
   },
 };

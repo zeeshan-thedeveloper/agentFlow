@@ -49,11 +49,11 @@ export async function deleteNamedCredential(integrationId: string): Promise<void
   if (!res.ok) throw new Error('Failed to delete connection');
 }
 
-export async function testDatabaseConnection(connectionString: string) {
+export async function testDatabaseConnection(connectionString: string, engine?: 'postgresql' | 'mongodb') {
   const res = await fetch('/api/integrations/database/credentials/test', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ connectionString }),
+    body: JSON.stringify({ connectionString, engine }),
   });
   const data = (await res.json().catch(() => ({}))) as { ok?: boolean; serverVersion?: string; message?: string };
   if (!res.ok) throw new Error(data.message ?? 'Connection failed');

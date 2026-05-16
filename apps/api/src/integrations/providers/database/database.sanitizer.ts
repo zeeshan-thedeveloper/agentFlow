@@ -37,23 +37,12 @@ export function parseQueryParams(raw: unknown): unknown[] {
   return parsed;
 }
 
-// Build a masked version of the connection string for display (strips password).
-// postgresql://user:secret@host:5432/db -> postgresql://user:****@host:5432/db
 export function maskConnectionString(connectionString: string): string {
   try {
     const url = new URL(connectionString);
-    if (url.password) {
-      url.password = '****';
-    }
+    if (url.password) url.password = '****';
     return url.toString();
   } catch {
-    // If it's not a valid URL, redact everything after the last @ as a best-effort.
-    const atIndex = connectionString.lastIndexOf('@');
-    if (atIndex === -1) return connectionString;
-    return (
-      connectionString.slice(0, connectionString.indexOf(':') + 1) +
-      '****' +
-      connectionString.slice(atIndex)
-    );
+    return connectionString.replace(/:\/\/([^:@]+):([^@]+)@/, '://$1:****@');
   }
 }

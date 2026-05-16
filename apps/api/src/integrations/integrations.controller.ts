@@ -77,8 +77,8 @@ export class IntegrationsController {
   }
 
   @Post('database/credentials/test')
-  testConnection(@Body() body: { connectionString: string }, @Req() req: AuthenticatedRequest) {
+  testConnection(@Body() body: { connectionString: string; engine?: string }, @Req() req: AuthenticatedRequest) {
     requireUserId(req);
-    return this.service.testDatabaseConnection(body.connectionString);
+    return this.service.testDatabaseConnection(body.connectionString, body.engine);
   }
 }

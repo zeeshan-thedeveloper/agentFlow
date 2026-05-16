@@ -94,8 +94,14 @@ export class IntegrationsService {
     return { ok: true };
   }
 
-  async testDatabaseConnection(connectionString: string) {
+  async testDatabaseConnection(connectionString: string, engine?: string) {
     try {
+      if (engine === 'mongodb' || connectionString.startsWith('mongodb')) {
+        const { testMongoConnection } = await import('./providers/database/mongo.connection');
+        const version = await testMongoConnection(connectionString);
+        return { ok: true, serverVersion: version };
+      }
+
       const version = await testConnection(connectionString);
       return { ok: true, serverVersion: version };
     } catch (err: unknown) {

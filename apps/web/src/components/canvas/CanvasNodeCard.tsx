@@ -44,6 +44,12 @@ export default function CanvasNodeCard({
   const isRunning = runPhase === 'running';
   const isDone    = runPhase === 'done';
   const isFailed  = runPhase === 'failed';
+  const isDatabaseNode = node.type === 'integration' && node.integrationId?.startsWith('database');
+  const subtitle = isDatabaseNode
+    ? node.dbType
+      ? `${node.dbType} · ${node.actionId ?? 'no action'}`
+      : 'Database · not configured'
+    : node.subtitle;
 
   return (
     <div
@@ -177,12 +183,12 @@ export default function CanvasNodeCard({
           }}>
             {node.label}
           </div>
-          {node.subtitle && (
+          {subtitle && (
             <div style={{
               fontSize: 10, color: 'var(--text-faint)', marginTop: 1,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {node.subtitle}
+              {subtitle}
             </div>
           )}
           {node.type === 'agent' && node.tools && node.tools.length > 0 && (

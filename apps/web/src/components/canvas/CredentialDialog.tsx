@@ -7,6 +7,7 @@ interface Props {
   integrationId: string;
   integrationName: string;
   credentialName?: string;
+  engine?: 'postgresql' | 'mongodb';
   onConnected: (maskedHint: string) => void;
   onClose: () => void;
 }
@@ -20,7 +21,7 @@ function summarizeServerVersion(serverVersion: string) {
   return serverVersion.split(' ').slice(0, 2).join(' ');
 }
 
-export function CredentialDialog({ integrationId, integrationName, credentialName, onConnected, onClose }: Props) {
+export function CredentialDialog({ integrationId, integrationName, credentialName, engine, onConnected, onClose }: Props) {
   const [connectionString, setConnectionString] = useState('');
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -37,7 +38,7 @@ export function CredentialDialog({ integrationId, integrationName, credentialNam
     setError(null);
 
     try {
-      const result = await testDatabaseConnection(trimmedConnectionString);
+      const result = await testDatabaseConnection(trimmedConnectionString, engine);
       const server = result.serverVersion ? ` Server: ${summarizeServerVersion(result.serverVersion)}` : '';
       setTestResult({ ok: true, message: `Connected.${server}` });
     } catch (err: unknown) {
