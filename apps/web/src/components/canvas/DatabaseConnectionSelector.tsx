@@ -92,6 +92,40 @@ function summarizeServerVersion(serverVersion: string) {
   return serverVersion.split(' ').slice(0, 2).join(' ');
 }
 
+function defaultFields(engine: Props['engine']): ConnectionFields {
+  return {
+    host: '',
+    port: engine === 'mongodb' ? '27017' : '5432',
+    database: '',
+    username: '',
+    password: '',
+    ssl: false,
+    srv: false,
+    authSource: '',
+  };
+}
+
+function parseConnectionHint(maskedHint: string | null | undefined, engine: Props['engine']): Partial<ConnectionFields> {
+  if (!maskedHint) return {};
+
+  try {
+    const url = new URL(maskedHint);
+    const dbName = url.pathname.startsWith('/') ? decodeURIComponent(url.pathname.slice(1)) : '';
+    return {
+      host: url.hostname,
+      port: url.port || (engine === 'mongodb' ? '27017' : '5432'),
+      database: dbName,
+      username: decodeURIComponent(url.username),
+      password: '',
+      ssl: url.searchParams.get('sslmode') === 'require',
+      srv: url.protocol === 'mongodb+srv:',
+      authSource: url.searchParams.get('authSource') ?? '',
+    };
+  } catch {
+    return {};
+  }
+}
+
 function matchesPrefix(integrationId: string, filterPrefix: string | undefined) {
   if (!filterPrefix) return true;
   if (filterPrefix === 'database:pg') {
@@ -112,18 +146,11 @@ export function DatabaseConnectionSelector({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingIntegrationId, setEditingIntegrationId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [connectionString, setConnectionString] = useState('');
-  const [fields, setFields] = useState<ConnectionFields>({
-    host: '',
-    port: engine === 'mongodb' ? '27017' : '5432',
-    database: '',
-    username: '',
-    password: '',
-    ssl: engine !== 'mongodb',
-    srv: false,
-    authSource: '',
-  });
+  const [fields, setFields] = useState<ConnectionFields>(() => defaultFields(engine));
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
@@ -166,15 +193,43 @@ export function DatabaseConnectionSelector({
     () => connections.filter(connection => matchesPrefix(connection.integrationId, filterPrefix)),
     [connections, filterPrefix],
   );
+  const selectedConnection = filteredConnections.find(connection => connection.integrationId === selectedIntegrationId);
 
-  const newIntegrationId = useMemo(() => {
+  const formIntegrationId = useMemo(() => {
+    if (editingIntegrationId) return editingIntegrationId;
     const slug = slugify(trimmedName);
     return slug ? `${enginePrefix}:${slug}` : enginePrefix;
-  }, [enginePrefix, trimmedName]);
+  }, [editingIntegrationId, enginePrefix, trimmedName]);
   const trimmedConnectionString = connectionString.trim();
   const canBuildFromFields = fields.host.trim() && (engine !== 'postgresql' || fields.database.trim());
   const formBusy = testing || saving;
-  const actionsDisabled = (!trimmedConnectionString && !canBuildFromFields) || formBusy;
+  const passwordRequiredForEdit = Boolean(editingIntegrationId && !trimmedConnectionString && !fields.password);
+  const actionsDisabled = (!trimmedConnectionString && !canBuildFromFields) || passwordRequiredForEdit || formBusy;
+  const showForm = formOpen || !selectedConnection;
+
+  function resetForm() {
+    setFormOpen(false);
+    setEditingIntegrationId(null);
+    setNewName('');
+    setConnectionString('');
+    setFields(defaultFields(engine));
+    setTestResult(null);
+    setFormError(null);
+  }
+
+  function configureConnection(connection: NamedConnection) {
+    setEditingIntegrationId(connection.integrationId);
+    setNewName(connection.name === connection.integrationId ? '' : connection.name);
+    setConnectionString('');
+    setFields({
+      ...defaultFields(engine),
+      ...parseConnectionHint(connection.maskedHint, engine),
+      password: '',
+    });
+    setTestResult(null);
+    setFormError(null);
+    setFormOpen(true);
+  }
 
   function updateField(name: keyof ConnectionFields, value: string | boolean) {
     setFields(previous => ({ ...previous, [name]: value }));
@@ -207,22 +262,10 @@ export function DatabaseConnectionSelector({
     setFormError(null);
 
     try {
-      await saveCredential(newIntegrationId, resolveConnectionString(), trimmedName || undefined);
+      await saveCredential(formIntegrationId, resolveConnectionString(), trimmedName || undefined);
       await loadConnections();
-      onSelect(newIntegrationId);
-      setNewName('');
-      setConnectionString('');
-      setFields({
-        host: '',
-        port: engine === 'mongodb' ? '27017' : '5432',
-        database: '',
-        username: '',
-        password: '',
-        ssl: engine !== 'mongodb',
-        srv: false,
-        authSource: '',
-      });
-      setTestResult(null);
+      onSelect(formIntegrationId);
+      resetForm();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Failed to save connection');
     } finally {
@@ -348,6 +391,70 @@ export function DatabaseConnectionSelector({
         </div>
       )}
 
+      {selectedConnection && !showForm && (
+        <div style={{
+          display: 'grid',
+          gap: 8,
+          paddingTop: 10,
+          borderTop: '1px solid var(--border-subtle)',
+        }}>
+          <div style={{
+            borderRadius: 7,
+            border: '1px solid rgba(16,185,129,0.42)',
+            background: 'rgba(16,185,129,0.08)',
+            padding: '9px 10px',
+            display: 'grid',
+            gap: 3,
+          }}>
+            <div style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 800 }}>
+              {selectedConnection.name}
+            </div>
+            <div style={{ color: 'var(--text-faint)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {selectedConnection.maskedHint ?? selectedConnection.integrationId}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => configureConnection(selectedConnection)}
+              style={{
+                height: 32,
+                borderRadius: 7,
+                border: '1px solid var(--border-strong)',
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: 12,
+                fontWeight: 800,
+              }}
+            >
+              Configure
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDelete(selectedConnection.integrationId)}
+              disabled={deletingId === selectedConnection.integrationId}
+              style={{
+                height: 32,
+                borderRadius: 7,
+                border: '1px solid rgba(239,68,68,0.48)',
+                background: 'transparent',
+                color: deletingId === selectedConnection.integrationId ? 'var(--text-faint)' : '#ef4444',
+                cursor: deletingId === selectedConnection.integrationId ? 'default' : 'pointer',
+                fontFamily: 'inherit',
+                fontSize: 12,
+                fontWeight: 800,
+              }}
+            >
+              {deletingId === selectedConnection.integrationId ? 'Removing' : 'Disconnect'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showForm && (
       <div style={{
         display: 'grid',
         gap: 8,
@@ -356,7 +463,7 @@ export function DatabaseConnectionSelector({
       }}>
         <label style={{ display: 'grid', gap: 6 }}>
           <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700 }}>
-            Add connection
+            {editingIntegrationId ? 'Configure connection' : 'Add connection'}
           </span>
           <input
             type="text"
@@ -421,8 +528,8 @@ export function DatabaseConnectionSelector({
             />
           </label>
 
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700 }}>Password</span>
+        <label style={{ display: 'grid', gap: 6 }}>
+          <span style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700 }}>Password</span>
             <input
               type="password"
               value={fields.password}
@@ -430,9 +537,15 @@ export function DatabaseConnectionSelector({
               autoComplete="off"
               spellCheck={false}
               style={inputStyle}
-            />
-          </label>
-        </div>
+          />
+        </label>
+      </div>
+
+        {editingIntegrationId && (
+          <div style={{ color: 'var(--text-faint)', fontSize: 10, lineHeight: 1.45 }}>
+            Passwords are not shown after saving. Enter the password again to test or save changes.
+          </div>
+        )}
 
         {engine === 'mongodb' ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', gap: 8, alignItems: 'end' }}>
@@ -504,6 +617,27 @@ export function DatabaseConnectionSelector({
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
+          {selectedConnection && (
+            <button
+              type="button"
+              onClick={resetForm}
+              disabled={formBusy}
+              style={{
+                gridColumn: '1 / -1',
+                height: 30,
+                borderRadius: 7,
+                border: '1px solid var(--border-strong)',
+                background: 'transparent',
+                color: formBusy ? 'var(--text-faint)' : 'var(--text-secondary)',
+                cursor: formBusy ? 'default' : 'pointer',
+                fontFamily: 'inherit',
+                fontSize: 12,
+                fontWeight: 800,
+              }}
+            >
+              Cancel
+            </button>
+          )}
           <button
             type="button"
             onClick={handleTest}
@@ -542,6 +676,7 @@ export function DatabaseConnectionSelector({
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }
