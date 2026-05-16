@@ -12,6 +12,9 @@ import {
 import { IntegrationsService } from './integrations.service';
 
 type AuthenticatedRequest = {
+  headers?: {
+    'x-user-id'?: string | string[];
+  };
   user?: {
     id?: string;
     userId?: string;
@@ -26,7 +29,14 @@ type AuthenticatedRequest = {
 };
 
 function requireUserId(req: AuthenticatedRequest): string {
-  const userId = req.user?.id ?? req.user?.userId ?? req.userId ?? req.session?.userId ?? req.session?.user?.id;
+  const forwardedUserId = req.headers?.['x-user-id'];
+  const userId =
+    (Array.isArray(forwardedUserId) ? forwardedUserId[0] : forwardedUserId) ??
+    req.user?.id ??
+    req.user?.userId ??
+    req.userId ??
+    req.session?.userId ??
+    req.session?.user?.id;
 
   if (!userId) {
     throw new UnauthorizedException('Authentication required.');
