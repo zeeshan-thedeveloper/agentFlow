@@ -1,10 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { createDecipheriv } from 'crypto';
+import { createDecipheriv, createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ResolvedCredentials } from './integration.interfaces';
 
+function getEncryptionKey() {
+  const secret = process.env.API_KEY_ENCRYPTION_SECRET ?? process.env.NEXTAUTH_SECRET;
+
+  if (!secret || secret.length < 32) {
+    throw new Error('API_KEY_ENCRYPTION_SECRET must be set to at least 32 characters.');
+  }
+
+  return createHash('sha256').update(secret).digest();
+}
+
 function decryptCredential(encrypted: string): string {
-  const key = Buffer.from(process.env.ENCRYPTION_KEY!, 'hex');
+  const key = getEncryptionKey();
   const [ivHex, authTagHex, ciphertext] = encrypted.split(':');
   const iv = Buffer.from(ivHex, 'hex');
   const authTag = Buffer.from(authTagHex, 'hex');
