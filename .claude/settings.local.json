@@ -17,7 +17,8 @@
       "Bash(Select-Object FullName, PSIsContainer)",
       "Bash(Format-Table -AutoSize)",
       "Bash(gh issue create --title 'feat: Integration Framework — connect external platforms as canvas nodes' --body ' *)",
-      "Bash(gh issue *)"
+      "Bash(gh issue *)",
+      "Bash(Get-Location)"
     ],
     "additionalDirectories": [
       "d:\\Personal\\agentic-ai-orchestration-platform"

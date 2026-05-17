@@ -1,4 +1,10 @@
 {
+  "model": "haiku-4-5",
+  "env": {
+    "MAX_THINKING_TOKENS": "5000",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "haiku",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
+  },
   "permissions": {
     "allow": [
       "Bash(git stash *)",

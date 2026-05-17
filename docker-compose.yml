@@ -94,6 +94,7 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://agent_user:agent_pass@postgres:5432/agentflow
+      INTERNAL_API_URL: http://api:18001
       NEXT_PUBLIC_API_URL: http://localhost:18001
       NEXTAUTH_URL: http://localhost:18100
       API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-uwxfYwnAWLwQgHwSfyYCnoBIVop2PV269LVm90qhcz4=}

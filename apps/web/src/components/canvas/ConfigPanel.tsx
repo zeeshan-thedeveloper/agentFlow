@@ -1,4 +1,5 @@
 import type { FlowNode } from './types';
+import { IntegrationConfigSection } from './IntegrationConfigSection';
 import { NODE_TYPES } from './constants';
 
 interface ConfigPanelProps {
@@ -393,6 +394,12 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput 
               </pre>
             </Section>
           </>
+        )}
+
+        {node.type === 'integration' && (
+          <Section label="Integration">
+            <IntegrationConfigSection node={node} onUpdate={onUpdate} />
+          </Section>
         )}
 
         <Section label="Node ID">

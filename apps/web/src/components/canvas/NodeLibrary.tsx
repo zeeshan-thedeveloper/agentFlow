@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import type { NodeType } from './types';
+import type { LibraryNodeType } from './types';
 import { NODE_TYPES } from './constants';
 
-const ACTIVE_NODE_TYPES: NodeType[] = ['trigger', 'agent', 'output'];
+const ACTIVE_NODE_TYPES: LibraryNodeType[] = ['trigger', 'agent', 'database', 'output'];
 
 interface NodeLibraryProps {
-  onAddNode: (type: NodeType) => void;
+  onAddNode: (type: LibraryNodeType) => void;
 }
 
 export default function NodeLibrary({ onAddNode }: NodeLibraryProps) {
@@ -37,7 +37,7 @@ export default function NodeLibrary({ onAddNode }: NodeLibraryProps) {
   );
 }
 
-function LibNode({ type, onAdd }: { type: NodeType; onAdd: () => void }) {
+function LibNode({ type, onAdd }: { type: LibraryNodeType; onAdd: () => void }) {
   const [hover, setHover] = useState(false);
   const cfg = NODE_TYPES[type];
 

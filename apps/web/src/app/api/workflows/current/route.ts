@@ -14,7 +14,7 @@ function isFlowNode(value: unknown): value is FlowNode {
   const node = value as Partial<FlowNode>;
   return (
     typeof node.id === 'string' &&
-    (node.type === 'trigger' || node.type === 'agent' || node.type === 'output') &&
+    (node.type === 'trigger' || node.type === 'agent' || node.type === 'output' || node.type === 'integration') &&
     typeof node.label === 'string' &&
     typeof node.x === 'number' &&
     typeof node.y === 'number'

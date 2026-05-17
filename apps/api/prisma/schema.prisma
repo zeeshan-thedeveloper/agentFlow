@@ -22,6 +22,7 @@ model User {
   sessions  Session[]
   workflows Workflow[]
   apiKeys   UserApiKey[]
+  integrationCredentials UserIntegrationCredential[]
 
   @@map("users")
 }
@@ -45,6 +46,44 @@ model UserApiKey {
   @@unique([userId, provider])
   @@index([userId])
   @@map("user_api_keys")
+}
+
+model UserIntegrationCredential {
+  id            String   @id @default(cuid())
+  userId        String
+  integrationId String
+  // integrationId examples:
+  //   'database'         — single database connection
+  //   'database:prod'    — named connection (Phase 3)
+  //   'slack'
+  //   'github'
+
+  name          String?
+  // Human label for named connections, such as "Production DB".
+
+  authType      String
+  // 'connection_string' for database
+  // 'api_key' for Slack/GitHub
+  // 'oauth2' for future OAuth integrations
+
+  encryptedData String   @db.Text
+  // AES-256-GCM encrypted JSON blob. Contents depend on authType:
+  //   connection_string: { "connectionString": "postgresql://..." }
+  //   api_key:           { "apiKey": "xoxb-..." }
+  //   oauth2:            { "accessToken": "...", "refreshToken": "...", "expiresAt": "ISO8601" }
+
+  maskedHint    String?
+  // Human-readable hint with password stripped, shown in UI only.
+  // Example: "postgresql://readonly_user:****@db.example.com:5432/mydb"
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, integrationId])
+  @@index([userId])
+  @@map("user_integration_credentials")
 }
 
 model Account {
