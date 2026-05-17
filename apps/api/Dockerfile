@@ -26,10 +26,10 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/types/package.json ./packages/types/package.json
 COPY apps/api/package.json ./apps/api/package.json
-RUN pnpm install --frozen-lockfile --prod
 
-# Prisma client (pnpm hoists it to root node_modules)
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+# Copy node_modules from build so the generated Prisma client is included
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
 
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY apps/api/prisma ./apps/api/prisma
