@@ -212,7 +212,7 @@ Recommended free / low-cost production setup:
 | Database | [Neon](https://neon.tech) — PostgreSQL serverless |
 | Cache / Queue | [Upstash](https://upstash.com) — Redis serverless |
 
-See [docs/deployment-options.md](docs/deployment-options.md) for step-by-step instructions.
+See [docs/deployment.md](docs/deployment.md) for the production runbook (deploy, rollback, secrets, incidents).
 
 ---
 
