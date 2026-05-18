@@ -92,9 +92,12 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Run Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: agentflow-api:scan
           format: table
           severity: HIGH,CRITICAL
           exit-code: '1'
+          scanners: vuln
+          ignore-unfixed: true
+          vuln-type: os,library

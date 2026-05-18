@@ -1,5 +1,6 @@
 FROM node:20.18-bookworm-slim AS base
 RUN apt-get update -y \
+  && apt-get upgrade -y \
   && apt-get install -y --no-install-recommends ca-certificates openssl \
   && rm -rf /var/lib/apt/lists/*
 RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@10.33.2 --activate
