@@ -48,14 +48,11 @@ jobs:
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H 134.209.221.190 >> ~/.ssh/known_hosts
+          echo "Key fingerprint:"
+          ssh-keygen -lf ~/.ssh/deploy_key || echo "Key parse failed"
 
       - name: Deploy to droplet
-        run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@134.209.221.190 \
-            "cd ~/apps/agentflow && \
-             docker compose -f docker-compose.prod.yml pull && \
-             docker compose -f docker-compose.prod.yml up -d --force-recreate api && \
-             docker image prune -f"
+        run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@134.209.221.190 "cd ~/apps/agentflow && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d --force-recreate api && docker image prune -f"
