@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import type { JsonValue } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -65,7 +64,7 @@ export async function GET() {
       data: {
         userId,
         name: DEFAULT_WORKFLOW_NAME,
-        canvasJson: DEFAULT_CANVAS_JSON as unknown as JsonValue,
+        canvasJson: DEFAULT_CANVAS_JSON as never,
       },
     }));
 
@@ -104,14 +103,14 @@ export async function PUT(request: Request) {
         where: { id: existing.id },
         data: {
           name,
-          canvasJson: body.canvasJson as unknown as JsonValue,
+          canvasJson: body.canvasJson as never,
         },
       })
     : await prisma.workflow.create({
         data: {
           userId,
           name,
-          canvasJson: body.canvasJson as unknown as JsonValue,
+          canvasJson: body.canvasJson as never,
         },
       });
 
