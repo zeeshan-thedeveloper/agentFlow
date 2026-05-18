@@ -41,5 +41,9 @@ EXPOSE 18001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://localhost:'+(process.env.PORT||18001)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
+RUN groupadd -r app && useradd -r -g app -d /app -s /usr/sbin/nologin app \
+  && chown -R app:app /app
+USER app
+
 WORKDIR /app/apps/api
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["node", "dist/main"]
