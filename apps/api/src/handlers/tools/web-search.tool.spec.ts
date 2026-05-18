@@ -11,31 +11,7 @@ type MockFetch = typeof fetch & {
   rejectWith: (error: Error) => void;
 };
 
-const originalEnv = {
-  BRAVE_SEARCH_API_KEY: process.env.BRAVE_SEARCH_API_KEY,
-  SERPER_API_KEY: process.env.SERPER_API_KEY,
-  TAVILY_API_KEY: process.env.TAVILY_API_KEY,
-};
-
 const originalFetch = globalThis.fetch;
-
-function restoreEnv(): void {
-  delete process.env.BRAVE_SEARCH_API_KEY;
-  delete process.env.SERPER_API_KEY;
-  delete process.env.TAVILY_API_KEY;
-
-  if (originalEnv.BRAVE_SEARCH_API_KEY !== undefined) {
-    process.env.BRAVE_SEARCH_API_KEY = originalEnv.BRAVE_SEARCH_API_KEY;
-  }
-
-  if (originalEnv.SERPER_API_KEY !== undefined) {
-    process.env.SERPER_API_KEY = originalEnv.SERPER_API_KEY;
-  }
-
-  if (originalEnv.TAVILY_API_KEY !== undefined) {
-    process.env.TAVILY_API_KEY = originalEnv.TAVILY_API_KEY;
-  }
-}
 
 function createResponse(body: unknown): Response {
   return {

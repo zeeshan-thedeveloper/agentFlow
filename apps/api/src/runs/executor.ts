@@ -55,7 +55,10 @@ function buildNodeParams(node: FlowNode, context: ExecutorContext): Record<strin
     };
   }
 
-  const { id, type, label, subtitle, x, y, params, ...canvasParams } = node;
+  const canvasParams = { ...(node as Record<string, unknown>) };
+  for (const key of ['id', 'type', 'label', 'subtitle', 'x', 'y', 'params']) {
+    delete canvasParams[key];
+  }
 
   // Current canvas nodes store config fields at the top level, not under params.
   return {
