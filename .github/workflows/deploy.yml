@@ -101,3 +101,20 @@ jobs:
             echo "No previous SHA recorded; skip rollback"
           fi
           exit 1
+
+      - name: Notify
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL not set; skipping notification"
+            exit 0
+          fi
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          SHA_SHORT="${SHA:0:7}"
+          STATUS="${{ job.status }}"
+          MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "deploy")
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"text\":\"Deploy ${STATUS} — \`${SHA_SHORT}\` — ${MSG}\"}" \
+            "$SLACK_WEBHOOK_URL"
