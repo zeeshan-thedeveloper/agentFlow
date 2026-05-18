@@ -19,10 +19,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '20.18'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -69,3 +71,30 @@ jobs:
           NEXT_PUBLIC_API_URL: http://localhost:3001
           GOOGLE_CLIENT_ID: placeholder
           GOOGLE_CLIENT_SECRET: placeholder
+
+  trivy:
+    name: Container vulnerability scan
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build API image for scan
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          load: true
+          tags: agentflow-api:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: agentflow-api:scan
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: '1'
