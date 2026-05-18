@@ -61,6 +61,17 @@ agentflow/
 
 ---
 
+## Local Setup
+
+Copy the example env files and fill in required values (generate secrets with `openssl rand -base64 32`):
+
+- API: [apps/api/.env.example](apps/api/.env.example) → `apps/api/.env`
+- Web: [apps/web/.env.local.example](apps/web/.env.local.example) → `apps/web/.env.local`
+
+`docker compose up` fails immediately if `NEXTAUTH_SECRET` or `API_KEY_ENCRYPTION_SECRET` are unset.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
