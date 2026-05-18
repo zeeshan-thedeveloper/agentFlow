@@ -1,14 +1,5 @@
 import { ScrapePageTool } from './scrape-page.tool';
 
-declare const describe: (name: string, fn: () => void) => void;
-declare const it: (name: string, fn: () => Promise<void> | void) => void;
-declare const beforeEach: (fn: () => void) => void;
-declare const afterEach: (fn: () => void) => void;
-declare const expect: (value: unknown) => {
-  toBe: (expected: unknown) => void;
-  toContain: (expected: string) => void;
-};
-
 type FetchCall = {
   input: string | URL | Request;
   init?: RequestInit;

@@ -1,14 +1,5 @@
 import { WebSearchTool } from './web-search.tool';
 
-declare const describe: (name: string, fn: () => void) => void;
-declare const it: (name: string, fn: () => Promise<void> | void) => void;
-declare const beforeEach: (fn: () => void) => void;
-declare const afterEach: (fn: () => void) => void;
-declare const expect: (value: unknown) => {
-  toBe: (expected: unknown) => void;
-  toContain: (expected: string) => void;
-};
-
 type FetchCall = {
   input: string | URL | Request;
   init?: RequestInit;
@@ -83,13 +74,15 @@ function useMockFetch(): MockFetch {
 
 describe('WebSearchTool', () => {
   beforeEach(() => {
+    process.env.BRAVE_SEARCH_API_KEY = '';
+    process.env.SERPER_API_KEY = '';
+    process.env.TAVILY_API_KEY = '';
     delete process.env.BRAVE_SEARCH_API_KEY;
     delete process.env.SERPER_API_KEY;
     delete process.env.TAVILY_API_KEY;
   });
 
   afterEach(() => {
-    restoreEnv();
     globalThis.fetch = originalFetch;
   });
 
@@ -142,8 +135,13 @@ describe('WebSearchTool', () => {
   });
 
   it('returns the no key configured error string when no env vars are set', async () => {
-    const result = await new WebSearchTool().run({ query: 'missing key' });
+    const tool = new WebSearchTool();
+    jest.spyOn(tool as unknown as { resolveProviderConfig: () => Promise<null> }, 'resolveProviderConfig').mockResolvedValue(null);
+    const fetchMock = useMockFetch();
 
+    const result = await tool.run({ query: 'missing key' });
+
+    expect(fetchMock.calls).toHaveLength(0);
     expect(result).toBe(
       'Error: Web Search requires a Tavily API key. Add one in Settings → Search.',
     );
