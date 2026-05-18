@@ -1,7 +1,9 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
 
 concurrency:
@@ -15,6 +17,7 @@ env:
 jobs:
   deploy:
     name: Build & Deploy API
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,6 +25,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -39,7 +44,9 @@ jobs:
           context: .
           file: apps/api/Dockerfile
           push: true
-          tags: ${{ env.IMAGE_NAME }}:latest
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:sha-${{ github.event.workflow_run.head_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -50,9 +57,64 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s' "$SSH_KEY" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H 134.209.221.190 >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.DROPLET_HOST }} >> ~/.ssh/known_hosts
           echo "Key fingerprint:"
           ssh-keygen -lf ~/.ssh/deploy_key || echo "Key parse failed"
 
+      - name: Capture last good SHA
+        id: rollback
+        run: |
+          LAST_GOOD=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} \
+            "cat ~/apps/agentflow/last-good-sha.txt 2>/dev/null || echo ''")
+          echo "sha=${LAST_GOOD}" >> "$GITHUB_OUTPUT"
+
+      - name: Run database migrations
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} \
+            "docker run --rm --env-file ~/apps/agentflow/.env \
+             ghcr.io/zeeshan-thedeveloper/agentflow-api:sha-${{ github.event.workflow_run.head_sha }} \
+             npx prisma migrate deploy"
+
       - name: Deploy to droplet
-        run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@134.209.221.190 "cd ~/apps/agentflow && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d --force-recreate api && docker image prune -f"
+        run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} "cd ~/apps/agentflow && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d --force-recreate api && docker image prune -f"
+
+      - name: Verify deploy
+        run: |
+          DEPLOY_SHA="${{ github.event.workflow_run.head_sha }}"
+          for i in $(seq 1 12); do
+            if curl -fsS https://agentflow-api.zeeshanahmed.app/health > /dev/null; then
+              echo "Health check passed (attempt $i)"
+              ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} \
+                "echo '${DEPLOY_SHA}' > ~/apps/agentflow/last-good-sha.txt"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Health check failed after 60s, rolling back"
+          PREV="${{ steps.rollback.outputs.sha }}"
+          if [ -n "$PREV" ]; then
+            ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} \
+              "docker pull ghcr.io/zeeshan-thedeveloper/agentflow-api:sha-${PREV} && \
+               docker tag ghcr.io/zeeshan-thedeveloper/agentflow-api:sha-${PREV} ghcr.io/zeeshan-thedeveloper/agentflow-api:latest && \
+               cd ~/apps/agentflow && docker compose -f docker-compose.prod.yml up -d --force-recreate api"
+          else
+            echo "No previous SHA recorded; skip rollback"
+          fi
+          exit 1
+
+      - name: Notify
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL not set; skipping notification"
+            exit 0
+          fi
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          SHA_SHORT="${SHA:0:7}"
+          STATUS="${{ job.status }}"
+          MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "deploy")
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"text\":\"Deploy ${STATUS} — \`${SHA_SHORT}\` — ${MSG}\"}" \
+            "$SLACK_WEBHOOK_URL"

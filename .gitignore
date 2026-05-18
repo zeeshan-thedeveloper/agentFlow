@@ -7,6 +7,7 @@ PLAN.md
 TASKS.md
 docs/deployment-options.md
 docs/tasks/
+docs/pipeline-hardening-tasks.md
 
 # ─── Node.js ──────────────────────────────────────────────────────────────────
 node_modules/

@@ -1,8 +1,9 @@
-FROM node:20-bookworm-slim AS base
+FROM node:20.18-bookworm-slim AS base
 RUN apt-get update -y \
+  && apt-get upgrade -y \
   && apt-get install -y --no-install-recommends ca-certificates openssl \
   && rm -rf /var/lib/apt/lists/*
-RUN corepack enable
+RUN npm install -g corepack@latest && corepack enable && corepack prepare pnpm@10.33.2 --activate
 
 # ── deps ──────────────────────────────────────────────────────────────────────
 FROM base AS deps
@@ -19,24 +20,34 @@ COPY apps/api ./apps/api
 RUN pnpm --filter @agentflow/api exec prisma generate
 RUN pnpm --filter @agentflow/api build
 
+# ── production deps only (drops Nest CLI, Jest, etc.) ─────────────────────────
+FROM build AS prod
+WORKDIR /app
+ENV NODE_ENV=production
+ENV CI=true
+RUN pnpm prune --prod
+
 # ── runtime ───────────────────────────────────────────────────────────────────
 FROM base AS runtime
 WORKDIR /app
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY packages/types/package.json ./packages/types/package.json
-COPY apps/api/package.json ./apps/api/package.json
-
-# Copy node_modules from build so the generated Prisma client is included
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
-
-COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=prod /app/node_modules ./node_modules
+COPY --from=prod /app/packages/types ./packages/types
+COPY --from=prod /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=prod /app/apps/api/dist ./apps/api/dist
 COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/package.json ./apps/api/package.json
 
 ENV NODE_ENV=production
 ENV PORT=18001
 EXPOSE 18001
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://localhost:'+(process.env.PORT||18001)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+RUN groupadd -r app && useradd -r -g app -d /app -s /usr/sbin/nologin app \
+  && chown -R app:app /app
+USER app
+
 WORKDIR /app/apps/api
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["node", "dist/main"]
