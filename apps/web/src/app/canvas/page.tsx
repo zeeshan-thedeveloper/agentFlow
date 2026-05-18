@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import AgentFlowCanvas from '@/components/canvas/AgentFlowCanvas';
 import { authOptions } from '@/lib/auth';
 import { getServerSession } from 'next-auth';
