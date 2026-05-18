@@ -1,8 +1,10 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { validateEnv } from './config/env.validator';
 
 async function bootstrap(): Promise<void> {
+  validateEnv();
   const app = await NestFactory.create(AppModule);
   app.enableCors();
 
