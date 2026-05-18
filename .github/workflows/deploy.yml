@@ -68,6 +68,13 @@ jobs:
             "cat ~/apps/agentflow/last-good-sha.txt 2>/dev/null || echo ''")
           echo "sha=${LAST_GOOD}" >> "$GITHUB_OUTPUT"
 
+      - name: Run database migrations
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} \
+            "docker run --rm --env-file ~/apps/agentflow/.env \
+             ghcr.io/zeeshan-thedeveloper/agentflow-api:sha-${{ github.event.workflow_run.head_sha }} \
+             npx prisma migrate deploy"
+
       - name: Deploy to droplet
         run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} "cd ~/apps/agentflow && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d --force-recreate api && docker image prune -f"
 
