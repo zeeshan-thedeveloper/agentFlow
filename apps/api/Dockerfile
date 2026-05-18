@@ -26,7 +26,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN pnpm --filter @agentflow/api deploy --prod --legacy /bundle/api \
   && cp -r apps/api/dist /bundle/api/dist \
-  && cp -r apps/api/prisma /bundle/api/prisma
+  && cp -r apps/api/prisma /bundle/api/prisma \
+  && cd /bundle/api && npx prisma generate
 
 # ── runtime ───────────────────────────────────────────────────────────────────
 FROM base AS runtime
