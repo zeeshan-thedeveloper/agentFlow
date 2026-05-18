@@ -38,6 +38,10 @@ jobs:
         working-directory: apps/api
         run: pnpm exec tsc --noEmit
 
+      - name: Test (API)
+        working-directory: apps/api
+        run: pnpm test
+
       - name: Lint (Web)
         working-directory: apps/web
         run: pnpm lint
