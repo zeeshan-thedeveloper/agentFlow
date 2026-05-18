@@ -20,20 +20,23 @@ COPY apps/api ./apps/api
 RUN pnpm --filter @agentflow/api exec prisma generate
 RUN pnpm --filter @agentflow/api build
 
+# ── production deps only (drops Nest CLI, Jest, etc.) ─────────────────────────
+FROM build AS prod
+WORKDIR /app
+ENV NODE_ENV=production
+ENV CI=true
+RUN pnpm prune --prod
+
 # ── runtime ───────────────────────────────────────────────────────────────────
 FROM base AS runtime
 WORKDIR /app
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY packages/types/package.json ./packages/types/package.json
-COPY apps/api/package.json ./apps/api/package.json
-
-# Copy node_modules from build so the generated Prisma client is included
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
-
-COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=prod /app/node_modules ./node_modules
+COPY --from=prod /app/packages/types ./packages/types
+COPY --from=prod /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=prod /app/apps/api/dist ./apps/api/dist
 COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/package.json ./apps/api/package.json
 
 ENV NODE_ENV=production
 ENV PORT=18001

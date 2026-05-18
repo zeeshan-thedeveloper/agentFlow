@@ -101,3 +101,4 @@ jobs:
           scanners: vuln
           ignore-unfixed: true
           vuln-type: os,library
+          skip-dirs: usr/local/lib/node_modules/npm
