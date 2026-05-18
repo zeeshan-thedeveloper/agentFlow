@@ -20,23 +20,19 @@ COPY apps/api ./apps/api
 RUN pnpm --filter @agentflow/api exec prisma generate
 RUN pnpm --filter @agentflow/api build
 
-# ── production deps only (drops Nest CLI, Jest, etc.) ─────────────────────────
-FROM build AS prod
+# ── portable production bundle (correct node_modules layout for node dist/main) ─
+FROM build AS bundle
 WORKDIR /app
 ENV NODE_ENV=production
-ENV CI=true
-RUN pnpm prune --prod
+RUN pnpm --filter @agentflow/api deploy --prod --legacy /bundle/api \
+  && cp -r apps/api/dist /bundle/api/dist \
+  && cp -r apps/api/prisma /bundle/api/prisma
 
 # ── runtime ───────────────────────────────────────────────────────────────────
 FROM base AS runtime
-WORKDIR /app
+WORKDIR /bundle/api
 
-COPY --from=prod /app/node_modules ./node_modules
-COPY --from=prod /app/packages/types ./packages/types
-COPY --from=prod /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=prod /app/apps/api/dist ./apps/api/dist
-COPY apps/api/prisma ./apps/api/prisma
-COPY apps/api/package.json ./apps/api/package.json
+COPY --from=bundle /bundle/api ./
 
 ENV NODE_ENV=production
 ENV PORT=18001
@@ -45,9 +41,8 @@ EXPOSE 18001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://localhost:'+(process.env.PORT||18001)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-RUN groupadd -r app && useradd -r -g app -d /app -s /usr/sbin/nologin app \
-  && chown -R app:app /app
+RUN groupadd -r app && useradd -r -g app -d /bundle/api -s /usr/sbin/nologin app \
+  && chown -R app:app /bundle/api
 USER app
 
-WORKDIR /app/apps/api
-CMD ["node", "dist/main"]
+CMD ["node", "dist/main.js"]
