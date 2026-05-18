@@ -50,41 +50,64 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Validate deploy secrets
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "$DROPLET_HOST" ]; then
+            echo "::error::Missing GitHub secret DROPLET_HOST (droplet public IP, e.g. 134.209.221.190)"
+            exit 1
+          fi
+          if [ -z "$SSH_KEY" ]; then
+            echo "::error::Missing GitHub secret SSH_PRIVATE_KEY (base64-encoded private key)"
+            exit 1
+          fi
+
       - name: Setup SSH
         env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
           printf '%s' "$SSH_KEY" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.DROPLET_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts
           echo "Key fingerprint:"
           ssh-keygen -lf ~/.ssh/deploy_key || echo "Key parse failed"
 
       - name: Capture last good SHA
         id: rollback
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
         run: |
-          LAST_GOOD=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} \
+          LAST_GOOD=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "zeesh@${DROPLET_HOST}" \
             "cat ~/apps/agentflow/last-good-sha.txt 2>/dev/null || echo ''")
           echo "sha=${LAST_GOOD}" >> "$GITHUB_OUTPUT"
 
       - name: Run database migrations
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} \
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "zeesh@${DROPLET_HOST}" \
             "docker run --rm --env-file ~/apps/agentflow/.env \
              ghcr.io/zeeshan-thedeveloper/agentflow-api:sha-${{ github.event.workflow_run.head_sha }} \
              npx prisma migrate deploy"
 
       - name: Deploy to droplet
-        run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} "cd ~/apps/agentflow && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d --force-recreate api && docker image prune -f"
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+        run: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "zeesh@${DROPLET_HOST}" "cd ~/apps/agentflow && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d --force-recreate api && docker image prune -f"
 
       - name: Verify deploy
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
         run: |
           DEPLOY_SHA="${{ github.event.workflow_run.head_sha }}"
           for i in $(seq 1 12); do
             if curl -fsS https://agentflow-api.zeeshanahmed.app/health > /dev/null; then
               echo "Health check passed (attempt $i)"
-              ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} \
+              ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "zeesh@${DROPLET_HOST}" \
                 "echo '${DEPLOY_SHA}' > ~/apps/agentflow/last-good-sha.txt"
               exit 0
             fi
@@ -93,7 +116,7 @@ jobs:
           echo "Health check failed after 60s, rolling back"
           PREV="${{ steps.rollback.outputs.sha }}"
           if [ -n "$PREV" ]; then
-            ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@${{ secrets.DROPLET_HOST }} \
+            ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "zeesh@${DROPLET_HOST}" \
               "docker pull ghcr.io/zeeshan-thedeveloper/agentflow-api:sha-${PREV} && \
                docker tag ghcr.io/zeeshan-thedeveloper/agentflow-api:sha-${PREV} ghcr.io/zeeshan-thedeveloper/agentflow-api:latest && \
                cd ~/apps/agentflow && docker compose -f docker-compose.prod.yml up -d --force-recreate api"
