@@ -54,23 +54,10 @@ jobs:
 
       - name: Deploy to droplet
         env:
-          DATABASE_URL: ${{ secrets.AGENTFLOW_DATABASE_URL }}
-          NEXTAUTH_SECRET: ${{ secrets.AGENTFLOW_NEXTAUTH_SECRET }}
-          API_KEY_ENCRYPTION_SECRET: ${{ secrets.AGENTFLOW_API_KEY_ENCRYPTION_SECRET }}
           DROPLET_IP: ${{ secrets.DROPLET_IP }}
         run: |
-          {
-            echo "DATABASE_URL=$DATABASE_URL"
-            echo "NEXTAUTH_SECRET=$NEXTAUTH_SECRET"
-            echo "API_KEY_ENCRYPTION_SECRET=$API_KEY_ENCRYPTION_SECRET"
-          } > /tmp/agentflow.env
-
-          scp -i ~/.ssh/deploy_key /tmp/agentflow.env zeesh@$DROPLET_IP:~/apps/agentflow/.env
-
-          ssh -i ~/.ssh/deploy_key zeesh@$DROPLET_IP "
-            set -e
-            cd ~/apps/agentflow
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --force-recreate api
-            docker image prune -f
-          "
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no zeesh@$DROPLET_IP \
+            "cd ~/apps/agentflow && \
+             docker compose -f docker-compose.prod.yml pull && \
+             docker compose -f docker-compose.prod.yml up -d --force-recreate api && \
+             docker image prune -f"
