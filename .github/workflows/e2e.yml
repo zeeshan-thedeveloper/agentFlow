@@ -1,0 +1,49 @@
+name: E2E
+
+on:
+  workflow_run:
+    workflows: ['Deploy']
+    types: [completed]
+    branches: [main]
+
+jobs:
+  e2e:
+    name: Production smoke tests
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: e2e
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run smoke tests
+        working-directory: e2e
+        run: pnpm test
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then exit 0; fi
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          SHA_SHORT="${SHA:0:7}"
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"text\":\"E2E failed — \`${SHA_SHORT}\` — production smoke tests\"}" \
+            "$SLACK_WEBHOOK_URL"
