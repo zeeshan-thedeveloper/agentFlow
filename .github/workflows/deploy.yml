@@ -43,20 +43,27 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.DROPLET_IP }} >> ~/.ssh/known_hosts
+
       - name: Deploy to droplet
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DROPLET_IP }}
-          username: zeesh
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
+        run: |
+          cat > /tmp/agentflow.env << 'EOF'
+          DATABASE_URL=${{ secrets.AGENTFLOW_DATABASE_URL }}
+          NEXTAUTH_SECRET=${{ secrets.AGENTFLOW_NEXTAUTH_SECRET }}
+          API_KEY_ENCRYPTION_SECRET=${{ secrets.AGENTFLOW_API_KEY_ENCRYPTION_SECRET }}
+          EOF
+
+          scp -i ~/.ssh/deploy_key /tmp/agentflow.env zeesh@${{ secrets.DROPLET_IP }}:~/apps/agentflow/.env
+
+          ssh -i ~/.ssh/deploy_key zeesh@${{ secrets.DROPLET_IP }} "
             set -e
             cd ~/apps/agentflow
-
-            echo "DATABASE_URL=${{ secrets.AGENTFLOW_DATABASE_URL }}" > .env
-            echo "NEXTAUTH_SECRET=${{ secrets.AGENTFLOW_NEXTAUTH_SECRET }}" >> .env
-            echo "API_KEY_ENCRYPTION_SECRET=${{ secrets.AGENTFLOW_API_KEY_ENCRYPTION_SECRET }}" >> .env
-
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --force-recreate api
             docker image prune -f
+          "
