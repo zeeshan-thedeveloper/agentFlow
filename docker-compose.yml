@@ -63,8 +63,8 @@ services:
       PORT: 18001
       DATABASE_URL: postgresql://agent_user:agent_pass@postgres:5432/agentflow
       REDIS_URL: redis://redis:6379
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-uwxfYwnAWLwQgHwSfyYCnoBIVop2PV269LVm90qhcz4=}
-      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-uwxfYwnAWLwQgHwSfyYCnoBIVop2PV269LVm90qhcz4=}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required, generate via "openssl rand -base64 32"}
+      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:?API_KEY_ENCRYPTION_SECRET is required, generate via "openssl rand -base64 32"}
     ports:
       - '18001:18001'
     volumes:
@@ -97,7 +97,8 @@ services:
       INTERNAL_API_URL: http://api:18001
       NEXT_PUBLIC_API_URL: http://localhost:18001
       NEXTAUTH_URL: http://localhost:18100
-      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:-uwxfYwnAWLwQgHwSfyYCnoBIVop2PV269LVm90qhcz4=}
+      API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET:?API_KEY_ENCRYPTION_SECRET is required, generate via "openssl rand -base64 32"}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required, generate via "openssl rand -base64 32"}
       WATCHPACK_POLLING: 'true'
     ports:
       - '18100:18100'
