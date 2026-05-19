@@ -3,19 +3,13 @@ export const dynamic = 'force-dynamic';
 import { getServerSession } from 'next-auth';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
+import { authOptions, hasGitHubOAuth, hasGoogleOAuth } from '@/lib/auth';
 import { AgentFlowLogo } from '@/components/login/AgentFlowLogo';
 import { LoginDecoration } from '@/components/login/LoginDecoration';
 import { LandingThemeToggle } from '@/components/landing/LandingThemeToggle';
 import GoogleSignInButton from './GoogleSignInButton';
+import GitHubSignInButton from './GitHubSignInButton';
 import '../landing.css';
-
-function hasGoogleOAuth() {
-  return Boolean(process.env.GOOGLE_CLIENT_ID) &&
-    Boolean(process.env.GOOGLE_CLIENT_SECRET) &&
-    process.env.GOOGLE_CLIENT_ID !== 'replace-with-google-oauth-client-id' &&
-    process.env.GOOGLE_CLIENT_SECRET !== 'replace-with-google-oauth-client-secret';
-}
 
 const highlights = [
   'Visual canvas editor',
@@ -26,6 +20,8 @@ const highlights = [
 export default async function LoginPage() {
   const session = await getServerSession(authOptions);
   const useGoogle = hasGoogleOAuth();
+  const useGitHub = hasGitHubOAuth();
+  const useOAuth = useGoogle || useGitHub;
 
   if (session?.user) {
     redirect('/canvas');
@@ -87,16 +83,19 @@ export default async function LoginPage() {
                 Sign in to your workspace
               </h2>
               <p className="l-text-muted mt-3 text-sm leading-6">
-                {useGoogle
-                  ? 'Continue with Google to access your canvas, workflows, and team settings.'
+                {useOAuth
+                  ? 'Continue with your account to access your canvas, workflows, and team settings.'
                   : 'Development mode — sign in without OAuth to explore the app shell.'}
               </p>
 
               <div className="mt-8 space-y-4">
-                <GoogleSignInButton
-                  providerId={useGoogle ? 'google' : 'demo'}
-                  label={useGoogle ? 'Continue with Google' : 'Continue in dev mode'}
-                />
+                {useGoogle && (
+                  <GoogleSignInButton providerId="google" label="Continue with Google" />
+                )}
+                {useGitHub && <GitHubSignInButton />}
+                {!useOAuth && (
+                  <GoogleSignInButton providerId="demo" label="Continue in dev mode" />
+                )}
 
                 <p className="l-text-faint text-center text-xs leading-5">
                   Free to start · No credit card required
