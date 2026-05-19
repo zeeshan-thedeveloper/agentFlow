@@ -1,14 +1,29 @@
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+import GitHubProvider from 'next-auth/providers/github';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from './prisma';
 
-const hasGoogleOAuth =
-  Boolean(process.env.GOOGLE_CLIENT_ID) &&
-  Boolean(process.env.GOOGLE_CLIENT_SECRET) &&
-  process.env.GOOGLE_CLIENT_ID !== 'replace-with-google-oauth-client-id' &&
-  process.env.GOOGLE_CLIENT_SECRET !== 'replace-with-google-oauth-client-secret';
+export function hasGoogleOAuth(): boolean {
+  return (
+    Boolean(process.env.GOOGLE_CLIENT_ID) &&
+    Boolean(process.env.GOOGLE_CLIENT_SECRET) &&
+    process.env.GOOGLE_CLIENT_ID !== 'replace-with-google-oauth-client-id' &&
+    process.env.GOOGLE_CLIENT_SECRET !== 'replace-with-google-oauth-client-secret'
+  );
+}
+
+export function hasGitHubOAuth(): boolean {
+  return (
+    Boolean(process.env.GITHUB_CLIENT_ID) &&
+    Boolean(process.env.GITHUB_CLIENT_SECRET) &&
+    process.env.GITHUB_CLIENT_ID !== 'replace-with-github-oauth-client-id' &&
+    process.env.GITHUB_CLIENT_SECRET !== 'replace-with-github-oauth-client-secret'
+  );
+}
+
+const hasAnyOAuth = hasGoogleOAuth() || hasGitHubOAuth();
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -16,14 +31,24 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   providers: [
-    ...(hasGoogleOAuth
+    ...(hasGoogleOAuth()
       ? [
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID ?? '',
             clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
           }),
         ]
-      : [
+      : []),
+    ...(hasGitHubOAuth()
+      ? [
+          GitHubProvider({
+            clientId: process.env.GITHUB_CLIENT_ID ?? '',
+            clientSecret: process.env.GITHUB_CLIENT_SECRET ?? '',
+          }),
+        ]
+      : []),
+    ...(!hasAnyOAuth
+      ? [
           CredentialsProvider({
             id: 'demo',
             name: 'Demo',
@@ -43,7 +68,8 @@ export const authOptions: NextAuthOptions = {
               });
             },
           }),
-        ]),
+        ]
+      : []),
   ],
   pages: {
     signIn: '/login',
