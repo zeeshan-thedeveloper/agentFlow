@@ -68,12 +68,17 @@
 
 html,
 body {
-  height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  min-height: 100%;
   background: var(--app-bg);
   color: var(--text-primary);
+}
+
+html.canvas-scroll-lock,
+html.canvas-scroll-lock body {
+  height: 100%;
+  overflow: hidden;
 }
 
 /* ── Canvas animations ─────────────────────────────────────────────────────── */
