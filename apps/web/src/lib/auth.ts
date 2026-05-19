@@ -25,6 +25,10 @@ export function hasGitHubOAuth(): boolean {
 
 const hasAnyOAuth = hasGoogleOAuth() || hasGitHubOAuth();
 
+const oauthProviderOptions = {
+  allowDangerousEmailAccountLinking: true,
+} as const;
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
@@ -34,6 +38,7 @@ export const authOptions: NextAuthOptions = {
     ...(hasGoogleOAuth()
       ? [
           GoogleProvider({
+            ...oauthProviderOptions,
             clientId: process.env.GOOGLE_CLIENT_ID ?? '',
             clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
           }),
@@ -42,8 +47,10 @@ export const authOptions: NextAuthOptions = {
     ...(hasGitHubOAuth()
       ? [
           GitHubProvider({
+            ...oauthProviderOptions,
             clientId: process.env.GITHUB_CLIENT_ID ?? '',
             clientSecret: process.env.GITHUB_CLIENT_SECRET ?? '',
+            authorization: { params: { scope: 'read:user user:email' } },
           }),
         ]
       : []),

@@ -17,11 +17,26 @@ const highlights = [
   'Built-in observability',
 ];
 
-export default async function LoginPage() {
+const authErrors: Record<string, string> = {
+  OAuthAccountNotLinked:
+    'This email is already linked to another sign-in method. Use the provider you signed up with, or contact support.',
+  OAuthSignin: 'Could not start sign-in. Please try again.',
+  OAuthCallback: 'Sign-in failed during authorization. Please try again.',
+  Default: 'Sign-in failed. Please try again.',
+};
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: { error?: string };
+}) {
   const session = await getServerSession(authOptions);
   const useGoogle = hasGoogleOAuth();
   const useGitHub = hasGitHubOAuth();
   const useOAuth = useGoogle || useGitHub;
+  const authError = searchParams?.error
+    ? authErrors[searchParams.error] ?? authErrors.Default
+    : null;
 
   if (session?.user) {
     redirect('/canvas');
@@ -87,6 +102,12 @@ export default async function LoginPage() {
                   ? 'Continue with your account to access your canvas, workflows, and team settings.'
                   : 'Development mode — sign in without OAuth to explore the app shell.'}
               </p>
+
+              {authError && (
+                <p className="mt-4 rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  {authError}
+                </p>
+              )}
 
               <div className="mt-8 space-y-4">
                 {useGoogle && (
