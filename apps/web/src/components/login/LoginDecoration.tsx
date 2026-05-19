@@ -10,19 +10,19 @@ function MiniNode({
   return (
     <div className={`node absolute w-36 p-3 shadow-glow-sm ${className}`}>
       <div className="mb-2 flex items-center justify-between">
-        <span className="rounded-md bg-white/5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-white/[0.45]">
+        <span className="l-text-faint l-surface rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em]">
           {label}
         </span>
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
       </div>
-      <div className="text-xs font-bold text-white">{title}</div>
+      <div className="l-text text-xs font-bold">{title}</div>
     </div>
   );
 }
 
 export function LoginDecoration() {
   return (
-    <div className="relative mt-10 h-56 overflow-hidden rounded-2xl border border-white/[0.06] bg-ink-950/80 dot-bg">
+    <div className="l-canvas-bg dot-bg relative mt-10 h-56 overflow-hidden rounded-2xl border border-[var(--border-subtle)]">
       <svg className="absolute inset-0 h-full w-full" viewBox="0 0 480 224" fill="none" aria-hidden="true">
         <defs>
           <linearGradient id="loginEdgeGrad" x1="80" y1="80" x2="400" y2="140" gradientUnits="userSpaceOnUse">
@@ -48,9 +48,9 @@ export function LoginDecoration() {
       <MiniNode className="node-trigger left-[6%] top-[22%]" label="Trigger" title="Webhook" />
       <MiniNode className="node-agent left-[38%] top-[38%]" label="Agent" title="Triage" />
       <MiniNode className="node-output right-[6%] top-[22%]" label="Output" title="Response" />
-      <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 backdrop-blur">
+      <div className="l-overlay absolute bottom-3 left-3 flex items-center gap-2 rounded-lg px-2.5 py-1.5 backdrop-blur">
         <span className="pulse-dot" />
-        <span className="text-[10px] font-medium text-white/50">3 nodes · 1.2s</span>
+        <span className="l-text-faint text-[10px] font-medium">3 nodes · 1.2s</span>
       </div>
     </div>
   );

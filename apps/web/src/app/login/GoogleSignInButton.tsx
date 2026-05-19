@@ -12,7 +12,7 @@ export default function GoogleSignInButton({ providerId, label }: GoogleSignInBu
     <button
       type="button"
       onClick={() => signIn(providerId, { callbackUrl: '/canvas' })}
-      className="group flex w-full min-h-[46px] items-center justify-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.06]"
+      className="landing-signin-btn"
     >
       {providerId === 'google' ? (
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -34,14 +34,14 @@ export default function GoogleSignInButton({ providerId, label }: GoogleSignInBu
           />
         </svg>
       ) : (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true" className="l-accent-violet">
           <path
             d="M9 2.5L14.5 5.5V12.5L9 15.5L3.5 12.5V5.5L9 2.5Z"
-            stroke="#a78bfa"
+            stroke="currentColor"
             strokeWidth="1.4"
             strokeLinejoin="round"
           />
-          <path d="M9 8v4M9 6.5v.5" stroke="#a78bfa" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M9 8v4M9 6.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
       )}
       {label}

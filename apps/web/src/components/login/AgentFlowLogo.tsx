@@ -4,7 +4,7 @@ export function AgentFlowLogo({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
       <svg width={size} height={size} viewBox="0 0 34 34" fill="none" aria-hidden="true">
-        <rect width="34" height="34" rx="10" fill="#111119" />
+        <rect width="34" height="34" rx="10" className="landing-logo-bg" />
         <path d="M11 17H23" stroke="url(#logoGradLogin)" strokeWidth="2.4" strokeLinecap="round" />
         <circle cx="10" cy="17" r="4.2" fill="#22d3ee" />
         <circle cx="24" cy="17" r="4.2" fill="#8b5cf6" />
@@ -15,7 +15,7 @@ export function AgentFlowLogo({ compact = false }: { compact?: boolean }) {
           </linearGradient>
         </defs>
       </svg>
-      <span className={`font-bold tracking-tight text-white ${compact ? 'text-base' : 'text-lg'}`}>AgentFlow</span>
+      <span className={`l-text font-bold tracking-tight ${compact ? 'text-base' : 'text-lg'}`}>AgentFlow</span>
     </div>
   );
 }
