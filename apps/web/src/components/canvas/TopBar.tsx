@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { signOut } from 'next-auth/react';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -224,6 +225,46 @@ export default function TopBar({ name, setName, runState, onRun, saveState, onSa
           </svg>
           Keys
         </button>
+
+        <Link
+          href="/settings"
+          aria-label="Settings"
+          title="Settings"
+          style={{
+            height: 30,
+            padding: '0 10px',
+            borderRadius: 7,
+            background: 'transparent',
+            border: '1px solid var(--border-strong)',
+            color: 'var(--text-muted)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+            transition: 'all 0.15s',
+            fontFamily: 'inherit',
+            fontSize: 12,
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path
+              d="M7 9.2a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4Z"
+              stroke="currentColor"
+              strokeWidth="1.2"
+            />
+            <path
+              d="M11.1 8.4c.1-.4.1-.8 0-1.2l1.2-.9a.7.7 0 0 0 .2-.9l-1.1-1.9a.7.7 0 0 0-.8-.3l-1.4.5a4.5 4.5 0 0 0-1-.6l-.2-1.5A.7.7 0 0 0 8.4 2H5.6a.7.7 0 0 0-.7.6l-.2 1.5c-.4.2-.7.4-1 .6l-1.4-.5a.7.7 0 0 0-.8.3L.4 6.4a.7.7 0 0 0 .2.9l1.2.9c-.1.4-.1.8 0 1.2l-1.2.9a.7.7 0 0 0-.2.9l1.1 1.9c.2.3.5.4.8.3l1.4-.5c.3.2.6.4 1 .6l.2 1.5c.1.3.4.6.7.6h2.8c.4 0 .7-.3.7-.6l.2-1.5c.4-.2.7-.4 1-.6l1.4.5c.3.1.6 0 .8-.3l1.1-1.9a.7.7 0 0 0-.2-.9l-1.2-.9Z"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Settings
+        </Link>
 
         <div style={{ width: 1, height: 24, background: 'var(--border-subtle)', margin: '0 2px' }} />
 
