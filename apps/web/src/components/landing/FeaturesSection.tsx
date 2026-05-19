@@ -36,19 +36,19 @@ export function FeaturesSection() {
     <section id="features" className="relative px-5 py-24 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="reveal max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-[0.24em] text-cyan-300">Features</p>
-          <h2 className="mt-4 text-4xl font-black tracking-tight text-white sm:text-5xl">Everything teams need to ship reliable agents.</h2>
+          <p className="l-accent-cyan text-sm font-bold uppercase tracking-[0.24em]">Features</p>
+          <h2 className="l-text mt-4 text-4xl font-black tracking-tight sm:text-5xl">Everything teams need to ship reliable agents.</h2>
         </div>
         <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
             <article key={feature.title} className="reveal feature-card rounded-2xl p-6">
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] shadow-glow-sm">
+              <div className="l-surface mb-6 flex h-12 w-12 items-center justify-center rounded-xl shadow-glow-sm">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d={feature.icon} stroke="#a78bfa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d={feature.icon} stroke="currentColor" className="l-accent-violet" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-white">{feature.title}</h3>
-              <p className="mt-3 leading-7 text-white/[0.55]">{feature.description}</p>
+              <h3 className="l-text text-lg font-bold">{feature.title}</h3>
+              <p className="l-text-muted mt-3 leading-7">{feature.description}</p>
             </article>
           ))}
         </div>

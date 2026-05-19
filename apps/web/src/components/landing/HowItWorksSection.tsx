@@ -24,21 +24,21 @@ export function HowItWorksSection() {
     <section id="how-it-works" className="relative px-5 py-24 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="reveal mx-auto max-w-3xl text-center">
-          <p className="text-sm font-bold uppercase tracking-[0.24em] text-violet-400">How it Works</p>
-          <h2 className="mt-4 text-4xl font-black tracking-tight text-white sm:text-5xl">From idea to production in one flow.</h2>
+          <p className="l-accent-violet text-sm font-bold uppercase tracking-[0.24em]">How it Works</p>
+          <h2 className="l-text mt-4 text-4xl font-black tracking-tight sm:text-5xl">From idea to production in one flow.</h2>
         </div>
         <div className="mt-14 grid gap-5 lg:grid-cols-3">
           {steps.map((item) => (
-            <article key={item.step} className="reveal rounded-2xl border border-white/[0.08] bg-ink-850/80 p-6">
-              <div className="mb-6 flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/[0.15] font-mono text-sm font-bold text-violet-300">
+            <article key={item.step} className="reveal l-card rounded-2xl p-6">
+              <div className="mb-6 flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/[0.15] font-mono text-sm font-bold l-accent-violet">
                 {item.step}
               </div>
-              <h3 className="text-xl font-bold text-white">{item.title}</h3>
-              <p className="mt-3 min-h-[84px] leading-7 text-white/[0.55]">{item.description}</p>
-              <div className="mt-6 rounded-xl border border-white/[0.08] bg-black/30 p-4 font-mono text-xs text-white/[0.62]">
+              <h3 className="l-text text-xl font-bold">{item.title}</h3>
+              <p className="l-text-muted mt-3 min-h-[84px] leading-7">{item.description}</p>
+              <div className="landing-code-block mt-6 rounded-xl p-4 font-mono text-xs">
                 {item.code.map((line) => (
                   <div key={line} className="py-1">
-                    <span className="text-cyan-300">$</span> {line}
+                    <span className="l-accent-cyan">$</span> {line}
                   </div>
                 ))}
               </div>

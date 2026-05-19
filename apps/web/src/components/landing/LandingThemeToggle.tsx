@@ -10,7 +10,7 @@ export function LandingThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="landing-theme-toggle flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-white/70 transition hover:bg-white/[0.07] hover:text-white"
+      className="landing-theme-toggle"
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
