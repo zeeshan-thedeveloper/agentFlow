@@ -2,10 +2,7 @@ html:has(.landing-body) {
   scroll-behavior: smooth;
 }
 
-body:has(.landing-body) {
-  height: auto;
-  min-height: 100%;
-  overflow: auto;
+.landing-body {
   background:
     radial-gradient(1200px 600px at 80% -10%, rgba(124, 58, 237, 0.18), transparent 60%),
     radial-gradient(900px 500px at 10% 10%, rgba(34, 211, 238, 0.1), transparent 60%),
