@@ -1,8 +1,40 @@
 import { DatabaseIcon } from 'lucide-react';
-import type { LibraryNodeType, NodeTypeConfig } from './types';
+import type { HandleDef, LibraryNodeType, NodeType, NodeTypeConfig } from './types';
 
 export const NW = 200;
 export const NH = 74;
+
+export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
+  trigger: [
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-top', label: 'Data' },
+    { id: 'query-out', type: 'source', handleType: 'query', position: 'right-bottom', label: 'SQL', conditional: "inputType === 'sql'" },
+  ],
+  schema: [
+    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
+    { id: 'db-in', type: 'target', handleType: 'schema', position: 'left-bottom', label: 'DB' },
+    { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right', label: 'Schema' },
+  ],
+  agent: [
+    { id: 'data-in', type: 'target', handleType: 'data', position: 'left-top', label: 'Data' },
+    { id: 'schema-in', type: 'target', handleType: 'schema', position: 'left-bottom', label: 'Schema' },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right', label: 'Data' },
+  ],
+  database: [
+    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
+    { id: 'agent-in', type: 'target', handleType: 'query', position: 'left', label: 'Agent' },
+    { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right-top', label: 'Schema' },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-bottom', label: 'Data' },
+  ],
+  output: [
+    { id: 'data-in', type: 'target', handleType: 'data', position: 'left', label: 'Data' },
+  ],
+  integration: [
+    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
+    { id: 'agent-in', type: 'target', handleType: 'query', position: 'left', label: 'Agent' },
+    { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right-top', label: 'Schema' },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-bottom', label: 'Data' },
+  ],
+};
 
 export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
   trigger: {
@@ -75,6 +107,28 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
     lib: {
       desc: 'Query or write to PostgreSQL or MongoDB',
       options: ['Database query'],
+      category: 'integrations',
+    },
+  },
+  schema: {
+    label: 'Schema',
+    color: '#8B5CF6',
+    glowA: 'rgba(139,92,246,0.25)',
+    glowB: 'rgba(139,92,246,0.08)',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path
+          d="M2.5 4.5h11v8h-11v-8zM5 2.5h6M5 6.5h6M5 9.5h4"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+    lib: {
+      desc: 'Introspect a database and output its schema as agent context.',
+      options: ['Introspect schema'],
       category: 'integrations',
     },
   },

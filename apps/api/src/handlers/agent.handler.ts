@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import OpenAI from 'openai';
 import type { NodeHandler } from './base.handler';
+import { isNodeInput } from '../runs/node-input';
 import { resolveTools } from './tools/registry';
 
 const ALGORITHM = 'aes-256-gcm';
@@ -44,9 +45,10 @@ export class AgentHandler implements NodeHandler {
   constructor(private readonly prisma = new PrismaClient()) {}
 
   async execute(params: Record<string, unknown>, input: unknown): Promise<unknown> {
+    const nodeInput = isNodeInput(input) ? input : { data: input };
     const userId = params.userId ?? params.workflowOwnerId;
     const model = params.model ?? 'gpt-4o-mini';
-    const prompt = params.prompt;
+    let prompt: string = typeof params.prompt === 'string' ? params.prompt : '';
     const maxIterations =
       typeof params.maxIterations === 'number' ? params.maxIterations : DEFAULT_MAX_ITERATIONS;
 
@@ -65,8 +67,12 @@ export class AgentHandler implements NodeHandler {
     if (typeof model !== 'string' || !model) {
       throw new Error('Agent node model must be a non-empty string.');
     }
-    if (typeof prompt !== 'string' || !prompt) {
+    if (!prompt) {
       throw new Error('Agent node prompt must be a non-empty string.');
+    }
+
+    if (nodeInput.schema) {
+      prompt = `${prompt}\n\n## Available Database Schema\n${nodeInput.schema}`;
     }
 
     const apiKey = await this.prisma.userApiKey.findUnique({
@@ -97,7 +103,10 @@ export class AgentHandler implements NodeHandler {
         : []),
       {
         role: 'user',
-        content: typeof input === 'string' ? input : JSON.stringify(input ?? ''),
+        content:
+          typeof nodeInput.data === 'string'
+            ? nodeInput.data
+            : JSON.stringify(nodeInput.data ?? ''),
       },
     ];
 

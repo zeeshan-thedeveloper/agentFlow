@@ -1,10 +1,17 @@
 import type { NodeHandler } from '../handlers/base.handler';
+import { isNodeInput } from '../runs/node-input';
+import { PrismaService } from '../prisma/prisma.service';
 import { CredentialResolver } from './credential.resolver';
+import type { SchemaConfig } from './integration.interfaces';
 import { integrationRegistry } from './integration.registry';
+import { enforceSchemaPolicy } from './schema.enforcer';
 import { interpolateParams } from './template.interpolator';
 
 export class IntegrationHandler implements NodeHandler {
-  constructor(private readonly credentialResolver: CredentialResolver) {}
+  constructor(
+    private readonly credentialResolver: CredentialResolver,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async execute(params: Record<string, unknown>, input: unknown): Promise<unknown> {
     const integrationId = String(params.integrationId ?? '');
@@ -19,10 +26,30 @@ export class IntegrationHandler implements NodeHandler {
     const integration = integrationRegistry.get(integrationId);
     if (!integration) throw new Error(`Unknown integration: "${integrationId}".`);
 
-    const actionParams = interpolateParams(rawActionParams, input);
+    const nodeInput = isNodeInput(input) ? input : { data: input };
+    let actionParams = interpolateParams(rawActionParams, nodeInput.data ?? input);
+
+    if (actionId === 'query' && nodeInput.query) {
+      actionParams = { ...actionParams, sql: nodeInput.query };
+    }
+
+    const schemaConfigRow = await this.prisma.databaseSchemaConfig.findUnique({
+      where: { userId_integrationId: { userId, integrationId } },
+    });
+    const schemaConfig = schemaConfigRow
+      ? (schemaConfigRow.config as unknown as SchemaConfig)
+      : null;
+
+    enforceSchemaPolicy(actionId, actionParams, schemaConfig);
 
     const credentials = await this.credentialResolver.resolve(userId, integrationId);
 
-    return integration.execute(actionId, actionParams, input, credentials);
+    const enrichedParams = {
+      ...actionParams,
+      _userId: userId,
+      _integrationId: integrationId,
+    };
+
+    return integration.execute(actionId, enrichedParams, nodeInput.data ?? input, credentials);
   }
 }

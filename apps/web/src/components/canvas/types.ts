@@ -1,7 +1,27 @@
 import type { ReactElement } from 'react';
 
-export type NodeType = 'trigger' | 'agent' | 'output' | 'integration';
+export const SCHEMA_NODE = 'schema' as const;
+
+export type NodeType = 'trigger' | 'agent' | 'output' | 'integration' | typeof SCHEMA_NODE;
 export type LibraryNodeType = NodeType | 'database';
+
+export interface SchemaNodeData {
+  type: typeof SCHEMA_NODE;
+  integrationId: string;
+  connectionName: string;
+}
+
+export type HandleType = 'trigger' | 'data' | 'query' | 'schema';
+
+export interface HandleDef {
+  id: string;
+  type: 'source' | 'target';
+  handleType: HandleType;
+  position: 'left' | 'right' | 'left-top' | 'left-bottom' | 'right-top' | 'right-bottom';
+  conditional?: string;
+  label?: string;
+}
+
 export type RunPhase = 'queued' | 'running' | 'done' | 'failed';
 export type RunState = 'idle' | 'running' | 'success' | 'error';
 
@@ -15,6 +35,7 @@ export interface FlowNode {
   // Type-specific config
   triggerType?: string;
   triggerInputMode?: 'none' | 'input';
+  inputType?: 'text' | 'sql';
   triggerInput?: string;
   prompt?: string;
   provider?: 'openai';
@@ -23,6 +44,7 @@ export interface FlowNode {
   maxIterations?: number;
   outputMode?: string;
   integrationId?: string;
+  connectionName?: string;
   dbType?: 'postgresql' | 'mongodb';
   actionId?: string;
   actionParams?: Record<string, unknown>;
@@ -31,6 +53,8 @@ export interface FlowNode {
 export interface FlowEdge {
   from: string;
   to: string;
+  sourceHandle?: string;
+  targetHandle?: string;
 }
 
 export interface WorkflowCanvasJson {

@@ -1,11 +1,13 @@
 import type { FlowNode } from './types';
 import { IntegrationConfigSection } from './IntegrationConfigSection';
+import { SchemaConfigSection } from './SchemaConfigSection';
 import { NODE_TYPES } from './constants';
 
 interface ConfigPanelProps {
   node: FlowNode;
   onUpdate: (patch: Partial<FlowNode>) => void;
   onClose: () => void;
+  onDelete: () => void;
   onRun?: () => void;
   runOutput?: unknown;
 }
@@ -65,8 +67,8 @@ function formatRunOutput(output: unknown) {
   return JSON.stringify(output, null, 2);
 }
 
-export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput }: ConfigPanelProps) {
-  const t = NODE_TYPES[node.type];
+export default function ConfigPanel({ node, onUpdate, onClose, onDelete, onRun, runOutput }: ConfigPanelProps) {
+  const t = NODE_TYPES[node.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
   const triggerInputMode = node.triggerInputMode ?? 'none';
 
   return (
@@ -155,6 +157,33 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput 
               </div>
             </Section>
 
+            <Section label="Input Type">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[
+                  { value: 'text', label: 'Text' },
+                  { value: 'sql', label: 'SQL Query' },
+                ].map(option => {
+                  const active = (node.inputType ?? 'text') === option.value;
+                  return (
+                    <label key={option.value} style={{
+                      display: 'flex', alignItems: 'center', gap: 9,
+                      padding: '7px 10px', borderRadius: 7, cursor: 'pointer',
+                      border: `1px solid ${active ? '#F59E0B50' : 'var(--border-subtle)'}`,
+                      background: active ? 'rgba(245,158,11,0.06)' : 'transparent',
+                    }}>
+                      <input
+                        type="radio"
+                        checked={active}
+                        onChange={() => onUpdate({ inputType: option.value as FlowNode['inputType'] })}
+                        style={{ accentColor: '#F59E0B', margin: 0 }}
+                      />
+                      <span style={{ fontSize: 12, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>{option.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </Section>
+
             <Section label="Input">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
@@ -194,7 +223,11 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput 
                   value={node.triggerInput ?? ''}
                   onChange={e => onUpdate({ triggerInput: e.target.value })}
                   rows={4}
-                  placeholder="Payload or instruction to pass into the agent..."
+                  placeholder={
+                    node.inputType === 'sql'
+                      ? "SELECT * FROM orders WHERE status = 'pending'"
+                      : 'Payload or instruction to pass into the agent...'
+                  }
                   style={{
                     width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
                     borderRadius: 7, padding: '8px 10px', fontSize: 11,
@@ -396,6 +429,20 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput 
           </>
         )}
 
+        {node.type === 'schema' && (
+          <SchemaConfigSection
+            integrationId={node.integrationId ?? ''}
+            connectionName={node.connectionName ?? ''}
+            onChange={(integrationId, connectionName) =>
+              onUpdate({
+                integrationId,
+                connectionName,
+                subtitle: connectionName || 'Select connection',
+              })
+            }
+          />
+        )}
+
         {node.type === 'integration' && (
           <Section label="Integration">
             <IntegrationConfigSection node={node} onUpdate={onUpdate} />
@@ -410,6 +457,30 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput 
             {node.id}
           </div>
         </Section>
+
+        <div style={{ marginTop: 8, paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
+          <button
+            type="button"
+            onClick={onDelete}
+            style={{
+              width: '100%',
+              height: 34,
+              borderRadius: 7,
+              border: '1px solid rgba(239,68,68,0.48)',
+              background: 'transparent',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: 12,
+              fontWeight: 800,
+            }}
+          >
+            Delete node
+          </button>
+          <p style={{ margin: '8px 0 0', fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.45 }}>
+            Or select the node and press Delete / Backspace. Connected edges are removed automatically.
+          </p>
+        </div>
       </div>
     </div>
   );

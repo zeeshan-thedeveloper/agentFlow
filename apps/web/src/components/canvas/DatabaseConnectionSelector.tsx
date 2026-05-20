@@ -8,6 +8,7 @@ import {
   testDatabaseConnection,
   type NamedConnection,
 } from '@/lib/integrations-api';
+import { SchemaConfigModal } from './SchemaConfigModal';
 
 interface Props {
   selectedIntegrationId: string | undefined;
@@ -154,6 +155,7 @@ export function DatabaseConnectionSelector({
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [schemaModalFor, setSchemaModalFor] = useState<{ integrationId: string; name: string } | null>(null);
 
   async function loadConnections() {
     setLoading(true);
@@ -309,7 +311,7 @@ export function DatabaseConnectionSelector({
                   color: 'var(--text-primary)',
                   cursor: 'pointer',
                   display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 1fr) auto auto',
+                  gridTemplateColumns: 'minmax(0, 1fr) auto auto auto',
                   alignItems: 'center',
                   gap: 8,
                   padding: '7px 8px 7px 10px',
@@ -350,6 +352,35 @@ export function DatabaseConnectionSelector({
                 }}>
                   {connection.maskedHint ?? ''}
                 </span>
+                <button
+                  type="button"
+                  title="Configure schema permissions"
+                  onClick={event => {
+                    event.stopPropagation();
+                    setSchemaModalFor({ integrationId: connection.integrationId, name: connection.name });
+                  }}
+                  onKeyDown={event => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setSchemaModalFor({ integrationId: connection.integrationId, name: connection.name });
+                  }}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 6,
+                    border: '1px solid var(--border-strong)',
+                    background: 'transparent',
+                    color: 'var(--text-faint)',
+                    cursor: 'pointer',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: 13,
+                    lineHeight: 1,
+                  }}
+                >
+                  ⚙
+                </button>
                 <button
                   type="button"
                   aria-label={`Delete ${connection.name}`}
@@ -677,6 +708,14 @@ export function DatabaseConnectionSelector({
           </button>
         </div>
       </div>
+      )}
+
+      {schemaModalFor && (
+        <SchemaConfigModal
+          integrationId={schemaModalFor.integrationId}
+          connectionName={schemaModalFor.name}
+          onClose={() => setSchemaModalFor(null)}
+        />
       )}
     </div>
   );

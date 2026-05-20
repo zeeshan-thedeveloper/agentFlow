@@ -14,5 +14,5 @@ export const registry: Record<string, NodeHandler> = {
   trigger: new TriggerHandler(),
   agent: new AgentHandler(),
   output: new OutputHandler(),
-  integration: new IntegrationHandler(credentialResolver),
+  integration: new IntegrationHandler(credentialResolver, prisma),
 };

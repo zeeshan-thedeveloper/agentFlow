@@ -9,6 +9,7 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import type { SchemaConfig } from './integration.interfaces';
 import { IntegrationsService } from './integrations.service';
 
 type AuthenticatedRequest = {
@@ -70,6 +71,32 @@ export class IntegrationsController {
   @HttpCode(200)
   deleteDatabaseCredential(@Param('integrationId') integrationId: string, @Req() req: AuthenticatedRequest) {
     return this.service.deleteCredential(requireUserId(req), integrationId);
+  }
+
+  @Get(':id/schema/tables')
+  async getSchemaTables(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const tables = await this.service.fetchDatabaseSchema(
+      requireUserId(req),
+      decodeURIComponent(id),
+    );
+    return { tables };
+  }
+
+  @Get(':id/schema/config')
+  async getSchemaConfig(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const config = await this.service.getSchemaConfig(requireUserId(req), decodeURIComponent(id));
+    return { config };
+  }
+
+  @Post(':id/schema/config')
+  @HttpCode(200)
+  async saveSchemaConfig(
+    @Param('id') id: string,
+    @Body() body: { config: SchemaConfig },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    await this.service.saveSchemaConfig(requireUserId(req), decodeURIComponent(id), body.config);
+    return { ok: true };
   }
 
   @Get(':id/credentials/status')

@@ -1,11 +1,14 @@
 import type { Integration } from './integration.interfaces';
+import { getSchemaConfigLoader } from './schema.config.loader';
 import { DatabaseIntegration } from './providers/database/database.integration';
 import { MongoIntegration } from './providers/database/mongo.integration';
 
+const schemaConfigLoader = getSchemaConfigLoader();
+
 const registryMap = new Map<string, Integration>([
-  ['database', new DatabaseIntegration()],
-  ['database:mongo', new MongoIntegration()],
-  ['database:pg', new DatabaseIntegration()],
+  ['database', new DatabaseIntegration(schemaConfigLoader)],
+  ['database:mongo', new MongoIntegration(schemaConfigLoader)],
+  ['database:pg', new DatabaseIntegration(schemaConfigLoader)],
   // add ['slack', new SlackIntegration()] etc. in future tickets
 ]);
 

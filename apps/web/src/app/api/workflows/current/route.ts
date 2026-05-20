@@ -7,13 +7,16 @@ import type { FlowEdge, FlowNode, WorkflowCanvasJson } from '@/components/canvas
 
 export const dynamic = 'force-dynamic';
 
+const ALLOWED_NODE_TYPES = ['trigger', 'agent', 'output', 'integration', 'schema'] as const;
+
 function isFlowNode(value: unknown): value is FlowNode {
   if (!value || typeof value !== 'object') return false;
 
   const node = value as Partial<FlowNode>;
+  const typeOk = ALLOWED_NODE_TYPES.includes(node.type as (typeof ALLOWED_NODE_TYPES)[number]);
   return (
     typeof node.id === 'string' &&
-    (node.type === 'trigger' || node.type === 'agent' || node.type === 'output' || node.type === 'integration') &&
+    typeOk &&
     typeof node.label === 'string' &&
     typeof node.x === 'number' &&
     typeof node.y === 'number'
@@ -40,7 +43,21 @@ function isWorkflowCanvasJson(value: unknown): value is WorkflowCanvasJson {
 }
 
 function normalizeCanvasJson(value: unknown): WorkflowCanvasJson {
-  return isWorkflowCanvasJson(value) ? value : DEFAULT_CANVAS_JSON;
+  if (!isWorkflowCanvasJson(value)) return DEFAULT_CANVAS_JSON;
+
+  return {
+    nodes: value.nodes,
+    edges: value.edges.map(edge => {
+      let targetHandle = edge.targetHandle ?? 'data-in';
+      if (targetHandle === 'query-in') targetHandle = 'agent-in';
+
+      return {
+        ...edge,
+        sourceHandle: edge.sourceHandle ?? 'data-out',
+        targetHandle,
+      };
+    }),
+  };
 }
 
 async function getUserId() {

@@ -1,5 +1,7 @@
-import type { FlowNode, RunPhase } from './types';
+import { useState } from 'react';
+import type { FlowEdge, FlowNode, RunPhase } from './types';
 import { NODE_TYPES } from './constants';
+import TypedNodeHandles from './TypedNodeHandles';
 
 function IcoCheck() {
   return (
@@ -18,8 +20,10 @@ interface CanvasNodeCardProps {
   onMouseDown: (e: React.MouseEvent) => void;
   onClick: () => void;
   onDelete?: (e: React.MouseEvent) => void;
-  onInputHandleMouseUp?: (e: React.MouseEvent) => void;
-  onStartConnection?: (e: React.MouseEvent) => void;
+  edges: FlowEdge[];
+  onStartConnection: (e: React.MouseEvent, handleId: string) => void;
+  onFinishConnection: (e: React.MouseEvent, handleId: string) => void;
+  onTargetHandleHover?: (handleId: string | null) => void;
 }
 
 function IcoFailed() {
@@ -32,20 +36,35 @@ function IcoFailed() {
 }
 
 export default function CanvasNodeCard({
-  node, selected, runPhase, scale = 1, onMouseDown, onClick, onDelete, onInputHandleMouseUp, onStartConnection,
+  node,
+  selected,
+  runPhase,
+  scale = 1,
+  onMouseDown,
+  onClick,
+  onDelete,
+  edges,
+  onStartConnection,
+  onFinishConnection,
+  onTargetHandleHover,
 }: CanvasNodeCardProps) {
   const TOOL_LABELS: Record<string, string> = {
     http_request: 'HTTP',
     web_search: 'Search',
     scrape_page: 'Scrape',
   };
-  const t = NODE_TYPES[node.type];
+  const [hovered, setHovered] = useState(false);
+  const t = NODE_TYPES[node.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
+  const showDelete = selected || hovered;
   const isQueued = runPhase === 'queued';
   const isRunning = runPhase === 'running';
   const isDone    = runPhase === 'done';
   const isFailed  = runPhase === 'failed';
+  const isSchemaNode = node.type === 'schema';
   const isDatabaseNode = node.type === 'integration' && node.integrationId?.startsWith('database');
-  const subtitle = isDatabaseNode
+  const subtitle = isSchemaNode
+    ? node.connectionName || 'Select connection'
+    : isDatabaseNode
     ? node.dbType
       ? `${node.dbType} · ${node.actionId ?? 'no action'}`
       : 'Database · not configured'
@@ -55,11 +74,14 @@ export default function CanvasNodeCard({
     <div
       onMouseDown={onMouseDown}
       onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         position: 'absolute', left: node.x, top: node.y,
         width: 200, userSelect: 'none', cursor: 'grab',
         zIndex: selected ? 20 : 10,
         pointerEvents: 'auto',
+        overflow: 'visible',
         transform: `scale(${scale})`,
         transformOrigin: 'top left',
       }}
@@ -79,22 +101,13 @@ export default function CanvasNodeCard({
         />
       )}
 
-      {/* Input handle */}
-      {node.type !== 'trigger' && (
-        <div
-          onMouseDown={e => e.stopPropagation()}
-          onMouseUp={onInputHandleMouseUp}
-          title="Connect here"
-          style={{
-            position: 'absolute', left: -7, top: '50%',
-            transform: 'translateY(-50%)',
-            width: 14, height: 14, borderRadius: '50%',
-            background: 'var(--app-bg)', border: `2px solid ${t.color}`,
-            boxShadow: `0 0 6px ${t.color}60`, zIndex: 3,
-            cursor: 'crosshair',
-          }}
-        />
-      )}
+      <TypedNodeHandles
+        node={node}
+        edges={edges}
+        onStartConnection={onStartConnection}
+        onFinishConnection={onFinishConnection}
+        onTargetHandleHover={onTargetHandleHover}
+      />
 
       {/* Card */}
       <div style={{
@@ -118,17 +131,19 @@ export default function CanvasNodeCard({
           : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 30px var(--shadow-node)',
         animation: isRunning ? 'nodeRun 1.4s ease-in-out infinite' : 'none',
       } as React.CSSProperties}>
-        {selected && (
+        {showDelete && onDelete && (
           <button
             type="button"
             title="Delete node"
+            aria-label="Delete node"
             onMouseDown={e => e.stopPropagation()}
             onClick={onDelete}
             style={{
               position: 'absolute', top: 7, right: 8,
               width: 22, height: 22, borderRadius: 6,
-              border: '1px solid var(--border-strong)',
-              background: 'var(--button-bg)', color: 'var(--text-muted)',
+              border: '1px solid rgba(239,68,68,0.45)',
+              background: selected ? 'rgba(239,68,68,0.12)' : 'var(--button-bg)',
+              color: '#ef4444',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', zIndex: 4,
             }}
@@ -247,21 +262,6 @@ export default function CanvasNodeCard({
         )}
       </div>
 
-      {/* Connection handle */}
-      {node.type !== 'output' && (
-        <div
-          onMouseDown={onStartConnection}
-          title="Drag to connect"
-          style={{
-            position: 'absolute', right: -7, top: '50%',
-            transform: 'translateY(-50%)',
-            width: 14, height: 14, borderRadius: '50%',
-            background: 'var(--app-bg)', border: `2px solid ${t.color}`,
-            boxShadow: `0 0 6px ${t.color}60`, zIndex: 3,
-            cursor: 'crosshair',
-          }}
-        />
-      )}
     </div>
   );
 }
