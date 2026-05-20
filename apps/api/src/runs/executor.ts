@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { registry } from '../handlers/registry';
+import { assembleNodeInput, handlerPayload } from './node-input';
 
 type FlowNode = {
   id: string;
@@ -15,6 +16,8 @@ type FlowNode = {
 type FlowEdge = {
   from: string;
   to: string;
+  sourceHandle?: string;
+  targetHandle?: string;
 };
 
 type WorkflowCanvasJson = {
@@ -138,10 +141,10 @@ export async function executeWorkflow(
   canvasJson: unknown,
   context: ExecutorContext = {},
 ): Promise<StepResult[]> {
+  assertCanvasJson(canvasJson);
   const sortedNodes = sortNodesTopologically(canvasJson);
   const results: StepResult[] = [];
-  // Seed the trigger node with request input, then pass each output forward.
-  let previousOutput: unknown = context.initialInput;
+  const stepOutputs = new Map<string, unknown>();
 
   logger.log(
     `Execution order: ${sortedNodes.map(node => `${node.id}:${node.type}`).join(' -> ')}`,
@@ -154,7 +157,12 @@ export async function executeWorkflow(
       throw new Error(`No handler registered for node type: ${node.type}`);
     }
 
-    const input = previousOutput;
+    const nodeInput = assembleNodeInput(node.id, canvasJson.edges, stepOutputs);
+    if (node.type === 'trigger' && context.initialInput !== undefined && nodeInput.data === undefined) {
+      nodeInput.data = context.initialInput;
+    }
+
+    const input = handlerPayload(node.type, nodeInput);
 
     try {
       const params = buildNodeParams(node, context);
@@ -171,7 +179,7 @@ export async function executeWorkflow(
         status: 'COMPLETED',
       });
 
-      previousOutput = output;
+      stepOutputs.set(node.id, output);
     } catch (error) {
       logger.error(
         `Failed node ${node.id} (${node.type}): ${error instanceof Error ? error.message : String(error)}`,
