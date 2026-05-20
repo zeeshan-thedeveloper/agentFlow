@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FlowEdge, FlowNode, RunPhase } from './types';
-import { NODE_TYPES } from './constants';
+import { NODE_TYPES, NH, NW } from './constants';
 import TypedNodeHandles from './TypedNodeHandles';
 
 function IcoCheck() {
@@ -13,7 +13,9 @@ function IcoCheck() {
 }
 
 interface CanvasNodeCardProps {
-  node: FlowNode & { x: number; y: number };
+  worldNode: FlowNode;
+  screenX: number;
+  screenY: number;
   selected: boolean;
   runPhase: RunPhase | undefined;
   scale?: number;
@@ -36,7 +38,9 @@ function IcoFailed() {
 }
 
 export default function CanvasNodeCard({
-  node,
+  worldNode,
+  screenX,
+  screenY,
   selected,
   runPhase,
   scale = 1,
@@ -54,39 +58,63 @@ export default function CanvasNodeCard({
     scrape_page: 'Scrape',
   };
   const [hovered, setHovered] = useState(false);
-  const t = NODE_TYPES[node.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
+  const t = NODE_TYPES[worldNode.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
   const showDelete = selected || hovered;
   const isQueued = runPhase === 'queued';
   const isRunning = runPhase === 'running';
   const isDone    = runPhase === 'done';
   const isFailed  = runPhase === 'failed';
-  const isSchemaNode = node.type === 'schema';
-  const isQueryRunnerNode = node.type === 'query-runner';
-  const isDatabaseNode = node.type === 'integration' && node.integrationId?.startsWith('database');
+  const isSchemaNode = worldNode.type === 'schema';
+  const isQueryRunnerNode = worldNode.type === 'query-runner';
+  const isDatabaseNode = worldNode.type === 'integration' && worldNode.integrationId?.startsWith('database');
   const subtitle = isSchemaNode
-    ? node.connectionName || 'Select connection'
+    ? worldNode.connectionName || 'Select connection'
     : isQueryRunnerNode
-    ? node.connectionName || 'Select connection'
+    ? worldNode.connectionName || 'Select connection'
     : isDatabaseNode
-    ? node.connectionName || node.integrationId?.split(':').pop() || 'Select connection'
-    : node.subtitle;
+    ? worldNode.connectionName || worldNode.integrationId?.split(':').pop() || 'Select connection'
+    : worldNode.subtitle;
 
   return (
     <div
-      onMouseDown={onMouseDown}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
-        position: 'absolute', left: node.x, top: node.y,
-        width: 200, userSelect: 'none', cursor: 'grab',
+        position: 'absolute',
+        left: screenX,
+        top: screenY,
+        width: NW * scale,
+        height: NH * scale,
+        userSelect: 'none',
         zIndex: selected ? 20 : 10,
-        pointerEvents: 'auto',
+        pointerEvents: 'none',
         overflow: 'visible',
-        transform: `scale(${scale})`,
-        transformOrigin: 'top left',
       }}
     >
+      <TypedNodeHandles
+        worldNode={worldNode}
+        scale={scale}
+        edges={edges}
+        onStartConnection={onStartConnection}
+        onFinishConnection={onFinishConnection}
+        onTargetHandleHover={onTargetHandleHover}
+      />
+
+      <div
+        onMouseDown={onMouseDown}
+        onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: NW,
+          height: NH,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          cursor: 'grab',
+          pointerEvents: 'auto',
+        }}
+      >
       {isRunning && (
         <div
           aria-hidden="true"
@@ -102,16 +130,9 @@ export default function CanvasNodeCard({
         />
       )}
 
-      <TypedNodeHandles
-        node={node}
-        edges={edges}
-        onStartConnection={onStartConnection}
-        onFinishConnection={onFinishConnection}
-        onTargetHandleHover={onTargetHandleHover}
-      />
-
       {/* Card */}
       <div style={{
+        height: '100%',
         background: 'var(--card-wash), var(--panel-bg-strong)',
         border: `1px solid ${selected ? t.color : isFailed ? '#EF444480' : isRunning ? t.color : isQueued ? t.color + '35' : 'var(--border-strong)'}`,
         borderRadius: 10, padding: '11px 14px',
@@ -197,7 +218,7 @@ export default function CanvasNodeCard({
             fontSize: 12, fontWeight: 600, color: 'var(--text-primary)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
-            {node.label}
+            {worldNode.label}
           </div>
           {subtitle && (
             <div style={{
@@ -207,9 +228,9 @@ export default function CanvasNodeCard({
               {subtitle}
             </div>
           )}
-          {node.type === 'agent' && node.tools && node.tools.length > 0 && (
+          {worldNode.type === 'agent' && worldNode.tools && worldNode.tools.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 5 }}>
-              {node.tools.map(toolName => (
+              {worldNode.tools.map(toolName => (
                 <span
                   key={toolName}
                   style={{
@@ -261,6 +282,7 @@ export default function CanvasNodeCard({
             animation: 'nodeProgressSweep 1s linear infinite',
           }} />
         )}
+      </div>
       </div>
 
     </div>
