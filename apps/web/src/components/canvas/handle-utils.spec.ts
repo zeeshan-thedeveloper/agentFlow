@@ -38,6 +38,10 @@ describe('isValidConnection', () => {
     expect(isValidConnection('a1', 'data-out', 'q1', 'query-in', nodes)).toBe(true);
   });
 
+  it('allows agent query-out to query-runner query-in', () => {
+    expect(isValidConnection('a1', 'query-out', 'q1', 'query-in', nodes)).toBe(true);
+  });
+
   it('allows database read-out to schema db-in', () => {
     expect(isValidConnection('d1', 'read-out', 's1', 'db-in', nodes)).toBe(true);
   });
