@@ -31,6 +31,8 @@ export function enforceSchemaPolicy(
   params: Record<string, unknown>,
   config: SchemaConfig | null,
 ): void {
+  if (actionId === 'introspect') return;
+
   if (!config) return;
 
   const operation = ACTION_TO_OPERATION[actionId];

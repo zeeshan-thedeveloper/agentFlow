@@ -2,6 +2,7 @@ import type {
   Integration,
   IntegrationActionDef,
   ResolvedCredentials,
+  SchemaConfig,
 } from '../../integration.interfaces';
 import { getClient } from './database.connection';
 import {
@@ -126,6 +127,12 @@ const ACTIONS: IntegrationActionDef[] = [
       },
     ],
   },
+  {
+    id: 'introspect',
+    name: 'Get Schema',
+    description: 'Introspect the database and return a compact schema description for use as agent context.',
+    paramSchema: [],
+  },
 ];
 
 export class DatabaseIntegration implements Integration {
@@ -136,12 +143,21 @@ export class DatabaseIntegration implements Integration {
   credentialLabel = 'Connection String';
   actions = ACTIONS;
 
+  constructor(
+    private readonly schemaConfigLoader: (
+      userId: string,
+      integrationId: string,
+    ) => Promise<SchemaConfig | null>,
+  ) {}
+
   async execute(
     actionId: string,
     params: Record<string, unknown>,
     _input: unknown,
     credentials: ResolvedCredentials,
   ): Promise<unknown> {
+    const userId = String(params._userId ?? '');
+    const integrationId = String(params._integrationId ?? '');
     const { connectionString } = credentials;
     if (!connectionString) {
       throw new Error('No database connection string found. Connect a database first.');
@@ -156,9 +172,55 @@ export class DatabaseIntegration implements Integration {
         return this.runUpdate(connectionString, params);
       case 'execute':
         return this.runExecute(connectionString, params);
+      case 'introspect':
+        return this.runIntrospect(connectionString, userId, integrationId);
       default:
         throw new Error(`Unknown action: ${actionId}`);
     }
+  }
+
+  private async runIntrospect(
+    connectionString: string,
+    userId: string,
+    integrationId: string,
+  ): Promise<unknown> {
+    const client = await getClient(connectionString);
+    let rows: { table_name: string; column_name: string; data_type: string }[];
+    try {
+      const result = await client.query<{
+        table_name: string;
+        column_name: string;
+        data_type: string;
+      }>(
+        `SELECT table_name, column_name, data_type
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+       ORDER BY table_name, ordinal_position`,
+      );
+      rows = result.rows;
+    } finally {
+      client.release();
+    }
+
+    const tableMap = new Map<string, string[]>();
+    for (const row of rows) {
+      if (!tableMap.has(row.table_name)) tableMap.set(row.table_name, []);
+      tableMap.get(row.table_name)!.push(`${row.column_name} ${row.data_type}`);
+    }
+
+    const schemaConfig = await this.schemaConfigLoader(userId, integrationId);
+    const allowedTables = schemaConfig
+      ? Object.keys(schemaConfig.tables).filter((t) => tableMap.has(t))
+      : [...tableMap.keys()];
+
+    const description = allowedTables
+      .map((t) => `${t}(${(tableMap.get(t) ?? []).join(', ')})`)
+      .join(', ');
+
+    return {
+      schema: `Tables: ${description}`,
+      tableCount: allowedTables.length,
+    };
   }
 
   private async runQuery(
