@@ -23,15 +23,35 @@ export function getHandlesKey(node: FlowNode): keyof typeof NODE_HANDLES {
   return node.type as keyof typeof NODE_HANDLES;
 }
 
-export function getNodeHandles(node: FlowNode): HandleDef[] {
+export function evalConditional(conditional: string | undefined, node: FlowNode): boolean {
+  if (!conditional) return true;
+
+  if (conditional.includes("inputType === 'sql'")) {
+    return node.inputType === 'sql';
+  }
+
+  if (
+    conditional.includes("inputType === 'text'") ||
+    conditional.includes("triggerInputMode === 'input'")
+  ) {
+    return node.triggerInputMode === 'input' && (node.inputType ?? 'text') !== 'sql';
+  }
+
+  return true;
+}
+
+export function getAllNodeHandleDefs(node: FlowNode): HandleDef[] {
   const key = getHandlesKey(node);
-  const defs = NODE_HANDLES[key] ?? [];
-  return defs.filter(def => {
-    if (def.conditional === "inputType === 'sql'") {
-      return node.inputType === 'sql';
-    }
-    return true;
-  });
+  return NODE_HANDLES[key] ?? [];
+}
+
+export function getNodeHandles(node: FlowNode): HandleDef[] {
+  return getAllNodeHandleDefs(node).filter(def => evalConditional(def.conditional, node));
+}
+
+export function getHandleDefById(node: FlowNode, handleId: string | undefined): HandleDef | undefined {
+  if (!handleId) return undefined;
+  return getAllNodeHandleDefs(node).find(def => def.id === handleId);
 }
 
 export function getHandleDef(node: FlowNode, handleId: string | undefined): HandleDef | undefined {
@@ -46,7 +66,7 @@ export function getHandleType(
 ): HandleType | undefined {
   const node = nodes.find(item => item.id === nodeId);
   if (!node || !handleId) return undefined;
-  return getHandleDef(node, handleId)?.handleType;
+  return getHandleDefById(node, handleId)?.handleType;
 }
 
 export function getTargetHandleType(targetHandle: string | undefined): HandleType {
@@ -88,11 +108,13 @@ export function getHandleAnchor(
   node: FlowNode,
   handleId: string,
 ): { x: number; y: number } {
-  const def = getHandleDef(node, handleId);
+  const def = getHandleDefById(node, handleId);
   const position = def?.position ?? (def?.type === 'target' ? 'left' : 'right');
   switch (position) {
     case 'left-top':
       return { x: node.x, y: node.y + NH * 0.28 };
+    case 'left-middle':
+      return { x: node.x, y: node.y + NH * 0.5 };
     case 'left-bottom':
       return { x: node.x, y: node.y + NH * 0.72 };
     case 'right-top':
