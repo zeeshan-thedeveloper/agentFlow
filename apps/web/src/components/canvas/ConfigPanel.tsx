@@ -157,6 +157,33 @@ export default function ConfigPanel({ node, onUpdate, onClose, onDelete, onRun, 
               </div>
             </Section>
 
+            <Section label="Input Type">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[
+                  { value: 'text', label: 'Text' },
+                  { value: 'sql', label: 'SQL Query' },
+                ].map(option => {
+                  const active = (node.inputType ?? 'text') === option.value;
+                  return (
+                    <label key={option.value} style={{
+                      display: 'flex', alignItems: 'center', gap: 9,
+                      padding: '7px 10px', borderRadius: 7, cursor: 'pointer',
+                      border: `1px solid ${active ? '#F59E0B50' : 'var(--border-subtle)'}`,
+                      background: active ? 'rgba(245,158,11,0.06)' : 'transparent',
+                    }}>
+                      <input
+                        type="radio"
+                        checked={active}
+                        onChange={() => onUpdate({ inputType: option.value as FlowNode['inputType'] })}
+                        style={{ accentColor: '#F59E0B', margin: 0 }}
+                      />
+                      <span style={{ fontSize: 12, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>{option.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </Section>
+
             <Section label="Input">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
@@ -196,7 +223,11 @@ export default function ConfigPanel({ node, onUpdate, onClose, onDelete, onRun, 
                   value={node.triggerInput ?? ''}
                   onChange={e => onUpdate({ triggerInput: e.target.value })}
                   rows={4}
-                  placeholder="Payload or instruction to pass into the agent..."
+                  placeholder={
+                    node.inputType === 'sql'
+                      ? "SELECT * FROM orders WHERE status = 'pending'"
+                      : 'Payload or instruction to pass into the agent...'
+                  }
                   style={{
                     width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
                     borderRadius: 7, padding: '8px 10px', fontSize: 11,
