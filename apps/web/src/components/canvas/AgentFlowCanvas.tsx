@@ -335,6 +335,8 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         ? { subtitle: 'Receives result', outputMode: 'Return output' }
         : type === 'database'
         ? { integrationId: 'database', label: 'Database', actionParams: {} }
+        : nodeType === 'schema'
+        ? { integrationId: '', connectionName: '', subtitle: 'Select connection' }
         : {};
 
     setNodes(p => [...p, {
