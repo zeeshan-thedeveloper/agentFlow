@@ -171,16 +171,37 @@ export default function ConfigPanel({
               </div>
             </Section>
 
-            <Section label="Input Type">
+            <Section label="Output">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
-                  { value: 'text', label: 'Text' },
-                  { value: 'sql', label: 'SQL Query' },
+                  {
+                    id: 'none',
+                    label: 'No input',
+                    desc: 'trigger-out only',
+                    patch: { triggerInputMode: 'none' as const, inputType: 'text' as const },
+                  },
+                  {
+                    id: 'text',
+                    label: 'Text input',
+                    desc: 'trigger-out + data-out',
+                    patch: { triggerInputMode: 'input' as const, inputType: 'text' as const },
+                  },
+                  {
+                    id: 'sql',
+                    label: 'SQL input',
+                    desc: 'trigger-out + query-out',
+                    patch: { triggerInputMode: 'input' as const, inputType: 'sql' as const },
+                  },
                 ].map(option => {
-                  const active = (node.inputType ?? 'text') === option.value;
+                  const active =
+                    option.id === 'none'
+                      ? triggerInputMode === 'none'
+                      : option.id === 'sql'
+                      ? triggerInputMode === 'input' && node.inputType === 'sql'
+                      : triggerInputMode === 'input' && (node.inputType ?? 'text') !== 'sql';
                   return (
-                    <label key={option.value} style={{
-                      display: 'flex', alignItems: 'center', gap: 9,
+                    <label key={option.id} style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 9,
                       padding: '7px 10px', borderRadius: 7, cursor: 'pointer',
                       border: `1px solid ${active ? '#F59E0B50' : 'var(--border-subtle)'}`,
                       background: active ? 'rgba(245,158,11,0.06)' : 'transparent',
@@ -188,43 +209,23 @@ export default function ConfigPanel({
                       <input
                         type="radio"
                         checked={active}
-                        onChange={() => onUpdate({ inputType: option.value as FlowNode['inputType'] })}
-                        style={{ accentColor: '#F59E0B', margin: 0 }}
-                      />
-                      <span style={{ fontSize: 12, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>{option.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </Section>
-
-            <Section label="Input">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {[
-                  { value: 'none', label: 'Without input' },
-                  { value: 'input', label: 'With input' },
-                ].map(option => {
-                  const active = triggerInputMode === option.value;
-                  return (
-                    <label key={option.value} style={{
-                      display: 'flex', alignItems: 'center', gap: 9,
-                      padding: '7px 10px', borderRadius: 7, cursor: 'pointer',
-                      border: `1px solid ${active ? '#F59E0B50' : 'var(--border-subtle)'}`,
-                      background: active ? 'rgba(245,158,11,0.06)' : 'transparent',
-                    }}>
-                      <input
-                        type="radio"
-                        checked={active}
-                        onChange={() => {
-                          const nextMode = option.value as FlowNode['triggerInputMode'];
+                        onChange={() =>
                           onUpdate({
-                            triggerInputMode: nextMode,
-                            subtitle: getTriggerSubtitle(node.triggerType ?? 'Manual', nextMode),
-                          });
-                        }}
-                        style={{ accentColor: '#F59E0B', margin: 0 }}
+                            ...option.patch,
+                            subtitle: getTriggerSubtitle(
+                              node.triggerType ?? 'Manual',
+                              option.patch.triggerInputMode,
+                            ),
+                          })
+                        }
+                        style={{ accentColor: '#F59E0B', margin: '2px 0 0' }}
                       />
-                      <span style={{ fontSize: 12, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>{option.label}</span>
+                      <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: 12, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                          {option.label}
+                        </span>
+                        <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>{option.desc}</span>
+                      </span>
                     </label>
                   );
                 })}

@@ -17,7 +17,14 @@ export interface HandleDef {
   id: string;
   type: 'source' | 'target';
   handleType: HandleType;
-  position: 'left' | 'right' | 'left-top' | 'left-bottom' | 'right-top' | 'right-bottom';
+  position:
+    | 'left'
+    | 'right'
+    | 'left-top'
+    | 'left-middle'
+    | 'left-bottom'
+    | 'right-top'
+    | 'right-bottom';
   conditional?: string;
   label?: string;
 }
