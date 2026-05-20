@@ -11,7 +11,7 @@ export interface SchemaNodeData {
   connectionName: string;
 }
 
-export type HandleType = 'trigger' | 'data' | 'query' | 'schema' | 'connection';
+export type HandleType = 'trigger' | 'data' | 'query' | 'schema' | 'connection' | 'text-trigger';
 
 export interface HandleDef {
   id: string;
@@ -24,6 +24,7 @@ export interface HandleDef {
     | 'left-middle'
     | 'left-bottom'
     | 'right-top'
+    | 'right-middle'
     | 'right-bottom';
   conditional?: string;
   label?: string;

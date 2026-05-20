@@ -7,6 +7,7 @@ export const HANDLE_COLORS: Record<HandleType, string> = {
   schema: '#8B5CF6',
   query: '#06B6D4',
   connection: '#64748B',
+  'text-trigger': '#A855F7',
 };
 
 export function getHandleColor(handleId: string, handleType: HandleType): string {
@@ -95,11 +96,21 @@ export function isValidConnection(
     return false;
   }
 
+  // query-out only connects to query-runner nodes
+  if (sourceHandle === 'query-out' && targetNode?.type !== 'query-runner') return false;
+
+  // text-trigger-out can only connect to trigger-in handles
+  if (srcType === 'text-trigger' && tgtType !== 'trigger') return false;
+  // trigger-in accepts either trigger or text-trigger sources
+  if (tgtType === 'trigger' && srcType !== 'trigger' && srcType !== 'text-trigger') return false;
+
   if (!srcType || !tgtType) return true;
   if (srcType === 'connection' && tgtType !== 'connection') return false;
   if (tgtType === 'connection' && srcType !== 'connection') return false;
   if (srcType === 'trigger' && tgtType !== 'trigger') return false;
-  if (tgtType === 'trigger' && srcType !== 'trigger') return false;
+
+  // text-trigger already handled above; skip standard type-match for it
+  if (srcType === 'text-trigger' || tgtType === 'text-trigger') return true;
 
   const isDataToQuery = srcType === 'data' && tgtType === 'query';
   if (srcType !== tgtType && !isDataToQuery) return false;
@@ -107,27 +118,94 @@ export function isValidConnection(
   return true;
 }
 
+function handleSide(position: string): 'left' | 'right' {
+  return position.includes('right') ? 'right' : 'left';
+}
+
+const HANDLE_Y_FRACTION: Record<string, number> = {
+  'left-top': 0.28,
+  'right-top': 0.28,
+  'left-middle': 0.5,
+  'right-middle': 0.5,
+  left: 0.5,
+  right: 0.5,
+  'left-bottom': 0.72,
+  'right-bottom': 0.72,
+};
+
+/** Map legacy saved handle ids to current node definitions. */
+export function resolveHandleId(node: FlowNode, handleId: string | undefined): string | undefined {
+  if (!handleId) return undefined;
+  if (getHandleDefById(node, handleId)) return handleId;
+  if (node.type === 'agent') {
+    if (handleId === 'data-out') return 'text-out';
+    if (handleId === 'data-in' || handleId === 'schema-in') return 'text-in';
+  }
+  return handleId;
+}
+
+function handleYFraction(def: HandleDef, sideHandles: HandleDef[]): number {
+  if (HANDLE_Y_FRACTION[def.position] !== undefined) {
+    return HANDLE_Y_FRACTION[def.position];
+  }
+  const index = Math.max(0, sideHandles.findIndex(h => h.id === def.id));
+  return (index + 1) / (sideHandles.length + 1);
+}
+
+/** Canvas-space anchor for a handle; shared by edge routing and handle dots. */
+export function getHandlePosition(
+  node: FlowNode,
+  handleId: string,
+  nodeWidth = NW,
+  nodeHeight = NH,
+): { x: number; y: number } {
+  const resolvedId = resolveHandleId(node, handleId) ?? handleId;
+  const def = getHandleDefById(node, resolvedId);
+  if (!def) {
+    return { x: node.x, y: node.y + nodeHeight / 2 };
+  }
+
+  const side = handleSide(def.position);
+  const sideHandles = getNodeHandles(node).filter(h => handleSide(h.position) === side);
+  const y = node.y + nodeHeight * handleYFraction(def, sideHandles);
+  const x = side === 'right' ? node.x + nodeWidth : node.x;
+
+  return { x, y };
+}
+
 export function getHandleAnchor(
   node: FlowNode,
   handleId: string,
+  nodeHeight = NH,
+  yOffset = 0,
 ): { x: number; y: number } {
-  const def = getHandleDefById(node, handleId);
-  const position = def?.position ?? (def?.type === 'target' ? 'left' : 'right');
-  switch (position) {
-    case 'left-top':
-      return { x: node.x, y: node.y + NH * 0.28 };
-    case 'left-middle':
-      return { x: node.x, y: node.y + NH * 0.5 };
-    case 'left-bottom':
-      return { x: node.x, y: node.y + NH * 0.72 };
-    case 'right-top':
-      return { x: node.x + NW, y: node.y + NH * 0.28 };
-    case 'right-bottom':
-      return { x: node.x + NW, y: node.y + NH * 0.72 };
-    case 'left':
-      return { x: node.x, y: node.y + NH / 2 };
-    case 'right':
-    default:
-      return { x: node.x + NW, y: node.y + NH / 2 };
-  }
+  const anchor = getHandlePosition(node, handleId, NW, nodeHeight);
+  return { x: anchor.x, y: anchor.y + yOffset };
+}
+
+/** Spread multiple edges that share the same handle so wires do not fully overlap. */
+export function getFanOutYOffset(index: number, count: number, spacing = 12): number {
+  if (count <= 1) return 0;
+  return (index - (count - 1) / 2) * spacing;
+}
+
+export function listEdgesOnHandle(
+  edges: { from: string; to: string; sourceHandle?: string; targetHandle?: string }[],
+  node: FlowNode,
+  handleId: string,
+  role: 'source' | 'target',
+): { from: string; to: string; sourceHandle?: string; targetHandle?: string }[] {
+  const resolved = resolveHandleId(node, handleId) ?? handleId;
+  return edges.filter(edge => {
+    if (role === 'source') {
+      return (
+        edge.from === node.id &&
+        (resolveHandleId(node, edge.sourceHandle) ?? edge.sourceHandle) === resolved
+      );
+    }
+    return (
+      edge.to === node.id &&
+      (resolveHandleId(node, edge.targetHandle) ?? edge.targetHandle) === resolved
+    );
+  });
 }

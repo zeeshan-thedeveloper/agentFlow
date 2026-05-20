@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { Copy } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FlowEdge, FlowNode, RunPhase } from './types';
-import { NODE_TYPES } from './constants';
+import { NODE_TYPES, NH, NW } from './constants';
 import TypedNodeHandles from './TypedNodeHandles';
 
 function IcoCheck() {
@@ -13,9 +14,12 @@ function IcoCheck() {
 }
 
 interface CanvasNodeCardProps {
-  node: FlowNode & { x: number; y: number };
+  worldNode: FlowNode;
+  screenX: number;
+  screenY: number;
   selected: boolean;
   runPhase: RunPhase | undefined;
+  runOutput?: string;
   scale?: number;
   onMouseDown: (e: React.MouseEvent) => void;
   onClick: () => void;
@@ -24,6 +28,7 @@ interface CanvasNodeCardProps {
   onStartConnection: (e: React.MouseEvent, handleId: string) => void;
   onFinishConnection: (e: React.MouseEvent, handleId: string) => void;
   onTargetHandleHover?: (handleId: string | null) => void;
+  onLayoutHeight?: (nodeId: string, height: number) => void;
 }
 
 function IcoFailed() {
@@ -36,9 +41,12 @@ function IcoFailed() {
 }
 
 export default function CanvasNodeCard({
-  node,
+  worldNode,
+  screenX,
+  screenY,
   selected,
   runPhase,
+  runOutput,
   scale = 1,
   onMouseDown,
   onClick,
@@ -47,46 +55,116 @@ export default function CanvasNodeCard({
   onStartConnection,
   onFinishConnection,
   onTargetHandleHover,
+  onLayoutHeight,
 }: CanvasNodeCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [layoutHeight, setLayoutHeight] = useState(NH);
+  const [outputExpanded, setOutputExpanded] = useState(true);
+  const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const TOOL_LABELS: Record<string, string> = {
     http_request: 'HTTP',
     web_search: 'Search',
     scrape_page: 'Scrape',
   };
   const [hovered, setHovered] = useState(false);
-  const t = NODE_TYPES[node.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
+  const t = NODE_TYPES[worldNode.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
   const showDelete = selected || hovered;
   const isQueued = runPhase === 'queued';
   const isRunning = runPhase === 'running';
   const isDone    = runPhase === 'done';
   const isFailed  = runPhase === 'failed';
-  const isSchemaNode = node.type === 'schema';
-  const isQueryRunnerNode = node.type === 'query-runner';
-  const isDatabaseNode = node.type === 'integration' && node.integrationId?.startsWith('database');
+  const isSchemaNode = worldNode.type === 'schema';
+  const isQueryRunnerNode = worldNode.type === 'query-runner';
+  const isDatabaseNode = worldNode.type === 'integration' && worldNode.integrationId?.startsWith('database');
   const subtitle = isSchemaNode
-    ? node.connectionName || 'Select connection'
+    ? worldNode.connectionName || 'Select connection'
     : isQueryRunnerNode
-    ? node.connectionName || 'Select connection'
+    ? worldNode.connectionName || 'Select connection'
     : isDatabaseNode
-    ? node.connectionName || node.integrationId?.split(':').pop() || 'Select connection'
-    : node.subtitle;
+    ? worldNode.connectionName || worldNode.integrationId?.split(':').pop() || 'Select connection'
+    : worldNode.subtitle;
+
+  useLayoutEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+
+    const report = () => {
+      const height = Math.max(NH, Math.round(el.offsetHeight));
+      setLayoutHeight(current => (current === height ? current : height));
+      onLayoutHeight?.(worldNode.id, height);
+    };
+
+    report();
+    const observer = new ResizeObserver(report);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [worldNode.id, worldNode.label, worldNode.subtitle, worldNode.tools, subtitle, onLayoutHeight]);
+
+  const isAgent = worldNode.type === 'agent';
+  const showOutputPanel = isAgent && isDone && Boolean(runOutput?.trim());
+
+  useEffect(() => {
+    if (isQueued || isRunning) {
+      setOutputExpanded(false);
+      setCopyState('idle');
+    } else if (isDone && runOutput?.trim()) {
+      setOutputExpanded(true);
+    }
+  }, [isQueued, isRunning, isDone, runOutput]);
+
+  async function handleCopyOutput(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!runOutput) return;
+    try {
+      await navigator.clipboard.writeText(runOutput);
+      setCopyState('copied');
+      setTimeout(() => setCopyState('idle'), 1500);
+    } catch {
+      setCopyState('idle');
+    }
+  }
 
   return (
     <div
-      onMouseDown={onMouseDown}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
-        position: 'absolute', left: node.x, top: node.y,
-        width: 200, userSelect: 'none', cursor: 'grab',
+        position: 'absolute',
+        left: screenX,
+        top: screenY,
+        width: NW * scale,
+        height: layoutHeight * scale,
+        userSelect: 'none',
         zIndex: selected ? 20 : 10,
-        pointerEvents: 'auto',
+        pointerEvents: 'none',
         overflow: 'visible',
-        transform: `scale(${scale})`,
-        transformOrigin: 'top left',
       }}
     >
+      <TypedNodeHandles
+        worldNode={worldNode}
+        layoutHeight={layoutHeight}
+        scale={scale}
+        edges={edges}
+        onStartConnection={onStartConnection}
+        onFinishConnection={onFinishConnection}
+        onTargetHandleHover={onTargetHandleHover}
+      />
+
+      <div
+        onMouseDown={onMouseDown}
+        onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: NW,
+          height: layoutHeight,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          cursor: 'grab',
+          pointerEvents: 'auto',
+        }}
+      >
       {isRunning && (
         <div
           aria-hidden="true"
@@ -102,16 +180,10 @@ export default function CanvasNodeCard({
         />
       )}
 
-      <TypedNodeHandles
-        node={node}
-        edges={edges}
-        onStartConnection={onStartConnection}
-        onFinishConnection={onFinishConnection}
-        onTargetHandleHover={onTargetHandleHover}
-      />
-
       {/* Card */}
-      <div style={{
+      <div
+        ref={cardRef}
+        style={{
         background: 'var(--card-wash), var(--panel-bg-strong)',
         border: `1px solid ${selected ? t.color : isFailed ? '#EF444480' : isRunning ? t.color : isQueued ? t.color + '35' : 'var(--border-strong)'}`,
         borderRadius: 10, padding: '11px 14px',
@@ -197,7 +269,7 @@ export default function CanvasNodeCard({
             fontSize: 12, fontWeight: 600, color: 'var(--text-primary)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
-            {node.label}
+            {worldNode.label}
           </div>
           {subtitle && (
             <div style={{
@@ -207,9 +279,9 @@ export default function CanvasNodeCard({
               {subtitle}
             </div>
           )}
-          {node.type === 'agent' && node.tools && node.tools.length > 0 && (
+          {worldNode.type === 'agent' && worldNode.tools && worldNode.tools.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 5 }}>
-              {node.tools.map(toolName => (
+              {worldNode.tools.map(toolName => (
                 <span
                   key={toolName}
                   style={{
@@ -262,6 +334,107 @@ export default function CanvasNodeCard({
           }} />
         )}
       </div>
+      </div>
+
+      {showOutputPanel && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: layoutHeight * scale,
+            width: NW * scale,
+            pointerEvents: 'auto',
+            zIndex: 6,
+          }}
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
+        >
+          <div
+            style={{
+              marginTop: 4 * scale,
+              background: 'var(--panel-bg-strong)',
+              border: `1px solid ${t.color}4D`,
+              borderRadius: 8,
+              overflow: 'hidden',
+              boxShadow: '0 6px 20px var(--shadow-node)',
+            }}
+          >
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setOutputExpanded(value => !value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setOutputExpanded(value => !value);
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+                padding: `${6 * scale}px ${8 * scale}px`,
+                cursor: 'pointer',
+                borderBottom: outputExpanded ? `1px solid ${t.color}22` : 'none',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10 * scale,
+                  fontWeight: 700,
+                  color: t.color,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <span style={{ fontSize: 9 * scale, lineHeight: 1 }}>{outputExpanded ? '▾' : '▸'}</span>
+                Output
+              </span>
+              <button
+                type="button"
+                title="Copy output"
+                aria-label="Copy output"
+                onClick={handleCopyOutput}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 22 * scale,
+                  height: 22 * scale,
+                  borderRadius: 5,
+                  border: '1px solid var(--border-strong)',
+                  background: 'var(--button-bg)',
+                  color: copyState === 'copied' ? '#22C55E' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                <Copy size={11 * scale} strokeWidth={2.2} />
+              </button>
+            </div>
+            {outputExpanded && (
+              <div
+                style={{
+                  padding: `${8 * scale}px ${10 * scale}px ${10 * scale}px`,
+                  fontSize: 11 * scale,
+                  lineHeight: 1.45,
+                  color: 'var(--text-secondary)',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  maxHeight: Math.round(11 * 1.45 * 4 * scale),
+                  overflowY: 'auto',
+                }}
+              >
+                {runOutput}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

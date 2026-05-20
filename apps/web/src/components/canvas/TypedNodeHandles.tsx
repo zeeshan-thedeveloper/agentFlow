@@ -2,11 +2,13 @@
 
 import { Database } from 'lucide-react';
 import type { FlowEdge, FlowNode, HandleDef } from './types';
-import { getHandleAnchor, getHandleColor, getHandlesKey, getNodeHandles, HANDLE_COLORS } from './handle-utils';
+import { NH, NW } from './constants';
+import { getHandleColor, getHandlePosition, getHandlesKey, getNodeHandles, HANDLE_COLORS } from './handle-utils';
 
 const HANDLE_TOOLTIPS: Record<string, string> = {
   'data-out': 'Data output — workflow payload',
   'data-in': 'Data input — prompt or prior node output',
+  'text-in': 'Text input — connect upstream Agent or Trigger text output',
   'query-out': 'SQL query output — connects to Query Runner SQL input',
   'query-in': 'SQL query input — from Trigger or Agent',
   'agent-in': 'Agent SQL input — connect Agent data-out here',
@@ -38,7 +40,9 @@ function handleTransform(def: HandleDef): string {
 }
 
 interface TypedNodeHandlesProps {
-  node: FlowNode;
+  worldNode: FlowNode;
+  layoutHeight?: number;
+  scale?: number;
   edges: FlowEdge[];
   onStartConnection: (e: React.MouseEvent, handleId: string) => void;
   onFinishConnection: (e: React.MouseEvent, handleId: string) => void;
@@ -46,32 +50,38 @@ interface TypedNodeHandlesProps {
 }
 
 export default function TypedNodeHandles({
-  node,
+  worldNode,
+  layoutHeight = NH,
+  scale = 1,
   edges,
   onStartConnection,
   onFinishConnection,
   onTargetHandleHover,
 }: TypedNodeHandlesProps) {
-  const handles = getNodeHandles(node);
-  const handlesKey = getHandlesKey(node);
-  const hasSchemaEdge = edges.some(e => e.to === node.id && e.targetHandle === 'schema-in');
+  const handles = getNodeHandles(worldNode);
+  const handlesKey = getHandlesKey(worldNode);
+  const hasSchemaEdge = edges.some(e => e.to === worldNode.id && e.targetHandle === 'schema-in');
   const showHandleLabels =
     handlesKey === 'database' ||
     handlesKey === 'query-runner' ||
     handlesKey === 'trigger' ||
-    node.type === 'schema' ||
-    node.type === 'agent';
+    worldNode.type === 'schema' ||
+    worldNode.type === 'agent';
 
   return (
     <>
       {handles.map(def => {
-        const anchor = getHandleAnchor(node, def.id);
-        const relX = anchor.x - node.x;
-        const relY = anchor.y - node.y;
+        const anchor = getHandlePosition(worldNode, def.id, NW, layoutHeight);
+        const relX = (anchor.x - worldNode.x) * scale;
+        const relY = (anchor.y - worldNode.y) * scale;
         const connected = edges.some(edge =>
           def.type === 'source'
-            ? edge.from === node.id && (edge.sourceHandle ?? 'data-out') === def.id
-            : edge.to === node.id && (edge.targetHandle ?? 'data-in') === def.id,
+            ? edge.from === worldNode.id &&
+              (edge.sourceHandle === def.id ||
+                (def.id === 'text-out' && edge.sourceHandle === 'data-out'))
+            : edge.to === worldNode.id &&
+              (edge.targetHandle === def.id ||
+                (def.id === 'text-in' && edge.targetHandle === 'data-in')),
         );
         const color = getHandleColor(def.id, def.handleType);
         const isSchemaIn = def.id === 'schema-in';
@@ -148,7 +158,7 @@ export default function TypedNodeHandles({
           </div>
         );
       })}
-      {node.type === 'agent' && hasSchemaEdge && (
+      {worldNode.type === 'agent' && hasSchemaEdge && (
         <span
           style={{
             position: 'absolute',

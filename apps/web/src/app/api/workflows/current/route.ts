@@ -51,9 +51,12 @@ function normalizeCanvasJson(value: unknown): WorkflowCanvasJson {
       let targetHandle = edge.targetHandle ?? 'data-in';
       if (targetHandle === 'query-in') targetHandle = 'agent-in';
 
+      let sourceHandle = edge.sourceHandle ?? 'text-out';
+      if (sourceHandle === 'data-out') sourceHandle = 'text-out';
+
       return {
         ...edge,
-        sourceHandle: edge.sourceHandle ?? 'data-out',
+        sourceHandle,
         targetHandle,
       };
     }),

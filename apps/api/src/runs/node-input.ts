@@ -41,6 +41,12 @@ export function assembleNodeInput(
     const value = stepOutputs.get(edge.from);
     const handleType = getTargetHandleType(edge.targetHandle);
 
+    // text-trigger-out carries text payload even though it wires to trigger-in
+    if (handleType === 'trigger' && edge.sourceHandle === 'text-trigger-out') {
+      if (value !== undefined) input.data = value;
+      continue;
+    }
+
     if (handleType === 'trigger') {
       continue;
     }

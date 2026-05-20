@@ -1,5 +1,6 @@
 export function edgeColor(sourceHandle?: string, targetHandle?: string): string {
   const handle = sourceHandle ?? targetHandle ?? '';
+  if (handle.includes('text-trigger')) return '#A855F7';
   if (handle.includes('trigger')) return '#F59E0B';
   if (handle.includes('schema')) return '#8B5CF6';
   if (handle.includes('query') || handle === 'sql') return '#06B6D4';
@@ -31,6 +32,7 @@ export function bezierMidpoint(x1: number, y1: number, x2: number, y2: number): 
 
 export function edgeHandleLabel(sourceHandle?: string, targetHandle?: string): string {
   const handle = sourceHandle ?? targetHandle ?? '';
+  if (handle.includes('text-trigger')) return 'RUN+TEXT';
   if (handle.includes('trigger')) return 'TRIGGER';
   if (handle.includes('schema')) return 'SCHEMA';
   if (handle.includes('query') || handle === 'sql') return 'SQL';

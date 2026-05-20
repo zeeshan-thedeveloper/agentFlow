@@ -29,9 +29,9 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
   ],
   agent: [
     { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
-    { id: 'data-in', type: 'target', handleType: 'data', position: 'left-middle', label: 'Data' },
-    { id: 'schema-in', type: 'target', handleType: 'schema', position: 'left-bottom', label: 'Schema' },
-    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-top', label: 'Data' },
+    { id: 'text-in', type: 'target', handleType: 'data', position: 'left-bottom', label: 'Text' },
+    { id: 'text-out', type: 'source', handleType: 'data', position: 'right-top', label: 'Text' },
+    { id: 'text-trigger-out', type: 'source', handleType: 'text-trigger', position: 'right-middle', label: 'Run+Text' },
     { id: 'query-out', type: 'source', handleType: 'query', position: 'right-bottom', label: 'SQL' },
   ],
   database: [
