@@ -1,10 +1,16 @@
 import type { NodeHandler } from '../handlers/base.handler';
+import { PrismaService } from '../prisma/prisma.service';
 import { CredentialResolver } from './credential.resolver';
+import type { SchemaConfig } from './integration.interfaces';
 import { integrationRegistry } from './integration.registry';
+import { enforceSchemaPolicy } from './schema.enforcer';
 import { interpolateParams } from './template.interpolator';
 
 export class IntegrationHandler implements NodeHandler {
-  constructor(private readonly credentialResolver: CredentialResolver) {}
+  constructor(
+    private readonly credentialResolver: CredentialResolver,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async execute(params: Record<string, unknown>, input: unknown): Promise<unknown> {
     const integrationId = String(params.integrationId ?? '');
@@ -20,6 +26,15 @@ export class IntegrationHandler implements NodeHandler {
     if (!integration) throw new Error(`Unknown integration: "${integrationId}".`);
 
     const actionParams = interpolateParams(rawActionParams, input);
+
+    const schemaConfigRow = await this.prisma.databaseSchemaConfig.findUnique({
+      where: { userId_integrationId: { userId, integrationId } },
+    });
+    const schemaConfig = schemaConfigRow
+      ? (schemaConfigRow.config as unknown as SchemaConfig)
+      : null;
+
+    enforceSchemaPolicy(actionId, actionParams, schemaConfig);
 
     const credentials = await this.credentialResolver.resolve(userId, integrationId);
 
