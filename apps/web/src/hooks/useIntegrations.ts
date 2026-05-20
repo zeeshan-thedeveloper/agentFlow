@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { fetchCredentialStatus, fetchIntegrations } from '@/lib/integrations-api';
+import {
+  fetchCredentialStatus,
+  fetchIntegrations,
+  listDatabaseConnections,
+  type NamedConnection,
+} from '@/lib/integrations-api';
 
 export interface IntegrationMeta {
   id: string;
@@ -72,4 +77,28 @@ export function useCredentialStatus(integrationId: string | undefined) {
   }, [refresh]);
 
   return { status, refresh };
+}
+
+export function useDatabaseConnections() {
+  const [connections, setConnections] = useState<NamedConnection[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    listDatabaseConnections()
+      .then(data => {
+        if (active) setConnections(data);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return { connections, loading };
 }

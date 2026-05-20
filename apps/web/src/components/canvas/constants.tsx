@@ -78,4 +78,26 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
       category: 'integrations',
     },
   },
+  schema: {
+    label: 'Schema',
+    color: '#8B5CF6',
+    glowA: 'rgba(139,92,246,0.25)',
+    glowB: 'rgba(139,92,246,0.08)',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path
+          d="M2.5 4.5h11v8h-11v-8zM5 2.5h6M5 6.5h6M5 9.5h4"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+    lib: {
+      desc: 'Introspect a database and output its schema as agent context.',
+      options: ['Introspect schema'],
+      category: 'integrations',
+    },
+  },
 };

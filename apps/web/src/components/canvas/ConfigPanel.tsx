@@ -1,5 +1,6 @@
 import type { FlowNode } from './types';
 import { IntegrationConfigSection } from './IntegrationConfigSection';
+import { SchemaConfigSection } from './SchemaConfigSection';
 import { NODE_TYPES } from './constants';
 
 interface ConfigPanelProps {
@@ -394,6 +395,20 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput 
               </pre>
             </Section>
           </>
+        )}
+
+        {node.type === 'schema' && (
+          <SchemaConfigSection
+            integrationId={node.integrationId ?? ''}
+            connectionName={node.connectionName ?? ''}
+            onChange={(integrationId, connectionName) =>
+              onUpdate({
+                integrationId,
+                connectionName,
+                subtitle: connectionName || 'Select connection',
+              })
+            }
+          />
         )}
 
         {node.type === 'integration' && (

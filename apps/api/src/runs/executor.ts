@@ -47,7 +47,20 @@ function assertCanvasJson(canvasJson: unknown): asserts canvasJson is WorkflowCa
   }
 }
 
+function resolveHandlerType(node: FlowNode): string {
+  return node.type === 'schema' ? 'integration' : node.type;
+}
+
 function buildNodeParams(node: FlowNode, context: ExecutorContext): Record<string, unknown> {
+  if (node.type === 'schema') {
+    return {
+      integrationId: node.integrationId,
+      actionId: 'introspect',
+      actionParams: {},
+      ...context,
+    };
+  }
+
   if (node.params && typeof node.params === 'object' && !Array.isArray(node.params)) {
     return {
       ...node.params,
@@ -55,9 +68,8 @@ function buildNodeParams(node: FlowNode, context: ExecutorContext): Record<strin
     };
   }
 
-  const { id, type, label, subtitle, x, y, params, ...canvasParams } = node;
+  const { id, type, label, subtitle, x, y, params, connectionName, ...canvasParams } = node;
 
-  // Current canvas nodes store config fields at the top level, not under params.
   return {
     ...canvasParams,
     ...context,
@@ -136,7 +148,7 @@ export async function executeWorkflow(
   );
 
   for (const node of sortedNodes) {
-    const handler = registry[node.type];
+    const handler = registry[resolveHandlerType(node)];
 
     if (!handler) {
       throw new Error(`No handler registered for node type: ${node.type}`);

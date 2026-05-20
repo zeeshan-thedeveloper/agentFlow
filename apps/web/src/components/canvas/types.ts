@@ -1,7 +1,15 @@
 import type { ReactElement } from 'react';
 
-export type NodeType = 'trigger' | 'agent' | 'output' | 'integration';
+export const SCHEMA_NODE = 'schema' as const;
+
+export type NodeType = 'trigger' | 'agent' | 'output' | 'integration' | typeof SCHEMA_NODE;
 export type LibraryNodeType = NodeType | 'database';
+
+export interface SchemaNodeData {
+  type: typeof SCHEMA_NODE;
+  integrationId: string;
+  connectionName: string;
+}
 export type RunPhase = 'queued' | 'running' | 'done' | 'failed';
 export type RunState = 'idle' | 'running' | 'success' | 'error';
 
@@ -23,6 +31,7 @@ export interface FlowNode {
   maxIterations?: number;
   outputMode?: string;
   integrationId?: string;
+  connectionName?: string;
   dbType?: 'postgresql' | 'mongodb';
   actionId?: string;
   actionParams?: Record<string, unknown>;

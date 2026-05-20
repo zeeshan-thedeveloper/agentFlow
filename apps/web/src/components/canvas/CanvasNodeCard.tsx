@@ -44,8 +44,11 @@ export default function CanvasNodeCard({
   const isRunning = runPhase === 'running';
   const isDone    = runPhase === 'done';
   const isFailed  = runPhase === 'failed';
+  const isSchemaNode = node.type === 'schema';
   const isDatabaseNode = node.type === 'integration' && node.integrationId?.startsWith('database');
-  const subtitle = isDatabaseNode
+  const subtitle = isSchemaNode
+    ? node.connectionName || 'Select connection'
+    : isDatabaseNode
     ? node.dbType
       ? `${node.dbType} · ${node.actionId ?? 'no action'}`
       : 'Database · not configured'
