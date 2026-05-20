@@ -55,7 +55,8 @@ export class QueryRunnerHandler implements NodeHandler {
     }
 
     const limit = Math.min(MAX_ROWS, 100);
-    const sqlWithLimit = /\blimit\s+\d+/i.test(sql) ? sql : `${sql} LIMIT ${limit}`;
+    const sqlTrimmed = sql.replace(/;+\s*$/, '').trim();
+    const sqlWithLimit = /\blimit\s+\d+/i.test(sqlTrimmed) ? sqlTrimmed : `${sqlTrimmed} LIMIT ${limit}`;
 
     const client = await getClient(connectionString);
     try {

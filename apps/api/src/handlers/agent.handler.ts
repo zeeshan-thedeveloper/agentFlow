@@ -90,6 +90,13 @@ export class AgentHandler implements NodeHandler {
     this.logger.log(`Resolved tools: ${tools.map(tool => tool.definition.name).join(',') || 'none'}`);
 
     // ── Working memory: full conversation lives here for the duration of the run ──
+    const userContent =
+      typeof nodeInput.data === 'string' && nodeInput.data.trim()
+        ? nodeInput.data
+        : nodeInput.data != null && nodeInput.data !== ''
+        ? JSON.stringify(nodeInput.data)
+        : null;
+
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: prompt },
       ...(tools.length > 0
@@ -101,13 +108,9 @@ export class AgentHandler implements NodeHandler {
             },
           ]
         : []),
-      {
-        role: 'user',
-        content:
-          typeof nodeInput.data === 'string'
-            ? nodeInput.data
-            : JSON.stringify(nodeInput.data ?? ''),
-      },
+      ...(userContent != null
+        ? [{ role: 'user' as const, content: userContent }]
+        : []),
     ];
 
     // ── ReAct loop ────────────────────────────────────────────────────────────────

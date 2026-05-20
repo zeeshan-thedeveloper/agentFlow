@@ -7,6 +7,7 @@ export const HANDLE_COLORS: Record<HandleType, string> = {
   schema: '#8B5CF6',
   query: '#06B6D4',
   connection: '#64748B',
+  'text-trigger': '#A855F7',
 };
 
 export function getHandleColor(handleId: string, handleType: HandleType): string {
@@ -95,11 +96,21 @@ export function isValidConnection(
     return false;
   }
 
+  // query-out only connects to query-runner nodes
+  if (sourceHandle === 'query-out' && targetNode?.type !== 'query-runner') return false;
+
+  // text-trigger-out can only connect to trigger-in handles
+  if (srcType === 'text-trigger' && tgtType !== 'trigger') return false;
+  // trigger-in accepts either trigger or text-trigger sources
+  if (tgtType === 'trigger' && srcType !== 'trigger' && srcType !== 'text-trigger') return false;
+
   if (!srcType || !tgtType) return true;
   if (srcType === 'connection' && tgtType !== 'connection') return false;
   if (tgtType === 'connection' && srcType !== 'connection') return false;
   if (srcType === 'trigger' && tgtType !== 'trigger') return false;
-  if (tgtType === 'trigger' && srcType !== 'trigger') return false;
+
+  // text-trigger already handled above; skip standard type-match for it
+  if (srcType === 'text-trigger' || tgtType === 'text-trigger') return true;
 
   const isDataToQuery = srcType === 'data' && tgtType === 'query';
   if (srcType !== tgtType && !isDataToQuery) return false;
@@ -115,6 +126,7 @@ const HANDLE_Y_FRACTION: Record<string, number> = {
   'left-top': 0.28,
   'right-top': 0.28,
   'left-middle': 0.5,
+  'right-middle': 0.5,
   left: 0.5,
   right: 0.5,
   'left-bottom': 0.72,
