@@ -104,7 +104,12 @@ export function DatabaseConfigSection({ node, onUpdate }: Props) {
           enginePrefix={engineConfig.enginePrefix}
           engine={node.dbType}
           integrationName={engineConfig.connectionName}
-          onSelect={id => onUpdate({ integrationId: id || 'database', actionId: undefined, actionParams: {} })}
+          onSelect={id => onUpdate({
+            integrationId: id || 'database',
+            actionId: undefined,
+            actionParams: {},
+            subtitle: id ? id.split(':').pop() ?? id : 'Select connection',
+          })}
         />
       )}
 

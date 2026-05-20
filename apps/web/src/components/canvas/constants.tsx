@@ -10,8 +10,9 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
     { id: 'query-out', type: 'source', handleType: 'query', position: 'right-bottom', conditional: "inputType === 'sql'" },
   ],
   schema: [
-    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left' },
-    { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right' },
+    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
+    { id: 'db-in', type: 'target', handleType: 'schema', position: 'left-bottom', label: 'DB' },
+    { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right', label: 'Schema' },
   ],
   agent: [
     { id: 'data-in', type: 'target', handleType: 'data', position: 'left-top' },
@@ -19,15 +20,19 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
     { id: 'data-out', type: 'source', handleType: 'data', position: 'right' },
   ],
   database: [
-    { id: 'query-in', type: 'target', handleType: 'query', position: 'left' },
-    { id: 'data-out', type: 'source', handleType: 'data', position: 'right' },
+    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
+    { id: 'agent-in', type: 'target', handleType: 'query', position: 'left', label: 'Agent' },
+    { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right-top', label: 'Schema' },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-bottom', label: 'Data' },
   ],
   output: [
     { id: 'data-in', type: 'target', handleType: 'data', position: 'left' },
   ],
   integration: [
-    { id: 'query-in', type: 'target', handleType: 'query', position: 'left' },
-    { id: 'data-out', type: 'source', handleType: 'data', position: 'right' },
+    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
+    { id: 'agent-in', type: 'target', handleType: 'query', position: 'left', label: 'Agent' },
+    { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right-top', label: 'Schema' },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-bottom', label: 'Data' },
   ],
 };
 

@@ -8,6 +8,8 @@ import NodeLibrary from './NodeLibrary';
 import CanvasBoard from './CanvasBoard';
 import ConfigPanel from './ConfigPanel';
 import { DEFAULT_EDGES, DEFAULT_NODES, DEFAULT_WORKFLOW_NAME } from './defaultWorkflow';
+import { isDatabaseNode } from './handle-utils';
+import { syncDatabaseSchemaEdges, syncSchemaDatabaseEdge } from './schema-db-link';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -135,8 +137,15 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
 
         setWorkflowId(workflow.id);
         setName(workflow.name);
-        setNodes(workflow.canvasJson.nodes);
-        setEdges(workflow.canvasJson.edges);
+        const loadedNodes = workflow.canvasJson.nodes;
+        let loadedEdges = workflow.canvasJson.edges;
+        for (const node of loadedNodes) {
+          if (node.type === 'schema') {
+            loadedEdges = syncSchemaDatabaseEdge(node, loadedNodes, loadedEdges);
+          }
+        }
+        setNodes(loadedNodes);
+        setEdges(loadedEdges);
       } catch {
         if (!cancelled) setSaveState('error');
       }
@@ -357,7 +366,24 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   }
 
   function updateNode(id: string, patch: Partial<FlowNode>) {
-    setNodes(p => p.map(n => n.id === id ? { ...n, ...patch } : n));
+    setNodes(prev => {
+      const nextNodes = prev.map(n => (n.id === id ? { ...n, ...patch } : n));
+      const updated = nextNodes.find(n => n.id === id);
+      if (!updated) return nextNodes;
+
+      const connectionChanged =
+        'integrationId' in patch || 'connectionName' in patch || 'subtitle' in patch;
+
+      if (updated.type === 'schema' && connectionChanged) {
+        setEdges(current => syncSchemaDatabaseEdge(updated, nextNodes, current));
+      }
+
+      if (isDatabaseNode(updated) && connectionChanged) {
+        setEdges(current => syncDatabaseSchemaEdges(updated, nextNodes, current));
+      }
+
+      return nextNodes;
+    });
   }
 
   const removeNode = useCallback((id: string) => {

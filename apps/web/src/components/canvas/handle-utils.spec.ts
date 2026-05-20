@@ -22,7 +22,11 @@ describe('isValidConnection', () => {
   });
 
   it('rejects schema to query', () => {
-    expect(isValidConnection('s1', 'schema-out', 'd1', 'query-in', nodes)).toBe(false);
+    expect(isValidConnection('s1', 'schema-out', 'd1', 'agent-in', nodes)).toBe(false);
+  });
+
+  it('allows database schema-out to schema db-in', () => {
+    expect(isValidConnection('d1', 'schema-out', 's1', 'db-in', nodes)).toBe(true);
   });
 
   it('rejects schema to data on agent schema-in mismatch', () => {
