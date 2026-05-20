@@ -107,27 +107,32 @@ export function isValidConnection(
   return true;
 }
 
-export function getHandleAnchor(
+function handleSide(position: string): 'left' | 'right' {
+  return position.includes('right') ? 'right' : 'left';
+}
+
+/** Canvas-space anchor for a handle; shared by edge routing and handle dots. */
+export function getHandlePosition(
   node: FlowNode,
   handleId: string,
+  nodeWidth = NW,
+  nodeHeight = NH,
 ): { x: number; y: number } {
   const def = getHandleDefById(node, handleId);
-  const position = def?.position ?? (def?.type === 'target' ? 'left' : 'right');
-  switch (position) {
-    case 'left-top':
-      return { x: node.x, y: node.y + NH * 0.28 };
-    case 'left-middle':
-      return { x: node.x, y: node.y + NH * 0.5 };
-    case 'left-bottom':
-      return { x: node.x, y: node.y + NH * 0.72 };
-    case 'right-top':
-      return { x: node.x + NW, y: node.y + NH * 0.28 };
-    case 'right-bottom':
-      return { x: node.x + NW, y: node.y + NH * 0.72 };
-    case 'left':
-      return { x: node.x, y: node.y + NH / 2 };
-    case 'right':
-    default:
-      return { x: node.x + NW, y: node.y + NH / 2 };
+  if (!def) {
+    return { x: node.x, y: node.y + nodeHeight / 2 };
   }
+
+  const side = handleSide(def.position);
+  const sideHandles = getAllNodeHandleDefs(node).filter(h => handleSide(h.position) === side);
+  const index = Math.max(0, sideHandles.findIndex(h => h.id === handleId));
+  const count = sideHandles.length;
+  const y = node.y + (nodeHeight / (count + 1)) * (index + 1);
+  const x = side === 'right' ? node.x + nodeWidth : node.x;
+
+  return { x, y };
+}
+
+export function getHandleAnchor(node: FlowNode, handleId: string): { x: number; y: number } {
+  return getHandlePosition(node, handleId);
 }

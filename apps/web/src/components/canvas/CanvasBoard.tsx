@@ -417,7 +417,9 @@ export default function CanvasBoard({
         {nodes.map(node => (
           <CanvasNodeCard
             key={node.id}
-            node={{ ...node, x: screenX(node.x), y: screenY(node.y) }}
+            worldNode={node}
+            screenX={screenX(node.x)}
+            screenY={screenY(node.y)}
             scale={zoom}
             selected={selected === node.id}
             runPhase={runPhases[node.id]}
