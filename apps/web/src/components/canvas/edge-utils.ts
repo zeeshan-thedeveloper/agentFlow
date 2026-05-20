@@ -36,4 +36,6 @@ export function edgeHandleLabel(sourceHandle?: string, targetHandle?: string): s
   if (handle.includes('trigger')) return 'TRIGGER';
   if (handle.includes('schema')) return 'SCHEMA';
   if (handle.includes('query') || handle === 'sql') return 'SQL';
-  if (handle === 'db-in' || handle.includes('read') || 
+  if (handle === 'db-in' || handle.includes('read') || handle.includes('write')) return 'DB';
+  return 'DATA';
+}
