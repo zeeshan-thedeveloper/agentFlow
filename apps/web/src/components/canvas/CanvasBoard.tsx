@@ -9,7 +9,13 @@ import {
   edgeColor,
   edgeHandleLabel,
 } from './edge-utils';
-import { getHandleAnchor, isValidConnection, resolveHandleId } from './handle-utils';
+import {
+  getFanOutYOffset,
+  getHandleAnchor,
+  isValidConnection,
+  listEdgesOnHandle,
+  resolveHandleId,
+} from './handle-utils';
 
 interface CanvasBoardProps {
   nodes: FlowNode[];
@@ -272,9 +278,37 @@ export default function CanvasBoard({
       resolveHandleId(a, edge.sourceHandle) ?? (a.type === 'agent' ? 'text-out' : 'data-out');
     const targetHandle =
       resolveHandleId(b, edge.targetHandle) ??
-      (b.type === 'query-runner' ? 'query-in' : 'data-in');
-    const start = getHandleAnchor(a, sourceHandle, nodeLayoutHeights[a.id] ?? NH);
-    const end = getHandleAnchor(b, targetHandle, nodeLayoutHeights[b.id] ?? NH);
+      (b.type === 'query-runner' ? 'query-in' : b.type === 'agent' ? 'text-in' : 'data-in');
+
+    const sourceSiblings = listEdgesOnHandle(edges, a, sourceHandle, 'source');
+    const targetSiblings = listEdgesOnHandle(edges, b, targetHandle, 'target');
+    const sourceIndex = sourceSiblings.findIndex(
+      item =>
+        item.from === edge.from &&
+        item.to === edge.to &&
+        item.sourceHandle === edge.sourceHandle &&
+        item.targetHandle === edge.targetHandle,
+    );
+    const targetIndex = targetSiblings.findIndex(
+      item =>
+        item.from === edge.from &&
+        item.to === edge.to &&
+        item.sourceHandle === edge.sourceHandle &&
+        item.targetHandle === edge.targetHandle,
+    );
+
+    const start = getHandleAnchor(
+      a,
+      sourceHandle,
+      nodeLayoutHeights[a.id] ?? NH,
+      getFanOutYOffset(Math.max(0, sourceIndex), sourceSiblings.length),
+    );
+    const end = getHandleAnchor(
+      b,
+      targetHandle,
+      nodeLayoutHeights[b.id] ?? NH,
+      getFanOutYOffset(Math.max(0, targetIndex), targetSiblings.length),
+    );
     return {
       x1: screenX(start.x),
       y1: screenY(start.y),

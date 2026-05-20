@@ -28,7 +28,8 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
     { id: 'data-out', type: 'source', handleType: 'data', position: 'right', label: 'Rows' },
   ],
   agent: [
-    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left', label: 'Trigger' },
+    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
+    { id: 'text-in', type: 'target', handleType: 'data', position: 'left-bottom', label: 'Text' },
     { id: 'text-out', type: 'source', handleType: 'data', position: 'right-top', label: 'Text' },
     { id: 'query-out', type: 'source', handleType: 'query', position: 'right-bottom', label: 'SQL' },
   ],
