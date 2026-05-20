@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FlowNode, FlowEdge, RunState, RunPhasesMap, LibraryNodeType, PersistedWorkflow } from './types';
 import { NODE_TYPES } from './constants';
 import TopBar from './TopBar';
@@ -91,6 +91,17 @@ function sortNodesForRun(nodes: FlowNode[], edges: FlowEdge[]) {
   return sorted.length === nodes.length ? sorted : nodes;
 }
 
+function formatRunOutput(output: unknown): string | undefined {
+  if (output == null) return undefined;
+  if (typeof output === 'string') return output.trim() || undefined;
+  if (typeof output === 'object' && 'data' in output) {
+    const data = (output as { data?: unknown }).data;
+    if (typeof data === 'string') return data.trim() || undefined;
+    if (data != null) return JSON.stringify(data, null, 2);
+  }
+  return JSON.stringify(output, null, 2);
+}
+
 function buildProgressPhases(nodeIds: string[], runningIndex: number): RunPhasesMap {
   return Object.fromEntries(
     nodeIds.map((nodeId, index) => [
@@ -121,6 +132,15 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   const [edges, setEdges] = useState<FlowEdge[]>(DEFAULT_EDGES);
 
   const selNode = nodes.find(n => n.id === selected) ?? null;
+
+  const runOutputs = useMemo(() => {
+    const outputs: Record<string, string> = {};
+    for (const [nodeId, value] of Object.entries(nodeOutputs)) {
+      const text = formatRunOutput(value);
+      if (text) outputs[nodeId] = text;
+    }
+    return outputs;
+  }, [nodeOutputs]);
 
   useEffect(() => {
     let cancelled = false;
@@ -195,6 +215,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     setRunState('running');
     setRunError(null);
     setRunPhases(executionNodeIds.length > 0 ? buildProgressPhases(executionNodeIds, 0) : {});
+    setNodeOutputs({});
     setSaveState('saving');
 
     try {
@@ -400,6 +421,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             selected={selected}
             setSelected={setSelected}
             runPhases={runPhases}
+            runOutputs={runOutputs}
             onRemoveNode={removeNode}
           />
 
