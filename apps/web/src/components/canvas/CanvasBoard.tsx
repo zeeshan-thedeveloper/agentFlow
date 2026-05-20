@@ -4,16 +4,12 @@ import { NODE_TYPES, NW, NH } from './constants';
 import type { LibraryNodeType } from './types';
 import CanvasNodeCard from './CanvasNodeCard';
 import {
-  getHandleAnchor,
-  getHandlesKey,
-  HANDLE_COLORS,
-  isValidConnection,
-} from './handle-utils';
-
-function resolveNodeTypeConfig(node: FlowNode) {
-  const key = getHandlesKey(node);
-  return NODE_TYPES[key as LibraryNodeType] ?? NODE_TYPES.integration;
-}
+  bezierMidpoint,
+  buildEdgePath,
+  edgeColor,
+  edgeHandleLabel,
+} from './edge-utils';
+import { getHandleAnchor, isValidConnection } from './handle-utils';
 
 interface CanvasBoardProps {
   nodes: FlowNode[];
@@ -60,6 +56,7 @@ export default function CanvasBoard({
   const [connecting, setConnecting] = useState<ConnectState | null>(null);
   const [hoverTarget, setHoverTarget] = useState<{ nodeId: string; handleId: string } | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
+  const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   function getCanvasPoint(e: Pick<React.MouseEvent | WheelEvent, 'clientX' | 'clientY'>) {
@@ -277,26 +274,6 @@ export default function CanvasBoard({
     };
   }
 
-  function edgePath(a: FlowNode, b: FlowNode, edge: FlowEdge): string {
-    const { x1, y1, x2, y2 } = edgeEndpoints(a, b, edge);
-    const cx = Math.max(60, (x2 - x1) * 0.45);
-    return `M ${x1} ${y1} C ${x1 + cx} ${y1} ${x2 - cx} ${y2} ${x2} ${y2}`;
-  }
-
-  function edgeControlPosition(a: FlowNode, b: FlowNode, edge: FlowEdge) {
-    const { x1, y1, x2, y2 } = edgeEndpoints(a, b, edge);
-    const cx = Math.max(60, (x2 - x1) * 0.45);
-    const c1x = x1 + cx;
-    const c2x = x2 - cx;
-    const t = 0.5;
-    const mt = 1 - t;
-
-    return {
-      x: mt ** 3 * x1 + 3 * mt ** 2 * t * c1x + 3 * mt * t ** 2 * c2x + t ** 3 * x2,
-      y: mt ** 3 * y1 + 3 * mt ** 2 * t * y1 + 3 * mt * t ** 2 * y2 + t ** 3 * y2,
-    };
-  }
-
   const nodeMap = Object.fromEntries(nodes.map(node => [node.id, node]));
   const connectingNode = connecting ? nodeMap[connecting.from] : null;
 
@@ -342,40 +319,52 @@ export default function CanvasBoard({
           const b = nodeMap[edge.to];
           if (!a || !b) return null;
 
-          const t = resolveNodeTypeConfig(a);
-          const path = edgePath(a, b, edge);
+          const { x1, y1, x2, y2 } = edgeEndpoints(a, b, edge);
+          const path = buildEdgePath(x1, y1, x2, y2);
+          const color = edgeColor(edge.sourceHandle, edge.targetHandle);
+          const label = edgeHandleLabel(edge.sourceHandle, edge.targetHandle);
+          const mid = bezierMidpoint(x1, y1, x2, y2);
           const edgeKey = `${edge.from}:${edge.sourceHandle ?? 'data-out'}->${edge.to}:${edge.targetHandle ?? 'data-in'}`;
           const isSelected = selectedEdge === edgeKey;
-          const isActive = runPhases[edge.from] === 'running' || runPhases[edge.from] === 'done';
-          const control = edgeControlPosition(a, b, edge);
-          const { x2, y2 } = edgeEndpoints(a, b, edge);
+          const isHovered = hoveredEdge === edgeKey;
+          const isIncomingActive = runPhases[edge.to] === 'running';
+          const emphasized = isSelected || isHovered;
 
           return (
             <g key={edgeKey}>
-              <path d={path} fill="none" stroke={t.color}
-                strokeWidth={isSelected ? 7 : isActive ? 6 : 3}
-                strokeOpacity={isSelected ? 0.28 : isActive ? 0.18 : 0.07}
-                filter={`url(#glow-${NODE_TYPES[a.type as LibraryNodeType] ? a.type : 'integration'})`}
-                style={{ pointerEvents: 'none' }} />
-              <path d={path} fill="none" stroke={t.color}
-                strokeWidth={isSelected ? 2.5 : 1.5}
-                strokeOpacity={isSelected ? 0.95 : isActive ? 0.7 : 0.3}
-                style={{ pointerEvents: 'none' }} />
-              <path d={path} fill="none" stroke={t.color}
-                strokeWidth={1.5} strokeOpacity={isActive ? 1 : 0.4}
-                strokeDasharray="12 8"
-                style={{ animation: `flowEdge ${isActive ? 0.9 : 1.8}s linear infinite`, pointerEvents: 'none' }} />
-              <circle
-                cx={x2}
-                cy={y2}
-                r={isSelected ? 4 : 3} fill={t.color} opacity={isActive || isSelected ? 0.9 : 0.4}
-                style={{ pointerEvents: 'none' }} />
+              <path
+                d={path}
+                fill="none"
+                stroke={color}
+                strokeWidth={emphasized ? 2 : 1.5}
+                strokeOpacity={emphasized ? 1 : 0.7}
+                className={isIncomingActive ? 'edgeActive' : undefined}
+                style={{ pointerEvents: 'none' }}
+              />
+              <text
+                x={mid.x}
+                y={mid.y - 6}
+                fontSize={8}
+                fill={color}
+                textAnchor="middle"
+                style={{
+                  pointerEvents: 'none',
+                  opacity: 0.8,
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  userSelect: 'none',
+                }}
+              >
+                {label}
+              </text>
               <path
                 d={path}
                 fill="none"
                 stroke="transparent"
                 strokeWidth={18}
                 style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                onMouseEnter={() => setHoveredEdge(edgeKey)}
+                onMouseLeave={() => setHoveredEdge(current => (current === edgeKey ? null : current))}
                 onMouseDown={e => {
                   e.stopPropagation();
                   setSelected(null);
@@ -388,7 +377,7 @@ export default function CanvasBoard({
               />
               {isSelected && (
                 <g
-                  transform={`translate(${control.x} ${control.y})`}
+                  transform={`translate(${mid.x} ${mid.y})`}
                   style={{ cursor: 'pointer' }}
                   onMouseDown={e => e.stopPropagation()}
                   onClick={e => {
@@ -396,7 +385,7 @@ export default function CanvasBoard({
                     removeEdge(edge);
                   }}
                 >
-                  <circle r="10" fill="var(--panel-bg)" stroke={t.color} strokeWidth="1.5" />
+                  <circle r="10" fill="var(--panel-bg)" stroke={color} strokeWidth="1.5" />
                   <path d="M-3.5 -3.5L3.5 3.5M3.5 -3.5L-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </g>
               )}
@@ -408,10 +397,12 @@ export default function CanvasBoard({
           const start = getHandleAnchor(connectingNode, connecting.sourceHandle);
           const x1 = screenX(start.x);
           const y1 = screenY(start.y);
-          const stroke = connecting.valid ? HANDLE_COLORS.data : '#ef4444';
+          const stroke = connecting.valid
+            ? edgeColor(connecting.sourceHandle)
+            : '#ef4444';
           return (
             <path
-              d={`M ${x1} ${y1} C ${x1 + 80 * zoom} ${y1} ${connecting.x - 80 * zoom} ${connecting.y} ${connecting.x} ${connecting.y}`}
+              d={buildEdgePath(x1, y1, connecting.x, connecting.y)}
               fill="none"
               stroke={stroke}
               strokeWidth={2 * zoom}
