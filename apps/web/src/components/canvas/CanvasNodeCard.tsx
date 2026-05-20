@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { FlowNode, RunPhase } from './types';
 import { NODE_TYPES } from './constants';
 
@@ -39,7 +40,9 @@ export default function CanvasNodeCard({
     web_search: 'Search',
     scrape_page: 'Scrape',
   };
-  const t = NODE_TYPES[node.type];
+  const [hovered, setHovered] = useState(false);
+  const t = NODE_TYPES[node.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
+  const showDelete = selected || hovered;
   const isQueued = runPhase === 'queued';
   const isRunning = runPhase === 'running';
   const isDone    = runPhase === 'done';
@@ -58,6 +61,8 @@ export default function CanvasNodeCard({
     <div
       onMouseDown={onMouseDown}
       onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         position: 'absolute', left: node.x, top: node.y,
         width: 200, userSelect: 'none', cursor: 'grab',
@@ -121,17 +126,19 @@ export default function CanvasNodeCard({
           : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 30px var(--shadow-node)',
         animation: isRunning ? 'nodeRun 1.4s ease-in-out infinite' : 'none',
       } as React.CSSProperties}>
-        {selected && (
+        {showDelete && onDelete && (
           <button
             type="button"
             title="Delete node"
+            aria-label="Delete node"
             onMouseDown={e => e.stopPropagation()}
             onClick={onDelete}
             style={{
               position: 'absolute', top: 7, right: 8,
               width: 22, height: 22, borderRadius: 6,
-              border: '1px solid var(--border-strong)',
-              background: 'var(--button-bg)', color: 'var(--text-muted)',
+              border: '1px solid rgba(239,68,68,0.45)',
+              background: selected ? 'rgba(239,68,68,0.12)' : 'var(--button-bg)',
+              color: '#ef4444',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', zIndex: 4,
             }}

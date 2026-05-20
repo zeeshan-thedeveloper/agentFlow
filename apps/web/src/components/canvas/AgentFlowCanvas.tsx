@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { FlowNode, FlowEdge, RunState, RunPhasesMap, LibraryNodeType, PersistedWorkflow } from './types';
 import { NODE_TYPES } from './constants';
 import TopBar from './TopBar';
@@ -355,6 +355,12 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     setNodes(p => p.map(n => n.id === id ? { ...n, ...patch } : n));
   }
 
+  const removeNode = useCallback((id: string) => {
+    setNodes(prev => prev.filter(node => node.id !== id));
+    setEdges(prev => prev.filter(edge => edge.from !== id && edge.to !== id));
+    setSelected(current => (current === id ? null : current));
+  }, []);
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--app-bg)' }}>
       <TopBar
@@ -379,6 +385,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             selected={selected}
             setSelected={setSelected}
             runPhases={runPhases}
+            onRemoveNode={removeNode}
           />
 
           {runError && (
@@ -449,6 +456,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             node={selNode}
             onClose={() => setSelected(null)}
             onUpdate={patch => updateNode(selNode.id, patch)}
+            onDelete={() => removeNode(selNode.id)}
             onRun={handleRun}
             runOutput={nodeOutputs[selNode.id]}
           />

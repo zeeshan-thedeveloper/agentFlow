@@ -11,6 +11,7 @@ interface CanvasBoardProps {
   selected: string | null;
   setSelected: (id: string | null) => void;
   runPhases: RunPhasesMap;
+  onRemoveNode: (id: string) => void;
 }
 
 interface DragState {
@@ -36,7 +37,7 @@ const MIN_ZOOM = 0.55;
 const MAX_ZOOM = 1.8;
 
 export default function CanvasBoard({
-  nodes, setNodes, edges, setEdges, selected, setSelected, runPhases,
+  nodes, setNodes, edges, setEdges, selected, setSelected, runPhases, onRemoveNode,
 }: CanvasBoardProps) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -86,13 +87,12 @@ export default function CanvasBoard({
   }
 
   const removeNode = useCallback((id: string) => {
-    setNodes(prev => prev.filter(node => node.id !== id));
-    setEdges(prev => prev.filter(edge => edge.from !== id && edge.to !== id));
+    onRemoveNode(id);
     setSelected(null);
     setSelectedEdge(null);
     setDragging(current => current?.id === id ? null : current);
     setConnecting(current => current?.from === id ? null : current);
-  }, [setEdges, setNodes, setSelected]);
+  }, [onRemoveNode, setSelected]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
