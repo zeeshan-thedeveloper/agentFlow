@@ -14,10 +14,11 @@ export interface NodeInput {
 
 export function getTargetHandleType(
   targetHandle: string | undefined,
-): 'data' | 'schema' | 'query' | 'connection' {
+): 'data' | 'schema' | 'query' | 'connection' | 'trigger' {
   if (targetHandle === 'schema-in') return 'schema';
   if (targetHandle === 'query-in' || targetHandle === 'agent-in') return 'query';
   if (targetHandle === 'db-in') return 'connection';
+  if (targetHandle === 'trigger-in') return 'trigger';
   return 'data';
 }
 
@@ -39,6 +40,10 @@ export function assembleNodeInput(
   for (const edge of edges.filter(item => item.to === nodeId)) {
     const value = stepOutputs.get(edge.from);
     const handleType = getTargetHandleType(edge.targetHandle);
+
+    if (handleType === 'trigger') {
+      continue;
+    }
 
     if (handleType === 'schema') {
       input.schema = schemaFromStepOutput(value);

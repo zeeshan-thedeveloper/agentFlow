@@ -78,7 +78,8 @@ export function isValidConnection(
   if (!srcType || !tgtType) return true;
   if (srcType === 'connection' && tgtType !== 'connection') return false;
   if (tgtType === 'connection' && srcType !== 'connection') return false;
-  if (srcType === 'trigger' && tgtType === 'data') return true;
+  if (srcType === 'trigger' && tgtType !== 'trigger') return false;
+  if (tgtType === 'trigger' && srcType !== 'trigger') return false;
   if (srcType === 'data' && tgtType === 'query') return true;
   return srcType === tgtType;
 }
