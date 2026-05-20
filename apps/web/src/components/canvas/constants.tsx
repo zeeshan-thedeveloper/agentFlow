@@ -11,20 +11,18 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
   ],
   schema: [
     { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
-    { id: 'db-in', type: 'target', handleType: 'schema', position: 'left-bottom', label: 'DB' },
     { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right', label: 'Schema' },
+  ],
+  'query-runner': [
+    { id: 'query-in', type: 'target', handleType: 'query', position: 'left', label: 'SQL' },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right', label: 'Rows' },
   ],
   agent: [
     { id: 'data-in', type: 'target', handleType: 'data', position: 'left-top', label: 'Data' },
     { id: 'schema-in', type: 'target', handleType: 'schema', position: 'left-bottom', label: 'Schema' },
     { id: 'data-out', type: 'source', handleType: 'data', position: 'right', label: 'Data' },
   ],
-  database: [
-    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
-    { id: 'agent-in', type: 'target', handleType: 'query', position: 'left', label: 'Agent' },
-    { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right-top', label: 'Schema' },
-    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-bottom', label: 'Data' },
-  ],
+  database: [],
   output: [
     { id: 'data-in', type: 'target', handleType: 'data', position: 'left', label: 'Data' },
   ],
@@ -105,8 +103,8 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
     glowB: 'rgba(16,185,129,0.08)',
     icon: <DatabaseIcon size={16} strokeWidth={1.8} />,
     lib: {
-      desc: 'Query or write to PostgreSQL or MongoDB',
-      options: ['Database query'],
+      desc: 'Named database connection (config only — no workflow handles)',
+      options: ['Configure connection'],
       category: 'integrations',
     },
   },
@@ -129,6 +127,23 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
     lib: {
       desc: 'Introspect a database and output its schema as agent context.',
       options: ['Introspect schema'],
+      category: 'integrations',
+    },
+  },
+  'query-runner': {
+    label: 'Query Runner',
+    color: '#06B6D4',
+    glowA: 'rgba(6,182,212,0.22)',
+    glowB: 'rgba(6,182,212,0.08)',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="3" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="1.4" />
+        <path d="M5 7l2.5 2.5L5 12M9 12h2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    lib: {
+      desc: 'Execute a SQL query against a database connection.',
+      options: ['Run query'],
       category: 'integrations',
     },
   },

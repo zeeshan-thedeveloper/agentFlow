@@ -1,5 +1,6 @@
 import type { FlowNode } from './types';
 import { IntegrationConfigSection } from './IntegrationConfigSection';
+import { QueryRunnerConfigSection } from './QueryRunnerConfigSection';
 import { SchemaConfigSection } from './SchemaConfigSection';
 import { NODE_TYPES } from './constants';
 
@@ -441,6 +442,10 @@ export default function ConfigPanel({ node, onUpdate, onClose, onDelete, onRun, 
               })
             }
           />
+        )}
+
+        {node.type === 'query-runner' && (
+          <QueryRunnerConfigSection node={node} onUpdate={onUpdate} />
         )}
 
         {node.type === 'integration' && (

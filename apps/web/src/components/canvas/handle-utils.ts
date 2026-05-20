@@ -9,6 +9,7 @@ export const HANDLE_COLORS: Record<HandleType, string> = {
 };
 
 export function getHandlesKey(node: FlowNode): keyof typeof NODE_HANDLES {
+  if (node.type === 'query-runner') return 'query-runner';
   if (node.type === 'integration' && node.integrationId?.startsWith('database')) {
     return 'database';
   }
@@ -45,31 +46,6 @@ export function getTargetHandleType(targetHandle: string | undefined): HandleTyp
   if (targetHandle === 'schema-in' || targetHandle === 'db-in') return 'schema';
   if (targetHandle === 'query-in' || targetHandle === 'agent-in') return 'query';
   return 'data';
-}
-
-export function isDatabaseNode(node: FlowNode): boolean {
-  return node.type === 'integration' && Boolean(node.integrationId?.startsWith('database'));
-}
-
-export function findDatabaseNodeForConnection(nodes: FlowNode[], integrationId: string): FlowNode | undefined {
-  if (!integrationId) return undefined;
-  return nodes.find(
-    node => isDatabaseNode(node) && node.integrationId === integrationId,
-  );
-}
-
-export function buildSchemaDatabaseEdge(dbNodeId: string, schemaNodeId: string): {
-  from: string;
-  to: string;
-  sourceHandle: string;
-  targetHandle: string;
-} {
-  return {
-    from: dbNodeId,
-    to: schemaNodeId,
-    sourceHandle: 'schema-out',
-    targetHandle: 'db-in',
-  };
 }
 
 export function isValidConnection(

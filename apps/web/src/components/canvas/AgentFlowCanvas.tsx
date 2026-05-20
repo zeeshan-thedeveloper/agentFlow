@@ -8,8 +8,6 @@ import NodeLibrary from './NodeLibrary';
 import CanvasBoard from './CanvasBoard';
 import ConfigPanel from './ConfigPanel';
 import { DEFAULT_EDGES, DEFAULT_NODES, DEFAULT_WORKFLOW_NAME } from './defaultWorkflow';
-import { isDatabaseNode } from './handle-utils';
-import { syncDatabaseSchemaEdges, syncSchemaDatabaseEdge } from './schema-db-link';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -137,15 +135,8 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
 
         setWorkflowId(workflow.id);
         setName(workflow.name);
-        const loadedNodes = workflow.canvasJson.nodes;
-        let loadedEdges = workflow.canvasJson.edges;
-        for (const node of loadedNodes) {
-          if (node.type === 'schema') {
-            loadedEdges = syncSchemaDatabaseEdge(node, loadedNodes, loadedEdges);
-          }
-        }
-        setNodes(loadedNodes);
-        setEdges(loadedEdges);
+        setNodes(workflow.canvasJson.nodes);
+        setEdges(workflow.canvasJson.edges);
       } catch {
         if (!cancelled) setSaveState('error');
       }
@@ -337,7 +328,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   }
 
   function addNode(type: LibraryNodeType) {
-    const nodeType = type === 'database' ? 'integration' : type;
+    const nodeType = type === 'database' ? 'integration' : type === 'schema' ? 'schema' : type;
     const id = `${type}-${Date.now()}`;
     const cfg = NODE_TYPES[type];
     const typeDefaults: Partial<FlowNode> =
@@ -351,6 +342,8 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         ? { integrationId: 'database', label: 'Database', actionParams: {} }
         : nodeType === 'schema'
         ? { integrationId: '', connectionName: '', subtitle: 'Select connection' }
+        : nodeType === 'query-runner'
+        ? { integrationId: '', connectionName: '', subtitle: 'Select connection', actionParams: { sql: '' } }
         : {};
 
     setNodes(p => [...p, {
@@ -366,24 +359,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   }
 
   function updateNode(id: string, patch: Partial<FlowNode>) {
-    setNodes(prev => {
-      const nextNodes = prev.map(n => (n.id === id ? { ...n, ...patch } : n));
-      const updated = nextNodes.find(n => n.id === id);
-      if (!updated) return nextNodes;
-
-      const connectionChanged =
-        'integrationId' in patch || 'connectionName' in patch || 'subtitle' in patch;
-
-      if (updated.type === 'schema' && connectionChanged) {
-        setEdges(current => syncSchemaDatabaseEdge(updated, nextNodes, current));
-      }
-
-      if (isDatabaseNode(updated) && connectionChanged) {
-        setEdges(current => syncDatabaseSchemaEdges(updated, nextNodes, current));
-      }
-
-      return nextNodes;
-    });
+    setNodes(prev => prev.map(n => (n.id === id ? { ...n, ...patch } : n)));
   }
 
   const removeNode = useCallback((id: string) => {

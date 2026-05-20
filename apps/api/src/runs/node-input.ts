@@ -57,7 +57,7 @@ export function isNodeInput(value: unknown): value is NodeInput {
 }
 
 export function handlerPayload(nodeType: string, input: NodeInput | unknown): unknown {
-  if (nodeType === 'agent' || nodeType === 'integration') {
+  if (nodeType === 'agent' || nodeType === 'integration' || nodeType === 'query-runner') {
     return isNodeInput(input) ? input : { data: input };
   }
 

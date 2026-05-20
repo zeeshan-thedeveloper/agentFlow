@@ -51,7 +51,9 @@ function assertCanvasJson(canvasJson: unknown): asserts canvasJson is WorkflowCa
 }
 
 function resolveHandlerType(node: FlowNode): string {
-  return node.type === 'schema' ? 'integration' : node.type;
+  if (node.type === 'schema') return 'integration';
+  if (node.type === 'query-runner') return 'query-runner';
+  return node.type;
 }
 
 function buildNodeParams(node: FlowNode, context: ExecutorContext): Record<string, unknown> {
@@ -60,6 +62,14 @@ function buildNodeParams(node: FlowNode, context: ExecutorContext): Record<strin
       integrationId: node.integrationId,
       actionId: 'introspect',
       actionParams: {},
+      ...context,
+    };
+  }
+
+  if (node.type === 'query-runner') {
+    return {
+      integrationId: node.integrationId,
+      actionParams: node.actionParams ?? {},
       ...context,
     };
   }
