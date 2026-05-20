@@ -1,8 +1,8 @@
 'use client';
 
 import { Database } from 'lucide-react';
-import type { FlowEdge, FlowNode } from './types';
-import { getHandlesKey, HANDLE_COLORS, getHandleAnchor, getNodeHandles } from './handle-utils';
+import type { FlowEdge, FlowNode, HandleDef } from './types';
+import { getHandleAnchor, getNodeHandles, HANDLE_COLORS } from './handle-utils';
 
 const HANDLE_TOOLTIPS: Record<string, string> = {
   'data-out': 'Data output — workflow payload',
@@ -15,6 +15,14 @@ const HANDLE_TOOLTIPS: Record<string, string> = {
   'db-in': 'Database link — connect from Database Schema output',
   'trigger-in': 'Execution trigger input',
 };
+
+function handleLabelPosition(def: HandleDef, relX: number, relY: number) {
+  const gap = 12;
+  if (def.type === 'target') {
+    return { left: relX - gap, top: relY, transform: 'translate(-100%, -50%)' };
+  }
+  return { left: relX + gap, top: relY, transform: 'translate(0, -50%)' };
+}
 
 interface TypedNodeHandlesProps {
   node: FlowNode;
@@ -32,15 +40,15 @@ export default function TypedNodeHandles({
   onTargetHandleHover,
 }: TypedNodeHandlesProps) {
   const handles = getNodeHandles(node);
-  const handlesKey = getHandlesKey(node);
   const hasSchemaEdge = edges.some(e => e.to === node.id && e.targetHandle === 'schema-in');
   const hasDbEdge = edges.some(e => e.to === node.id && e.targetHandle === 'db-in');
-  const showHandleLabels = handlesKey === 'database' || node.type === 'schema';
 
   return (
     <>
       {handles.map(def => {
         const anchor = getHandleAnchor(node, def.id);
+        const relX = anchor.x - node.x;
+        const relY = anchor.y - node.y;
         const connected = edges.some(edge =>
           def.type === 'source'
             ? edge.from === node.id && (edge.sourceHandle ?? 'data-out') === def.id
@@ -50,9 +58,10 @@ export default function TypedNodeHandles({
         const isSchemaIn = def.id === 'schema-in';
         const isDbIn = def.id === 'db-in';
         const accentHandle = isSchemaIn || isDbIn;
+        const labelPos = handleLabelPosition(def, relX, relY);
 
         return (
-          <div key={def.id}>
+          <div key={def.id} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
             <div
               title={HANDLE_TOOLTIPS[def.id] ?? def.label ?? def.id}
               onMouseDown={e => {
@@ -71,38 +80,47 @@ export default function TypedNodeHandles({
               }}
               style={{
                 position: 'absolute',
-                left: anchor.x - node.x,
-                top: anchor.y - node.y,
+                left: relX,
+                top: relY,
                 transform: def.type === 'target' ? 'translate(-50%, -50%)' : 'translate(50%, -50%)',
-                width: 14,
-                height: 14,
+                width: 16,
+                height: 16,
                 borderRadius: '50%',
-                background: 'var(--app-bg)',
-                border: accentHandle && !connected ? `2px dashed ${color}` : `2px solid ${color}`,
-                boxShadow: connected && accentHandle ? `0 0 8px ${color}` : `0 0 6px ${color}60`,
-                opacity: accentHandle && !connected ? 0.55 : 1,
+                background: 'var(--panel-bg-strong)',
+                border: accentHandle && !connected ? `2px dashed ${color}` : `2.5px solid ${color}`,
+                boxShadow: connected && accentHandle
+                  ? `0 0 10px ${color}90`
+                  : `0 0 0 1px var(--app-bg), 0 0 8px ${color}50`,
+                opacity: accentHandle && !connected ? 0.7 : 1,
                 cursor: 'crosshair',
-                zIndex: 4,
+                zIndex: 5,
+                pointerEvents: 'auto',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              {(isSchemaIn || isDbIn) && <Database size={8} color={color} strokeWidth={2} />}
+              {(isSchemaIn || isDbIn) && <Database size={9} color={color} strokeWidth={2.2} />}
             </div>
-            {showHandleLabels && def.label && (
+            {def.label && (
               <span
                 style={{
                   position: 'absolute',
-                  left: anchor.x - node.x + (def.type === 'target' ? -6 : 6),
-                  top: anchor.y - node.y + 10,
-                  transform: def.type === 'target' ? 'translateX(-50%)' : 'translateX(-50%)',
-                  fontSize: 8,
+                  ...labelPos,
+                  pointerEvents: 'none',
+                  zIndex: 5,
+                  fontSize: 10,
                   fontWeight: 700,
-                  color,
-                  letterSpacing: '0.06em',
+                  lineHeight: 1,
+                  letterSpacing: '0.04em',
                   textTransform: 'uppercase',
                   whiteSpace: 'nowrap',
+                  color,
+                  padding: '3px 7px',
+                  borderRadius: 5,
+                  background: 'var(--panel-bg-strong)',
+                  border: `1px solid ${color}66`,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.14), 0 0 0 1px var(--app-bg)',
                 }}
               >
                 {def.label}
@@ -117,11 +135,15 @@ export default function TypedNodeHandles({
             position: 'absolute',
             left: 8,
             bottom: 6,
-            fontSize: 8,
+            fontSize: 9,
             fontWeight: 700,
             color: HANDLE_COLORS.schema,
             letterSpacing: '0.06em',
             textTransform: 'uppercase',
+            padding: '2px 6px',
+            borderRadius: 4,
+            background: 'var(--panel-bg-strong)',
+            border: `1px solid ${HANDLE_COLORS.schema}55`,
           }}
         >
           linked
@@ -133,11 +155,15 @@ export default function TypedNodeHandles({
             position: 'absolute',
             left: 8,
             bottom: 6,
-            fontSize: 8,
+            fontSize: 9,
             fontWeight: 700,
             color: HANDLE_COLORS.schema,
             letterSpacing: '0.06em',
             textTransform: 'uppercase',
+            padding: '2px 6px',
+            borderRadius: 4,
+            background: 'var(--panel-bg-strong)',
+            border: `1px solid ${HANDLE_COLORS.schema}55`,
           }}
         >
           schema

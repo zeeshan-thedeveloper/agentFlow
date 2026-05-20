@@ -81,6 +81,7 @@ export default function CanvasNodeCard({
         width: 200, userSelect: 'none', cursor: 'grab',
         zIndex: selected ? 20 : 10,
         pointerEvents: 'auto',
+        overflow: 'visible',
         transform: `scale(${scale})`,
         transformOrigin: 'top left',
       }}

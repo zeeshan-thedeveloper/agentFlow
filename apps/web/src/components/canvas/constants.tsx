@@ -6,8 +6,8 @@ export const NH = 74;
 
 export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
   trigger: [
-    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-top' },
-    { id: 'query-out', type: 'source', handleType: 'query', position: 'right-bottom', conditional: "inputType === 'sql'" },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-top', label: 'Data' },
+    { id: 'query-out', type: 'source', handleType: 'query', position: 'right-bottom', label: 'SQL', conditional: "inputType === 'sql'" },
   ],
   schema: [
     { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
@@ -15,9 +15,9 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
     { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right', label: 'Schema' },
   ],
   agent: [
-    { id: 'data-in', type: 'target', handleType: 'data', position: 'left-top' },
-    { id: 'schema-in', type: 'target', handleType: 'schema', position: 'left-bottom' },
-    { id: 'data-out', type: 'source', handleType: 'data', position: 'right' },
+    { id: 'data-in', type: 'target', handleType: 'data', position: 'left-top', label: 'Data' },
+    { id: 'schema-in', type: 'target', handleType: 'schema', position: 'left-bottom', label: 'Schema' },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right', label: 'Data' },
   ],
   database: [
     { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
@@ -26,7 +26,7 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
     { id: 'data-out', type: 'source', handleType: 'data', position: 'right-bottom', label: 'Data' },
   ],
   output: [
-    { id: 'data-in', type: 'target', handleType: 'data', position: 'left' },
+    { id: 'data-in', type: 'target', handleType: 'data', position: 'left', label: 'Data' },
   ],
   integration: [
     { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
