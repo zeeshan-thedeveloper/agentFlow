@@ -2,6 +2,7 @@
 
 import { Database } from 'lucide-react';
 import type { FlowEdge, FlowNode, HandleDef } from './types';
+import { NH, NW } from './constants';
 import { getHandleColor, getHandlePosition, getHandlesKey, getNodeHandles, HANDLE_COLORS } from './handle-utils';
 
 const HANDLE_TOOLTIPS: Record<string, string> = {
@@ -39,6 +40,7 @@ function handleTransform(def: HandleDef): string {
 
 interface TypedNodeHandlesProps {
   worldNode: FlowNode;
+  layoutHeight?: number;
   scale?: number;
   edges: FlowEdge[];
   onStartConnection: (e: React.MouseEvent, handleId: string) => void;
@@ -48,6 +50,7 @@ interface TypedNodeHandlesProps {
 
 export default function TypedNodeHandles({
   worldNode,
+  layoutHeight = NH,
   scale = 1,
   edges,
   onStartConnection,
@@ -67,7 +70,7 @@ export default function TypedNodeHandles({
   return (
     <>
       {handles.map(def => {
-        const anchor = getHandlePosition(worldNode, def.id);
+        const anchor = getHandlePosition(worldNode, def.id, NW, layoutHeight);
         const relX = (anchor.x - worldNode.x) * scale;
         const relY = (anchor.y - worldNode.y) * scale;
         const connected = edges.some(edge =>

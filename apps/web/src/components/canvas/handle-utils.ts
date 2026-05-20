@@ -111,6 +111,35 @@ function handleSide(position: string): 'left' | 'right' {
   return position.includes('right') ? 'right' : 'left';
 }
 
+const HANDLE_Y_FRACTION: Record<string, number> = {
+  'left-top': 0.28,
+  'right-top': 0.28,
+  'left-middle': 0.5,
+  left: 0.5,
+  right: 0.5,
+  'left-bottom': 0.72,
+  'right-bottom': 0.72,
+};
+
+/** Map legacy saved handle ids to current node definitions. */
+export function resolveHandleId(node: FlowNode, handleId: string | undefined): string | undefined {
+  if (!handleId) return undefined;
+  if (getHandleDefById(node, handleId)) return handleId;
+  if (node.type === 'agent') {
+    if (handleId === 'data-out') return 'text-out';
+    if (handleId === 'data-in' || handleId === 'schema-in') return 'trigger-in';
+  }
+  return handleId;
+}
+
+function handleYFraction(def: HandleDef, sideHandles: HandleDef[]): number {
+  if (HANDLE_Y_FRACTION[def.position] !== undefined) {
+    return HANDLE_Y_FRACTION[def.position];
+  }
+  const index = Math.max(0, sideHandles.findIndex(h => h.id === def.id));
+  return (index + 1) / (sideHandles.length + 1);
+}
+
 /** Canvas-space anchor for a handle; shared by edge routing and handle dots. */
 export function getHandlePosition(
   node: FlowNode,
@@ -118,21 +147,24 @@ export function getHandlePosition(
   nodeWidth = NW,
   nodeHeight = NH,
 ): { x: number; y: number } {
-  const def = getHandleDefById(node, handleId);
+  const resolvedId = resolveHandleId(node, handleId) ?? handleId;
+  const def = getHandleDefById(node, resolvedId);
   if (!def) {
     return { x: node.x, y: node.y + nodeHeight / 2 };
   }
 
   const side = handleSide(def.position);
-  const sideHandles = getAllNodeHandleDefs(node).filter(h => handleSide(h.position) === side);
-  const index = Math.max(0, sideHandles.findIndex(h => h.id === handleId));
-  const count = sideHandles.length;
-  const y = node.y + (nodeHeight / (count + 1)) * (index + 1);
+  const sideHandles = getNodeHandles(node).filter(h => handleSide(h.position) === side);
+  const y = node.y + nodeHeight * handleYFraction(def, sideHandles);
   const x = side === 'right' ? node.x + nodeWidth : node.x;
 
   return { x, y };
 }
 
-export function getHandleAnchor(node: FlowNode, handleId: string): { x: number; y: number } {
-  return getHandlePosition(node, handleId);
+export function getHandleAnchor(
+  node: FlowNode,
+  handleId: string,
+  nodeHeight = NH,
+): { x: number; y: number } {
+  return getHandlePosition(node, handleId, NW, nodeHeight);
 }

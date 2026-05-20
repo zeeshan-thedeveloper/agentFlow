@@ -9,7 +9,7 @@ import {
   edgeColor,
   edgeHandleLabel,
 } from './edge-utils';
-import { getHandleAnchor, isValidConnection } from './handle-utils';
+import { getHandleAnchor, isValidConnection, resolveHandleId } from './handle-utils';
 
 interface CanvasBoardProps {
   nodes: FlowNode[];
@@ -57,7 +57,12 @@ export default function CanvasBoard({
   const [hoverTarget, setHoverTarget] = useState<{ nodeId: string; handleId: string } | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
+  const [nodeLayoutHeights, setNodeLayoutHeights] = useState<Record<string, number>>({});
   const ref = useRef<HTMLDivElement>(null);
+
+  const reportLayoutHeight = useCallback((nodeId: string, height: number) => {
+    setNodeLayoutHeights(prev => (prev[nodeId] === height ? prev : { ...prev, [nodeId]: height }));
+  }, []);
 
   function getCanvasPoint(e: Pick<React.MouseEvent | WheelEvent, 'clientX' | 'clientY'>) {
     const rect = ref.current?.getBoundingClientRect();
@@ -262,10 +267,13 @@ export default function CanvasBoard({
   }
 
   function edgeEndpoints(a: FlowNode, b: FlowNode, edge: FlowEdge) {
-    const sourceHandle = edge.sourceHandle ?? 'data-out';
-    const targetHandle = edge.targetHandle ?? 'data-in';
-    const start = getHandleAnchor(a, sourceHandle);
-    const end = getHandleAnchor(b, targetHandle);
+    const sourceHandle =
+      resolveHandleId(a, edge.sourceHandle) ?? (a.type === 'agent' ? 'text-out' : 'data-out');
+    const targetHandle =
+      resolveHandleId(b, edge.targetHandle) ??
+      (b.type === 'query-runner' ? 'query-in' : 'data-in');
+    const start = getHandleAnchor(a, sourceHandle, nodeLayoutHeights[a.id] ?? NH);
+    const end = getHandleAnchor(b, targetHandle, nodeLayoutHeights[b.id] ?? NH);
     return {
       x1: screenX(start.x),
       y1: screenY(start.y),
@@ -394,7 +402,11 @@ export default function CanvasBoard({
         })}
 
         {connecting && connectingNode && (() => {
-          const start = getHandleAnchor(connectingNode, connecting.sourceHandle);
+          const start = getHandleAnchor(
+            connectingNode,
+            resolveHandleId(connectingNode, connecting.sourceHandle) ?? 'text-out',
+            nodeLayoutHeights[connectingNode.id] ?? NH,
+          );
           const x1 = screenX(start.x);
           const y1 = screenY(start.y);
           const stroke = connecting.valid
@@ -438,6 +450,7 @@ export default function CanvasBoard({
               setHoverTarget(handleId ? { nodeId: node.id, handleId } : null);
             }}
             onFinishConnection={(e, handleId) => finishConnection(e, node.id, handleId)}
+            onLayoutHeight={reportLayoutHeight}
           />
         ))}
       </div>

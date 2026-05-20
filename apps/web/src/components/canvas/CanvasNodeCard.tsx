@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { FlowEdge, FlowNode, RunPhase } from './types';
 import { NODE_TYPES, NH, NW } from './constants';
 import TypedNodeHandles from './TypedNodeHandles';
@@ -26,6 +26,7 @@ interface CanvasNodeCardProps {
   onStartConnection: (e: React.MouseEvent, handleId: string) => void;
   onFinishConnection: (e: React.MouseEvent, handleId: string) => void;
   onTargetHandleHover?: (handleId: string | null) => void;
+  onLayoutHeight?: (nodeId: string, height: number) => void;
 }
 
 function IcoFailed() {
@@ -51,7 +52,10 @@ export default function CanvasNodeCard({
   onStartConnection,
   onFinishConnection,
   onTargetHandleHover,
+  onLayoutHeight,
 }: CanvasNodeCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [layoutHeight, setLayoutHeight] = useState(NH);
   const TOOL_LABELS: Record<string, string> = {
     http_request: 'HTTP',
     web_search: 'Search',
@@ -75,6 +79,22 @@ export default function CanvasNodeCard({
     ? worldNode.connectionName || worldNode.integrationId?.split(':').pop() || 'Select connection'
     : worldNode.subtitle;
 
+  useLayoutEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+
+    const report = () => {
+      const height = Math.max(NH, Math.round(el.offsetHeight));
+      setLayoutHeight(current => (current === height ? current : height));
+      onLayoutHeight?.(worldNode.id, height);
+    };
+
+    report();
+    const observer = new ResizeObserver(report);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [worldNode.id, worldNode.label, worldNode.subtitle, worldNode.tools, subtitle, onLayoutHeight]);
+
   return (
     <div
       style={{
@@ -82,7 +102,7 @@ export default function CanvasNodeCard({
         left: screenX,
         top: screenY,
         width: NW * scale,
-        height: NH * scale,
+        height: layoutHeight * scale,
         userSelect: 'none',
         zIndex: selected ? 20 : 10,
         pointerEvents: 'none',
@@ -91,6 +111,7 @@ export default function CanvasNodeCard({
     >
       <TypedNodeHandles
         worldNode={worldNode}
+        layoutHeight={layoutHeight}
         scale={scale}
         edges={edges}
         onStartConnection={onStartConnection}
@@ -108,7 +129,7 @@ export default function CanvasNodeCard({
           left: 0,
           top: 0,
           width: NW,
-          height: NH,
+          height: layoutHeight,
           transform: `scale(${scale})`,
           transformOrigin: 'top left',
           cursor: 'grab',
@@ -131,8 +152,9 @@ export default function CanvasNodeCard({
       )}
 
       {/* Card */}
-      <div style={{
-        height: '100%',
+      <div
+        ref={cardRef}
+        style={{
         background: 'var(--card-wash), var(--panel-bg-strong)',
         border: `1px solid ${selected ? t.color : isFailed ? '#EF444480' : isRunning ? t.color : isQueued ? t.color + '35' : 'var(--border-strong)'}`,
         borderRadius: 10, padding: '11px 14px',
