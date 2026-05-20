@@ -15,14 +15,26 @@ const HANDLE_TOOLTIPS: Record<string, string> = {
   'schema-in': 'Schema context input — connect a Schema node to give this agent database context',
   'db-in': 'Database connection — connect from Database Read or Write output',
   'trigger-in': 'Execution trigger input',
+  'trigger-out': 'Execution signal — connect to trigger-in on Schema or downstream nodes',
 };
+
+function isLeftSideHandle(def: HandleDef): boolean {
+  return def.position === 'left' || def.position === 'left-top' || def.position === 'left-bottom';
+}
 
 function handleLabelPosition(def: HandleDef, relX: number, relY: number) {
   const gap = 12;
-  if (def.type === 'target') {
+  if (def.type === 'target' || (def.type === 'source' && isLeftSideHandle(def))) {
     return { left: relX - gap, top: relY, transform: 'translate(-100%, -50%)' };
   }
   return { left: relX + gap, top: relY, transform: 'translate(0, -50%)' };
+}
+
+function handleTransform(def: HandleDef): string {
+  if (def.type === 'target' || (def.type === 'source' && isLeftSideHandle(def))) {
+    return 'translate(-50%, -50%)';
+  }
+  return 'translate(50%, -50%)';
 }
 
 interface TypedNodeHandlesProps {
@@ -46,6 +58,7 @@ export default function TypedNodeHandles({
   const showHandleLabels =
     handlesKey === 'database' ||
     handlesKey === 'query-runner' ||
+    handlesKey === 'trigger' ||
     node.type === 'schema' ||
     node.type === 'agent';
 
@@ -88,7 +101,7 @@ export default function TypedNodeHandles({
                 position: 'absolute',
                 left: relX,
                 top: relY,
-                transform: def.type === 'target' ? 'translate(-50%, -50%)' : 'translate(50%, -50%)',
+                transform: handleTransform(def),
                 width: 16,
                 height: 16,
                 borderRadius: '50%',

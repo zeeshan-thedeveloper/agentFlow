@@ -18,8 +18,12 @@ describe('isValidConnection', () => {
     expect(isValidConnection('t1', 'data-out', 'a1', 'data-in', nodes)).toBe(true);
   });
 
-  it('allows trigger to data', () => {
-    expect(isValidConnection('t1', 'data-out', 's1', 'trigger-in', nodes)).toBe(true);
+  it('allows trigger-out to schema trigger-in', () => {
+    expect(isValidConnection('t1', 'trigger-out', 's1', 'trigger-in', nodes)).toBe(true);
+  });
+
+  it('rejects data-out to schema trigger-in', () => {
+    expect(isValidConnection('t1', 'data-out', 's1', 'trigger-in', nodes)).toBe(false);
   });
 
   it('rejects schema to query', () => {
