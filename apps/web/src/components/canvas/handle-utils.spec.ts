@@ -39,6 +39,22 @@ describe('isValidConnection', () => {
     expect(isValidConnection('a1', 'text-out', 'q1', 'query-in', nodes)).toBe(true);
   });
 
+  it('allows agent text-out to another agent text-in', () => {
+    const nodesWithSecondAgent: FlowNode[] = [
+      ...nodes,
+      { id: 'a2', type: 'agent', label: 'Agent 2', x: 0, y: 0 },
+    ];
+    expect(isValidConnection('a1', 'text-out', 'a2', 'text-in', nodesWithSecondAgent)).toBe(true);
+  });
+
+  it('rejects agent text-out to agent trigger-in', () => {
+    const nodesWithSecondAgent: FlowNode[] = [
+      ...nodes,
+      { id: 'a2', type: 'agent', label: 'Agent 2', x: 0, y: 0 },
+    ];
+    expect(isValidConnection('a1', 'text-out', 'a2', 'trigger-in', nodesWithSecondAgent)).toBe(false);
+  });
+
   it('allows agent query-out to query-runner query-in', () => {
     expect(isValidConnection('a1', 'query-out', 'q1', 'query-in', nodes)).toBe(true);
   });

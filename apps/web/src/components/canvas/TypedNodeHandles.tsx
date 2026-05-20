@@ -8,6 +8,7 @@ import { getHandleColor, getHandlePosition, getHandlesKey, getNodeHandles, HANDL
 const HANDLE_TOOLTIPS: Record<string, string> = {
   'data-out': 'Data output — workflow payload',
   'data-in': 'Data input — prompt or prior node output',
+  'text-in': 'Text input — connect upstream Agent or Trigger text output',
   'query-out': 'SQL query output — connects to Query Runner SQL input',
   'query-in': 'SQL query input — from Trigger or Agent',
   'agent-in': 'Agent SQL input — connect Agent data-out here',
@@ -75,8 +76,12 @@ export default function TypedNodeHandles({
         const relY = (anchor.y - worldNode.y) * scale;
         const connected = edges.some(edge =>
           def.type === 'source'
-            ? edge.from === worldNode.id && (edge.sourceHandle ?? 'data-out') === def.id
-            : edge.to === worldNode.id && (edge.targetHandle ?? 'data-in') === def.id,
+            ? edge.from === worldNode.id &&
+              (edge.sourceHandle === def.id ||
+                (def.id === 'text-out' && edge.sourceHandle === 'data-out'))
+            : edge.to === worldNode.id &&
+              (edge.targetHandle === def.id ||
+                (def.id === 'text-in' && edge.targetHandle === 'data-in')),
         );
         const color = getHandleColor(def.id, def.handleType);
         const isSchemaIn = def.id === 'schema-in';

@@ -127,7 +127,7 @@ export function resolveHandleId(node: FlowNode, handleId: string | undefined): s
   if (getHandleDefById(node, handleId)) return handleId;
   if (node.type === 'agent') {
     if (handleId === 'data-out') return 'text-out';
-    if (handleId === 'data-in' || handleId === 'schema-in') return 'trigger-in';
+    if (handleId === 'data-in' || handleId === 'schema-in') return 'text-in';
   }
   return handleId;
 }
@@ -165,6 +165,35 @@ export function getHandleAnchor(
   node: FlowNode,
   handleId: string,
   nodeHeight = NH,
+  yOffset = 0,
 ): { x: number; y: number } {
-  return getHandlePosition(node, handleId, NW, nodeHeight);
+  const anchor = getHandlePosition(node, handleId, NW, nodeHeight);
+  return { x: anchor.x, y: anchor.y + yOffset };
+}
+
+/** Spread multiple edges that share the same handle so wires do not fully overlap. */
+export function getFanOutYOffset(index: number, count: number, spacing = 12): number {
+  if (count <= 1) return 0;
+  return (index - (count - 1) / 2) * spacing;
+}
+
+export function listEdgesOnHandle(
+  edges: { from: string; to: string; sourceHandle?: string; targetHandle?: string }[],
+  node: FlowNode,
+  handleId: string,
+  role: 'source' | 'target',
+): { from: string; to: string; sourceHandle?: string; targetHandle?: string }[] {
+  const resolved = resolveHandleId(node, handleId) ?? handleId;
+  return edges.filter(edge => {
+    if (role === 'source') {
+      return (
+        edge.from === node.id &&
+        (resolveHandleId(node, edge.sourceHandle) ?? edge.sourceHandle) === resolved
+      );
+    }
+    return (
+      edge.to === node.id &&
+      (resolveHandleId(node, edge.targetHandle) ?? edge.targetHandle) === resolved
+    );
+  });
 }
