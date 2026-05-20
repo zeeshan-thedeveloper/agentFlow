@@ -469,6 +469,8 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         {selNode && (
           <ConfigPanel
             node={selNode}
+            nodes={nodes}
+            edges={edges}
             onClose={() => setSelected(null)}
             onUpdate={patch => updateNode(selNode.id, patch)}
             onDelete={() => removeNode(selNode.id)}

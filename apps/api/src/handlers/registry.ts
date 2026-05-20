@@ -4,6 +4,7 @@ import { OutputHandler } from './output.handler';
 import { TriggerHandler } from './trigger.handler';
 import { CredentialResolver } from '../integrations/credential.resolver';
 import { IntegrationHandler } from '../integrations/integration.handler';
+import { DatabaseHandler } from './database.handler';
 import { QueryRunnerHandler } from './query-runner.handler';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -16,5 +17,6 @@ export const registry: Record<string, NodeHandler> = {
   agent: new AgentHandler(),
   output: new OutputHandler(),
   integration: new IntegrationHandler(credentialResolver, prisma),
+  database: new DatabaseHandler(),
   'query-runner': new QueryRunnerHandler(credentialResolver, prisma),
 };

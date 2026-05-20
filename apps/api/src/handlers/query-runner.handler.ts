@@ -17,7 +17,7 @@ export class QueryRunnerHandler implements NodeHandler {
 
   async execute(params: Record<string, unknown>, input: unknown): Promise<unknown> {
     const nodeInput = isNodeInput(input) ? input : { data: input };
-    const integrationId = String(params.integrationId ?? '');
+    const integrationId = String(nodeInput.connection ?? params.integrationId ?? '');
     const userId = String(params.userId ?? params.workflowOwnerId ?? '');
 
     if (!integrationId) throw new Error('Query Runner: integrationId is required.');

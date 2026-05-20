@@ -6,7 +6,14 @@ export const HANDLE_COLORS: Record<HandleType, string> = {
   trigger: '#F59E0B',
   schema: '#8B5CF6',
   query: '#06B6D4',
+  connection: '#64748B',
 };
+
+export function getHandleColor(handleId: string, handleType: HandleType): string {
+  if (handleId === 'read-out') return '#10B981';
+  if (handleId === 'write-out') return '#F59E0B';
+  return HANDLE_COLORS[handleType];
+}
 
 export function getHandlesKey(node: FlowNode): keyof typeof NODE_HANDLES {
   if (node.type === 'query-runner') return 'query-runner';
@@ -55,9 +62,22 @@ export function isValidConnection(
   targetHandle: string | undefined,
   nodes: FlowNode[],
 ): boolean {
+  const sourceNode = nodes.find(item => item.id === sourceId);
+  const targetNode = nodes.find(item => item.id === targetId);
   const srcType = getHandleType(sourceId, sourceHandle, nodes);
   const tgtType = getHandleType(targetId, targetHandle, nodes);
+
+  if (
+    targetHandle === 'db-in' &&
+    targetNode?.type === 'schema' &&
+    sourceHandle !== 'read-out'
+  ) {
+    return false;
+  }
+
   if (!srcType || !tgtType) return true;
+  if (srcType === 'connection' && tgtType !== 'connection') return false;
+  if (tgtType === 'connection' && srcType !== 'connection') return false;
   if (srcType === 'trigger' && tgtType === 'data') return true;
   if (srcType === 'data' && tgtType === 'query') return true;
   return srcType === tgtType;

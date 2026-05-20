@@ -1,4 +1,5 @@
-import type { FlowNode } from './types';
+import type { FlowEdge, FlowNode } from './types';
+import { findDbInSourceNode } from './db-connection';
 import { IntegrationConfigSection } from './IntegrationConfigSection';
 import { QueryRunnerConfigSection } from './QueryRunnerConfigSection';
 import { SchemaConfigSection } from './SchemaConfigSection';
@@ -6,6 +7,8 @@ import { NODE_TYPES } from './constants';
 
 interface ConfigPanelProps {
   node: FlowNode;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
   onUpdate: (patch: Partial<FlowNode>) => void;
   onClose: () => void;
   onDelete: () => void;
@@ -68,9 +71,19 @@ function formatRunOutput(output: unknown) {
   return JSON.stringify(output, null, 2);
 }
 
-export default function ConfigPanel({ node, onUpdate, onClose, onDelete, onRun, runOutput }: ConfigPanelProps) {
+export default function ConfigPanel({
+  node,
+  nodes,
+  edges,
+  onUpdate,
+  onClose,
+  onDelete,
+  onRun,
+  runOutput,
+}: ConfigPanelProps) {
   const t = NODE_TYPES[node.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
   const triggerInputMode = node.triggerInputMode ?? 'none';
+  const dbSourceNode = findDbInSourceNode(node.id, nodes, edges);
 
   return (
     <div style={{
@@ -431,21 +444,40 @@ export default function ConfigPanel({ node, onUpdate, onClose, onDelete, onRun, 
         )}
 
         {node.type === 'schema' && (
-          <SchemaConfigSection
-            integrationId={node.integrationId ?? ''}
-            connectionName={node.connectionName ?? ''}
-            onChange={(integrationId, connectionName) =>
-              onUpdate({
-                integrationId,
-                connectionName,
-                subtitle: connectionName || 'Select connection',
-              })
-            }
-          />
+          dbSourceNode ? (
+            <Section label="Database Connection">
+              <div style={{
+                fontSize: 12,
+                color: 'var(--text-secondary)',
+                padding: '8px 10px',
+                borderRadius: 7,
+                border: '1px solid var(--border-strong)',
+                background: 'var(--surface-bg)',
+              }}>
+                Connected to: {dbSourceNode.label}
+              </div>
+            </Section>
+          ) : (
+            <SchemaConfigSection
+              integrationId={node.integrationId ?? ''}
+              connectionName={node.connectionName ?? ''}
+              onChange={(integrationId, connectionName) =>
+                onUpdate({
+                  integrationId,
+                  connectionName,
+                  subtitle: connectionName || 'Select connection',
+                })
+              }
+            />
+          )
         )}
 
         {node.type === 'query-runner' && (
-          <QueryRunnerConfigSection node={node} onUpdate={onUpdate} />
+          <QueryRunnerConfigSection
+            node={node}
+            onUpdate={onUpdate}
+            connectedDbLabel={dbSourceNode?.label}
+          />
         )}
 
         {node.type === 'integration' && (
