@@ -43,7 +43,16 @@ function isWorkflowCanvasJson(value: unknown): value is WorkflowCanvasJson {
 }
 
 function normalizeCanvasJson(value: unknown): WorkflowCanvasJson {
-  return isWorkflowCanvasJson(value) ? value : DEFAULT_CANVAS_JSON;
+  if (!isWorkflowCanvasJson(value)) return DEFAULT_CANVAS_JSON;
+
+  return {
+    nodes: value.nodes,
+    edges: value.edges.map(edge => ({
+      ...edge,
+      sourceHandle: edge.sourceHandle ?? 'data-out',
+      targetHandle: edge.targetHandle ?? 'data-in',
+    })),
+  };
 }
 
 async function getUserId() {
