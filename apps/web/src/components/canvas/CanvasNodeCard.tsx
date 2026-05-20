@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import type { FlowNode, RunPhase } from './types';
+import type { FlowEdge, FlowNode, RunPhase } from './types';
 import { NODE_TYPES } from './constants';
+import TypedNodeHandles from './TypedNodeHandles';
 
 function IcoCheck() {
   return (
@@ -19,8 +20,10 @@ interface CanvasNodeCardProps {
   onMouseDown: (e: React.MouseEvent) => void;
   onClick: () => void;
   onDelete?: (e: React.MouseEvent) => void;
-  onInputHandleMouseUp?: (e: React.MouseEvent) => void;
-  onStartConnection?: (e: React.MouseEvent) => void;
+  edges: FlowEdge[];
+  onStartConnection: (e: React.MouseEvent, handleId: string) => void;
+  onFinishConnection: (e: React.MouseEvent, handleId: string) => void;
+  onTargetHandleHover?: (handleId: string | null) => void;
 }
 
 function IcoFailed() {
@@ -33,7 +36,17 @@ function IcoFailed() {
 }
 
 export default function CanvasNodeCard({
-  node, selected, runPhase, scale = 1, onMouseDown, onClick, onDelete, onInputHandleMouseUp, onStartConnection,
+  node,
+  selected,
+  runPhase,
+  scale = 1,
+  onMouseDown,
+  onClick,
+  onDelete,
+  edges,
+  onStartConnection,
+  onFinishConnection,
+  onTargetHandleHover,
 }: CanvasNodeCardProps) {
   const TOOL_LABELS: Record<string, string> = {
     http_request: 'HTTP',
@@ -87,22 +100,13 @@ export default function CanvasNodeCard({
         />
       )}
 
-      {/* Input handle */}
-      {node.type !== 'trigger' && (
-        <div
-          onMouseDown={e => e.stopPropagation()}
-          onMouseUp={onInputHandleMouseUp}
-          title="Connect here"
-          style={{
-            position: 'absolute', left: -7, top: '50%',
-            transform: 'translateY(-50%)',
-            width: 14, height: 14, borderRadius: '50%',
-            background: 'var(--app-bg)', border: `2px solid ${t.color}`,
-            boxShadow: `0 0 6px ${t.color}60`, zIndex: 3,
-            cursor: 'crosshair',
-          }}
-        />
-      )}
+      <TypedNodeHandles
+        node={node}
+        edges={edges}
+        onStartConnection={onStartConnection}
+        onFinishConnection={onFinishConnection}
+        onTargetHandleHover={onTargetHandleHover}
+      />
 
       {/* Card */}
       <div style={{
@@ -257,21 +261,6 @@ export default function CanvasNodeCard({
         )}
       </div>
 
-      {/* Connection handle */}
-      {node.type !== 'output' && (
-        <div
-          onMouseDown={onStartConnection}
-          title="Drag to connect"
-          style={{
-            position: 'absolute', right: -7, top: '50%',
-            transform: 'translateY(-50%)',
-            width: 14, height: 14, borderRadius: '50%',
-            background: 'var(--app-bg)', border: `2px solid ${t.color}`,
-            boxShadow: `0 0 6px ${t.color}60`, zIndex: 3,
-            cursor: 'crosshair',
-          }}
-        />
-      )}
     </div>
   );
 }
