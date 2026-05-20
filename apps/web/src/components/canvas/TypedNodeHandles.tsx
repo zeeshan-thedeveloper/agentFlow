@@ -2,12 +2,12 @@
 
 import { Database } from 'lucide-react';
 import type { FlowEdge, FlowNode, HandleDef } from './types';
-import { getHandleAnchor, getNodeHandles, HANDLE_COLORS } from './handle-utils';
+import { getHandleAnchor, getHandlesKey, getNodeHandles, HANDLE_COLORS } from './handle-utils';
 
 const HANDLE_TOOLTIPS: Record<string, string> = {
   'data-out': 'Data output — workflow payload',
   'data-in': 'Data input — prompt or prior node output',
-  'query-out': 'SQL query output — connects to Database query input',
+  'query-out': 'SQL query output — connects to Query Runner SQL input',
   'query-in': 'SQL query input — from Trigger or Agent',
   'agent-in': 'Agent SQL input — connect Agent data-out here',
   'schema-out': 'Schema link — connect to Schema node DB input',
@@ -40,8 +40,12 @@ export default function TypedNodeHandles({
   onTargetHandleHover,
 }: TypedNodeHandlesProps) {
   const handles = getNodeHandles(node);
+  const handlesKey = getHandlesKey(node);
   const hasSchemaEdge = edges.some(e => e.to === node.id && e.targetHandle === 'schema-in');
-  const hasDbEdge = edges.some(e => e.to === node.id && e.targetHandle === 'db-in');
+  const showHandleLabels =
+    handlesKey === 'query-runner' ||
+    node.type === 'schema' ||
+    node.type === 'agent';
 
   return (
     <>
@@ -56,8 +60,7 @@ export default function TypedNodeHandles({
         );
         const color = HANDLE_COLORS[def.handleType];
         const isSchemaIn = def.id === 'schema-in';
-        const isDbIn = def.id === 'db-in';
-        const accentHandle = isSchemaIn || isDbIn;
+        const accentHandle = isSchemaIn;
         const labelPos = handleLabelPosition(def, relX, relY);
 
         return (
@@ -100,7 +103,7 @@ export default function TypedNodeHandles({
                 justifyContent: 'center',
               }}
             >
-              {(isSchemaIn || isDbIn) && <Database size={9} color={color} strokeWidth={2.2} />}
+              {isSchemaIn && <Database size={9} color={color} strokeWidth={2.2} />}
             </div>
             {def.label && (
               <span
@@ -129,26 +132,6 @@ export default function TypedNodeHandles({
           </div>
         );
       })}
-      {node.type === 'schema' && hasDbEdge && (
-        <span
-          style={{
-            position: 'absolute',
-            left: 8,
-            bottom: 6,
-            fontSize: 9,
-            fontWeight: 700,
-            color: HANDLE_COLORS.schema,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            padding: '2px 6px',
-            borderRadius: 4,
-            background: 'var(--panel-bg-strong)',
-            border: `1px solid ${HANDLE_COLORS.schema}55`,
-          }}
-        >
-          linked
-        </span>
-      )}
       {node.type === 'agent' && hasSchemaEdge && (
         <span
           style={{

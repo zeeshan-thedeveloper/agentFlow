@@ -61,13 +61,14 @@ export default function CanvasNodeCard({
   const isDone    = runPhase === 'done';
   const isFailed  = runPhase === 'failed';
   const isSchemaNode = node.type === 'schema';
+  const isQueryRunnerNode = node.type === 'query-runner';
   const isDatabaseNode = node.type === 'integration' && node.integrationId?.startsWith('database');
   const subtitle = isSchemaNode
     ? node.connectionName || 'Select connection'
+    : isQueryRunnerNode
+    ? node.connectionName || 'Select connection'
     : isDatabaseNode
-    ? node.dbType
-      ? `${node.dbType} · ${node.actionId ?? 'no action'}`
-      : 'Database · not configured'
+    ? node.connectionName || node.integrationId?.split(':').pop() || 'Select connection'
     : node.subtitle;
 
   return (
