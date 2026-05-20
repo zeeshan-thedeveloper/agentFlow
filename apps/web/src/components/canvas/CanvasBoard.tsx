@@ -3,9 +3,16 @@ import type { FlowNode, FlowEdge, RunPhasesMap } from './types';
 import { NODE_TYPES, NW, NH } from './constants';
 import type { LibraryNodeType } from './types';
 import CanvasNodeCard from './CanvasNodeCard';
+import {
+  getHandleAnchor,
+  getHandlesKey,
+  HANDLE_COLORS,
+  isValidConnection,
+} from './handle-utils';
 
-function resolveNodeTypeConfig(type: string) {
-  return NODE_TYPES[type as LibraryNodeType] ?? NODE_TYPES.integration;
+function resolveNodeTypeConfig(node: FlowNode) {
+  const key = getHandlesKey(node);
+  return NODE_TYPES[key as LibraryNodeType] ?? NODE_TYPES.integration;
 }
 
 interface CanvasBoardProps {
@@ -34,8 +41,10 @@ interface PanState {
 
 interface ConnectState {
   from: string;
+  sourceHandle: string;
   x: number;
   y: number;
+  valid: boolean;
 }
 
 const MIN_ZOOM = 0.55;
@@ -49,6 +58,7 @@ export default function CanvasBoard({
   const [dragging, setDragging] = useState<DragState | null>(null);
   const [panning, setPanning] = useState<PanState | null>(null);
   const [connecting, setConnecting] = useState<ConnectState | null>(null);
+  const [hoverTarget, setHoverTarget] = useState<{ nodeId: string; handleId: string } | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -113,8 +123,10 @@ export default function CanvasBoard({
       e.preventDefault();
 
       if (selectedEdge) {
-        const [from, to] = selectedEdge.split('->');
-        setEdges(prev => prev.filter(edge => edge.from !== from || edge.to !== to));
+        setEdges(prev => prev.filter(edge => {
+          const key = `${edge.from}:${edge.sourceHandle ?? 'data-out'}->${edge.to}:${edge.targetHandle ?? 'data-in'}`;
+          return key !== selectedEdge;
+        }));
         setSelectedEdge(null);
         return;
       }
@@ -146,7 +158,16 @@ export default function CanvasBoard({
   function onMouseMove(e: React.MouseEvent) {
     if (connecting) {
       const point = getCanvasPoint(e);
-      setConnecting(current => current ? { ...current, ...point } : null);
+      const valid = hoverTarget
+        ? isValidConnection(
+            connecting.from,
+            connecting.sourceHandle,
+            hoverTarget.nodeId,
+            hoverTarget.handleId,
+            nodes,
+          )
+        : true;
+      setConnecting(current => (current ? { ...current, ...point, valid } : null));
       return;
     }
 
@@ -183,7 +204,7 @@ export default function CanvasBoard({
     setConnecting(null);
   }
 
-  function startConnection(e: React.MouseEvent, from: string) {
+  function startConnection(e: React.MouseEvent, from: string, sourceHandle: string) {
     e.preventDefault();
     e.stopPropagation();
     const point = getCanvasPoint(e);
@@ -191,41 +212,79 @@ export default function CanvasBoard({
     setSelectedEdge(null);
     setDragging(null);
     setPanning(null);
-    setConnecting({ from, ...point });
+    setConnecting({ from, sourceHandle, ...point, valid: true });
   }
 
-  function finishConnection(e: React.MouseEvent, to: string) {
+  function finishConnection(e: React.MouseEvent, to: string, targetHandle: string) {
     e.preventDefault();
     e.stopPropagation();
     if (!connecting || connecting.from === to) return;
 
+    if (!isValidConnection(connecting.from, connecting.sourceHandle, to, targetHandle, nodes)) {
+      setConnecting(null);
+      setHoverTarget(null);
+      return;
+    }
+
     setEdges(prev => {
-      const exists = prev.some(edge => edge.from === connecting.from && edge.to === to);
+      const exists = prev.some(
+        edge =>
+          edge.from === connecting.from &&
+          edge.to === to &&
+          (edge.sourceHandle ?? 'data-out') === connecting.sourceHandle &&
+          (edge.targetHandle ?? 'data-in') === targetHandle,
+      );
       if (exists) return prev;
-      return [...prev, { from: connecting.from, to }];
+      return [
+        ...prev,
+        {
+          from: connecting.from,
+          to,
+          sourceHandle: connecting.sourceHandle,
+          targetHandle,
+        },
+      ];
     });
     setConnecting(null);
+    setHoverTarget(null);
   }
 
   function removeEdge(edge: FlowEdge) {
-    setEdges(prev => prev.filter(item => item.from !== edge.from || item.to !== edge.to));
+    setEdges(prev =>
+      prev.filter(
+        item =>
+          !(
+            item.from === edge.from &&
+            item.to === edge.to &&
+            (item.sourceHandle ?? 'data-out') === (edge.sourceHandle ?? 'data-out') &&
+            (item.targetHandle ?? 'data-in') === (edge.targetHandle ?? 'data-in')
+          ),
+      ),
+    );
     setSelectedEdge(null);
   }
 
-  function edgePath(a: FlowNode, b: FlowNode): string {
-    const x1 = screenX(a.x + NW);
-    const y1 = screenY(a.y + NH / 2);
-    const x2 = screenX(b.x);
-    const y2 = screenY(b.y + NH / 2);
+  function edgeEndpoints(a: FlowNode, b: FlowNode, edge: FlowEdge) {
+    const sourceHandle = edge.sourceHandle ?? 'data-out';
+    const targetHandle = edge.targetHandle ?? 'data-in';
+    const start = getHandleAnchor(a, sourceHandle);
+    const end = getHandleAnchor(b, targetHandle);
+    return {
+      x1: screenX(start.x),
+      y1: screenY(start.y),
+      x2: screenX(end.x),
+      y2: screenY(end.y),
+    };
+  }
+
+  function edgePath(a: FlowNode, b: FlowNode, edge: FlowEdge): string {
+    const { x1, y1, x2, y2 } = edgeEndpoints(a, b, edge);
     const cx = Math.max(60, (x2 - x1) * 0.45);
     return `M ${x1} ${y1} C ${x1 + cx} ${y1} ${x2 - cx} ${y2} ${x2} ${y2}`;
   }
 
-  function edgeControlPosition(a: FlowNode, b: FlowNode) {
-    const x1 = screenX(a.x + NW);
-    const y1 = screenY(a.y + NH / 2);
-    const x2 = screenX(b.x);
-    const y2 = screenY(b.y + NH / 2);
+  function edgeControlPosition(a: FlowNode, b: FlowNode, edge: FlowEdge) {
+    const { x1, y1, x2, y2 } = edgeEndpoints(a, b, edge);
     const cx = Math.max(60, (x2 - x1) * 0.45);
     const c1x = x1 + cx;
     const c2x = x2 - cx;
@@ -283,12 +342,13 @@ export default function CanvasBoard({
           const b = nodeMap[edge.to];
           if (!a || !b) return null;
 
-          const t = resolveNodeTypeConfig(a.type);
-          const path = edgePath(a, b);
-          const edgeKey = `${edge.from}->${edge.to}`;
+          const t = resolveNodeTypeConfig(a);
+          const path = edgePath(a, b, edge);
+          const edgeKey = `${edge.from}:${edge.sourceHandle ?? 'data-out'}->${edge.to}:${edge.targetHandle ?? 'data-in'}`;
           const isSelected = selectedEdge === edgeKey;
           const isActive = runPhases[edge.from] === 'running' || runPhases[edge.from] === 'done';
-          const control = edgeControlPosition(a, b);
+          const control = edgeControlPosition(a, b, edge);
+          const { x2, y2 } = edgeEndpoints(a, b, edge);
 
           return (
             <g key={edgeKey}>
@@ -306,8 +366,8 @@ export default function CanvasBoard({
                 strokeDasharray="12 8"
                 style={{ animation: `flowEdge ${isActive ? 0.9 : 1.8}s linear infinite`, pointerEvents: 'none' }} />
               <circle
-                cx={screenX(b.x)}
-                cy={screenY(b.y + NH / 2)}
+                cx={x2}
+                cy={y2}
                 r={isSelected ? 4 : 3} fill={t.color} opacity={isActive || isSelected ? 0.9 : 0.4}
                 style={{ pointerEvents: 'none' }} />
               <path
@@ -344,16 +404,22 @@ export default function CanvasBoard({
           );
         })}
 
-        {connecting && connectingNode && (
-          <path
-            d={`M ${screenX(connectingNode.x + NW)} ${screenY(connectingNode.y + NH / 2)} C ${screenX(connectingNode.x + NW) + 80 * zoom} ${screenY(connectingNode.y + NH / 2)} ${connecting.x - 80 * zoom} ${connecting.y} ${connecting.x} ${connecting.y}`}
-            fill="none"
-            stroke={NODE_TYPES[connectingNode.type].color}
-            strokeWidth={2 * zoom}
-            strokeDasharray="8 6"
-            strokeOpacity={0.85}
-          />
-        )}
+        {connecting && connectingNode && (() => {
+          const start = getHandleAnchor(connectingNode, connecting.sourceHandle);
+          const x1 = screenX(start.x);
+          const y1 = screenY(start.y);
+          const stroke = connecting.valid ? HANDLE_COLORS.data : '#ef4444';
+          return (
+            <path
+              d={`M ${x1} ${y1} C ${x1 + 80 * zoom} ${y1} ${connecting.x - 80 * zoom} ${connecting.y} ${connecting.x} ${connecting.y}`}
+              fill="none"
+              stroke={stroke}
+              strokeWidth={2 * zoom}
+              strokeDasharray="8 6"
+              strokeOpacity={0.85}
+            />
+          );
+        })()}
       </svg>
 
       <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none' }}>
@@ -373,8 +439,12 @@ export default function CanvasBoard({
               e.stopPropagation();
               removeNode(node.id);
             }}
-            onInputHandleMouseUp={e => finishConnection(e, node.id)}
-            onStartConnection={e => startConnection(e, node.id)}
+            edges={edges}
+            onStartConnection={(e, handleId) => startConnection(e, node.id, handleId)}
+            onTargetHandleHover={handleId => {
+              setHoverTarget(handleId ? { nodeId: node.id, handleId } : null);
+            }}
+            onFinishConnection={(e, handleId) => finishConnection(e, node.id, handleId)}
           />
         ))}
       </div>
