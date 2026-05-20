@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 
 export const SCHEMA_NODE = 'schema' as const;
 
-export type NodeType = 'trigger' | 'agent' | 'output' | 'integration' | typeof SCHEMA_NODE;
+export type NodeType = 'trigger' | 'agent' | 'output' | 'integration' | 'query-runner' | typeof SCHEMA_NODE;
 export type LibraryNodeType = NodeType | 'database';
 
 export interface SchemaNodeData {
