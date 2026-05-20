@@ -12,8 +12,8 @@ export interface NodeInput {
 }
 
 export function getTargetHandleType(targetHandle: string | undefined): 'data' | 'schema' | 'query' {
-  if (targetHandle === 'schema-in') return 'schema';
-  if (targetHandle === 'query-in') return 'query';
+  if (targetHandle === 'schema-in' || targetHandle === 'db-in') return 'schema';
+  if (targetHandle === 'query-in' || targetHandle === 'agent-in') return 'query';
   return 'data';
 }
 

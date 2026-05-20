@@ -47,11 +47,16 @@ function normalizeCanvasJson(value: unknown): WorkflowCanvasJson {
 
   return {
     nodes: value.nodes,
-    edges: value.edges.map(edge => ({
-      ...edge,
-      sourceHandle: edge.sourceHandle ?? 'data-out',
-      targetHandle: edge.targetHandle ?? 'data-in',
-    })),
+    edges: value.edges.map(edge => {
+      let targetHandle = edge.targetHandle ?? 'data-in';
+      if (targetHandle === 'query-in') targetHandle = 'agent-in';
+
+      return {
+        ...edge,
+        sourceHandle: edge.sourceHandle ?? 'data-out',
+        targetHandle,
+      };
+    }),
   };
 }
 

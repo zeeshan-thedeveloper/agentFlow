@@ -42,9 +42,34 @@ export function getHandleType(
 }
 
 export function getTargetHandleType(targetHandle: string | undefined): HandleType {
-  if (targetHandle === 'schema-in') return 'schema';
-  if (targetHandle === 'query-in') return 'query';
+  if (targetHandle === 'schema-in' || targetHandle === 'db-in') return 'schema';
+  if (targetHandle === 'query-in' || targetHandle === 'agent-in') return 'query';
   return 'data';
+}
+
+export function isDatabaseNode(node: FlowNode): boolean {
+  return node.type === 'integration' && Boolean(node.integrationId?.startsWith('database'));
+}
+
+export function findDatabaseNodeForConnection(nodes: FlowNode[], integrationId: string): FlowNode | undefined {
+  if (!integrationId) return undefined;
+  return nodes.find(
+    node => isDatabaseNode(node) && node.integrationId === integrationId,
+  );
+}
+
+export function buildSchemaDatabaseEdge(dbNodeId: string, schemaNodeId: string): {
+  from: string;
+  to: string;
+  sourceHandle: string;
+  targetHandle: string;
+} {
+  return {
+    from: dbNodeId,
+    to: schemaNodeId,
+    sourceHandle: 'schema-out',
+    targetHandle: 'db-in',
+  };
 }
 
 export function isValidConnection(
@@ -58,6 +83,7 @@ export function isValidConnection(
   const tgtType = getHandleType(targetId, targetHandle, nodes);
   if (!srcType || !tgtType) return true;
   if (srcType === 'trigger' && tgtType === 'data') return true;
+  if (srcType === 'data' && tgtType === 'query') return true;
   return srcType === tgtType;
 }
 

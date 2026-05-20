@@ -19,6 +19,7 @@ export interface HandleDef {
   handleType: HandleType;
   position: 'left' | 'right' | 'left-top' | 'left-bottom' | 'right-top' | 'right-bottom';
   conditional?: string;
+  label?: string;
 }
 
 export type RunPhase = 'queued' | 'running' | 'done' | 'failed';
