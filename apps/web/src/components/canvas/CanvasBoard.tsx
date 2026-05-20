@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FlowNode, FlowEdge, RunPhasesMap } from './types';
 import { NODE_TYPES, NW, NH } from './constants';
+import type { LibraryNodeType } from './types';
 import CanvasNodeCard from './CanvasNodeCard';
+
+function resolveNodeTypeConfig(type: string) {
+  return NODE_TYPES[type as LibraryNodeType] ?? NODE_TYPES.integration;
+}
 
 interface CanvasBoardProps {
   nodes: FlowNode[];
@@ -278,7 +283,7 @@ export default function CanvasBoard({
           const b = nodeMap[edge.to];
           if (!a || !b) return null;
 
-          const t = NODE_TYPES[a.type];
+          const t = resolveNodeTypeConfig(a.type);
           const path = edgePath(a, b);
           const edgeKey = `${edge.from}->${edge.to}`;
           const isSelected = selectedEdge === edgeKey;
@@ -290,7 +295,7 @@ export default function CanvasBoard({
               <path d={path} fill="none" stroke={t.color}
                 strokeWidth={isSelected ? 7 : isActive ? 6 : 3}
                 strokeOpacity={isSelected ? 0.28 : isActive ? 0.18 : 0.07}
-                filter={`url(#glow-${a.type})`}
+                filter={`url(#glow-${NODE_TYPES[a.type as LibraryNodeType] ? a.type : 'integration'})`}
                 style={{ pointerEvents: 'none' }} />
               <path d={path} fill="none" stroke={t.color}
                 strokeWidth={isSelected ? 2.5 : 1.5}

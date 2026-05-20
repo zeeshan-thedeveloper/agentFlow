@@ -165,8 +165,13 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     const workflow = (await response.json()) as PersistedWorkflow;
     setWorkflowId(workflow.id);
     setName(workflow.name);
-    setNodes(workflow.canvasJson.nodes);
-    setEdges(workflow.canvasJson.edges);
+    const savedNodes = workflow.canvasJson.nodes;
+    const nodeIds = new Set(savedNodes.map(node => node.id));
+    const savedEdges = workflow.canvasJson.edges.filter(
+      edge => nodeIds.has(edge.from) && nodeIds.has(edge.to),
+    );
+    setNodes(savedNodes);
+    setEdges(savedEdges);
 
     return workflow;
   }
@@ -360,6 +365,14 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     setEdges(prev => prev.filter(edge => edge.from !== id && edge.to !== id));
     setSelected(current => (current === id ? null : current));
   }, []);
+
+  useEffect(() => {
+    const nodeIds = new Set(nodes.map(node => node.id));
+    setEdges(prev => {
+      const next = prev.filter(edge => nodeIds.has(edge.from) && nodeIds.has(edge.to));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [nodes, setEdges]);
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--app-bg)' }}>
