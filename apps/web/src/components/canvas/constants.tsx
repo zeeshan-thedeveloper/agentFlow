@@ -1,8 +1,35 @@
 import { DatabaseIcon } from 'lucide-react';
-import type { LibraryNodeType, NodeTypeConfig } from './types';
+import type { HandleDef, LibraryNodeType, NodeType, NodeTypeConfig } from './types';
 
 export const NW = 200;
 export const NH = 74;
+
+export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
+  trigger: [
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-top' },
+    { id: 'query-out', type: 'source', handleType: 'query', position: 'right-bottom', conditional: "inputType === 'sql'" },
+  ],
+  schema: [
+    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left' },
+    { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right' },
+  ],
+  agent: [
+    { id: 'data-in', type: 'target', handleType: 'data', position: 'left-top' },
+    { id: 'schema-in', type: 'target', handleType: 'schema', position: 'left-bottom' },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right' },
+  ],
+  database: [
+    { id: 'query-in', type: 'target', handleType: 'query', position: 'left' },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right' },
+  ],
+  output: [
+    { id: 'data-in', type: 'target', handleType: 'data', position: 'left' },
+  ],
+  integration: [
+    { id: 'query-in', type: 'target', handleType: 'query', position: 'left' },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right' },
+  ],
+};
 
 export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
   trigger: {

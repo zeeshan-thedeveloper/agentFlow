@@ -10,6 +10,17 @@ export interface SchemaNodeData {
   integrationId: string;
   connectionName: string;
 }
+
+export type HandleType = 'trigger' | 'data' | 'query' | 'schema';
+
+export interface HandleDef {
+  id: string;
+  type: 'source' | 'target';
+  handleType: HandleType;
+  position: 'left' | 'right' | 'left-top' | 'left-bottom' | 'right-top' | 'right-bottom';
+  conditional?: string;
+}
+
 export type RunPhase = 'queued' | 'running' | 'done' | 'failed';
 export type RunState = 'idle' | 'running' | 'success' | 'error';
 
@@ -23,6 +34,7 @@ export interface FlowNode {
   // Type-specific config
   triggerType?: string;
   triggerInputMode?: 'none' | 'input';
+  inputType?: 'text' | 'sql';
   triggerInput?: string;
   prompt?: string;
   provider?: 'openai';
@@ -40,6 +52,8 @@ export interface FlowNode {
 export interface FlowEdge {
   from: string;
   to: string;
+  sourceHandle?: string;
+  targetHandle?: string;
 }
 
 export interface WorkflowCanvasJson {
