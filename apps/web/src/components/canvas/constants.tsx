@@ -7,7 +7,14 @@ export const NH = 74;
 export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
   trigger: [
     { id: 'trigger-out', type: 'source', handleType: 'trigger', position: 'left', label: 'Trigger' },
-    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-top', label: 'Data' },
+    {
+      id: 'data-out',
+      type: 'source',
+      handleType: 'data',
+      position: 'right-top',
+      label: 'Data',
+      conditional: "inputType === 'text' || triggerInputMode === 'input'",
+    },
     { id: 'query-out', type: 'source', handleType: 'query', position: 'right-bottom', label: 'SQL', conditional: "inputType === 'sql'" },
   ],
   schema: [
@@ -21,7 +28,8 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
     { id: 'data-out', type: 'source', handleType: 'data', position: 'right', label: 'Rows' },
   ],
   agent: [
-    { id: 'data-in', type: 'target', handleType: 'data', position: 'left-top', label: 'Data' },
+    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
+    { id: 'data-in', type: 'target', handleType: 'data', position: 'left-middle', label: 'Data' },
     { id: 'schema-in', type: 'target', handleType: 'schema', position: 'left-bottom', label: 'Schema' },
     { id: 'data-out', type: 'source', handleType: 'data', position: 'right', label: 'Data' },
   ],
