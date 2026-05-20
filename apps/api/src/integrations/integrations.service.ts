@@ -1,6 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { createCipheriv, createHash, randomBytes } from 'crypto';
+import { MongoClient } from 'mongodb';
+import { Client } from 'pg';
 import { PrismaService } from '../prisma/prisma.service';
+import { CredentialResolver } from './credential.resolver';
+import type { SchemaConfig } from './integration.interfaces';
 import { integrationRegistry } from './integration.registry';
 import { testConnection } from './providers/database/database.connection';
 import { maskConnectionString } from './providers/database/database.sanitizer';
@@ -26,7 +30,10 @@ function encryptCredential(plaintext: string): string {
 
 @Injectable()
 export class IntegrationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly credentialResolver: CredentialResolver,
+  ) {}
 
   getAll() {
     return integrationRegistry
@@ -118,5 +125,59 @@ export class IntegrationsService {
       const message = err instanceof Error ? err.message : String(err);
       throw new BadRequestException(`Connection failed: ${message}`);
     }
+  }
+
+  async fetchDatabaseSchema(userId: string, integrationId: string): Promise<string[]> {
+    const credentials = await this.credentialResolver.resolve(userId, integrationId);
+    const connectionString = credentials.connectionString as string;
+
+    const isMongo = integrationId.includes('mongo');
+
+    if (isMongo) {
+      const client = new MongoClient(connectionString, { serverSelectionTimeoutMS: 5000 });
+      try {
+        await client.connect();
+        const db = client.db();
+        const collections = await db.listCollections().toArray();
+        return collections.map((c) => c.name).sort();
+      } finally {
+        await client.close();
+      }
+    } else {
+      const client = new Client({ connectionString, connectionTimeoutMillis: 5000 });
+      try {
+        await client.connect();
+        const { rows } = await client.query<{ table_name: string }>(
+          `SELECT table_name
+         FROM information_schema.tables
+         WHERE table_schema = 'public'
+           AND table_type = 'BASE TABLE'
+         ORDER BY table_name`,
+        );
+        return rows.map((r) => r.table_name);
+      } finally {
+        await client.end();
+      }
+    }
+  }
+
+  async getSchemaConfig(userId: string, integrationId: string): Promise<SchemaConfig | null> {
+    const row = await this.prisma.databaseSchemaConfig.findUnique({
+      where: { userId_integrationId: { userId, integrationId } },
+    });
+    if (!row) return null;
+    return row.config as unknown as SchemaConfig;
+  }
+
+  async saveSchemaConfig(
+    userId: string,
+    integrationId: string,
+    config: SchemaConfig,
+  ): Promise<void> {
+    await this.prisma.databaseSchemaConfig.upsert({
+      where: { userId_integrationId: { userId, integrationId } },
+      update: { config: config as object },
+      create: { userId, integrationId, config: config as object },
+    });
   }
 }

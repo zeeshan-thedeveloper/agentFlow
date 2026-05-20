@@ -45,3 +45,14 @@ export interface Integration extends IntegrationMeta {
     credentials: ResolvedCredentials,
   ): Promise<unknown>;
 }
+
+export interface TablePermissions {
+  read: boolean;
+  insert: boolean;
+  update: boolean;
+  delete: boolean;
+}
+
+export interface SchemaConfig {
+  tables: Record<string, TablePermissions>;
+}
