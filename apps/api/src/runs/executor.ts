@@ -50,9 +50,14 @@ function assertCanvasJson(canvasJson: unknown): asserts canvasJson is WorkflowCa
   }
 }
 
+function isDatabaseConfigNode(node: FlowNode): boolean {
+  return node.type === 'integration' && Boolean(String(node.integrationId ?? '').startsWith('database'));
+}
+
 function resolveHandlerType(node: FlowNode): string {
   if (node.type === 'schema') return 'integration';
   if (node.type === 'query-runner') return 'query-runner';
+  if (isDatabaseConfigNode(node)) return 'database';
   return node.type;
 }
 
@@ -70,6 +75,13 @@ function buildNodeParams(node: FlowNode, context: ExecutorContext): Record<strin
     return {
       integrationId: node.integrationId,
       actionParams: node.actionParams ?? {},
+      ...context,
+    };
+  }
+
+  if (isDatabaseConfigNode(node)) {
+    return {
+      integrationId: node.integrationId,
       ...context,
     };
   }

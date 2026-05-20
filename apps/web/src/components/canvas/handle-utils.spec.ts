@@ -30,6 +30,18 @@ describe('isValidConnection', () => {
     expect(isValidConnection('a1', 'data-out', 'q1', 'query-in', nodes)).toBe(true);
   });
 
+  it('allows database read-out to schema db-in', () => {
+    expect(isValidConnection('d1', 'read-out', 's1', 'db-in', nodes)).toBe(true);
+  });
+
+  it('rejects database write-out to schema db-in', () => {
+    expect(isValidConnection('d1', 'write-out', 's1', 'db-in', nodes)).toBe(false);
+  });
+
+  it('allows database write-out to query-runner db-in', () => {
+    expect(isValidConnection('d1', 'write-out', 'q1', 'db-in', nodes)).toBe(true);
+  });
+
   it('rejects schema to data on agent schema-in mismatch', () => {
     expect(isValidConnection('t1', 'data-out', 'a1', 'schema-in', nodes)).toBe(false);
   });

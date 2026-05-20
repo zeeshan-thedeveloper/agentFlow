@@ -11,7 +11,7 @@ export interface SchemaNodeData {
   connectionName: string;
 }
 
-export type HandleType = 'trigger' | 'data' | 'query' | 'schema';
+export type HandleType = 'trigger' | 'data' | 'query' | 'schema' | 'connection';
 
 export interface HandleDef {
   id: string;

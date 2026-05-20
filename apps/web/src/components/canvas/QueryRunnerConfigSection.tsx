@@ -6,24 +6,31 @@ import type { FlowNode } from './types';
 interface Props {
   node: FlowNode;
   onUpdate: (patch: Partial<FlowNode>) => void;
+  connectedDbLabel?: string;
 }
 
-export function QueryRunnerConfigSection({ node, onUpdate }: Props) {
+export function QueryRunnerConfigSection({ node, onUpdate, connectedDbLabel }: Props) {
   const staticSql = String(node.actionParams?.sql ?? '');
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <SchemaConfigSection
-        integrationId={node.integrationId ?? ''}
-        connectionName={node.connectionName ?? ''}
-        onChange={(integrationId, connectionName) =>
-          onUpdate({
-            integrationId,
-            connectionName,
-            subtitle: connectionName || 'Select connection',
-          })
-        }
-      />
+      {connectedDbLabel ? (
+        <div className="rounded border bg-gray-50 px-3 py-2 text-xs text-gray-600">
+          Connected to: {connectedDbLabel}
+        </div>
+      ) : (
+        <SchemaConfigSection
+          integrationId={node.integrationId ?? ''}
+          connectionName={node.connectionName ?? ''}
+          onChange={(integrationId, connectionName) =>
+            onUpdate({
+              integrationId,
+              connectionName,
+              subtitle: connectionName || 'Select connection',
+            })
+          }
+        />
+      )}
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-600">
           Static SQL (optional)

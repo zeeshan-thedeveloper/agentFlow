@@ -2,7 +2,7 @@
 
 import { Database } from 'lucide-react';
 import type { FlowEdge, FlowNode, HandleDef } from './types';
-import { getHandleAnchor, getHandlesKey, getNodeHandles, HANDLE_COLORS } from './handle-utils';
+import { getHandleAnchor, getHandleColor, getHandlesKey, getNodeHandles, HANDLE_COLORS } from './handle-utils';
 
 const HANDLE_TOOLTIPS: Record<string, string> = {
   'data-out': 'Data output — workflow payload',
@@ -10,9 +10,10 @@ const HANDLE_TOOLTIPS: Record<string, string> = {
   'query-out': 'SQL query output — connects to Query Runner SQL input',
   'query-in': 'SQL query input — from Trigger or Agent',
   'agent-in': 'Agent SQL input — connect Agent data-out here',
-  'schema-out': 'Schema link — connect to Schema node DB input',
+  'read-out': 'Database read connection — wire to Schema or Query Runner DB input',
+  'write-out': 'Database write connection — wire to Query Runner DB input',
   'schema-in': 'Schema context input — connect a Schema node to give this agent database context',
-  'db-in': 'Database link — connect from Database Schema output',
+  'db-in': 'Database connection — connect from Database Read or Write output',
   'trigger-in': 'Execution trigger input',
 };
 
@@ -43,6 +44,7 @@ export default function TypedNodeHandles({
   const handlesKey = getHandlesKey(node);
   const hasSchemaEdge = edges.some(e => e.to === node.id && e.targetHandle === 'schema-in');
   const showHandleLabels =
+    handlesKey === 'database' ||
     handlesKey === 'query-runner' ||
     node.type === 'schema' ||
     node.type === 'agent';
@@ -58,9 +60,10 @@ export default function TypedNodeHandles({
             ? edge.from === node.id && (edge.sourceHandle ?? 'data-out') === def.id
             : edge.to === node.id && (edge.targetHandle ?? 'data-in') === def.id,
         );
-        const color = HANDLE_COLORS[def.handleType];
+        const color = getHandleColor(def.id, def.handleType);
         const isSchemaIn = def.id === 'schema-in';
-        const accentHandle = isSchemaIn;
+        const isDbIn = def.id === 'db-in';
+        const accentHandle = isSchemaIn || isDbIn;
         const labelPos = handleLabelPosition(def, relX, relY);
 
         return (
@@ -103,7 +106,7 @@ export default function TypedNodeHandles({
                 justifyContent: 'center',
               }}
             >
-              {isSchemaIn && <Database size={9} color={color} strokeWidth={2.2} />}
+              {(isSchemaIn || isDbIn) && <Database size={9} color={color} strokeWidth={2.2} />}
             </div>
             {def.label && (
               <span

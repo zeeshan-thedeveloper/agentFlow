@@ -11,10 +11,12 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
   ],
   schema: [
     { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
+    { id: 'db-in', type: 'target', handleType: 'connection', position: 'left-bottom', label: 'DB' },
     { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right', label: 'Schema' },
   ],
   'query-runner': [
-    { id: 'query-in', type: 'target', handleType: 'query', position: 'left', label: 'SQL' },
+    { id: 'query-in', type: 'target', handleType: 'query', position: 'left-top', label: 'SQL' },
+    { id: 'db-in', type: 'target', handleType: 'connection', position: 'left-bottom', label: 'DB' },
     { id: 'data-out', type: 'source', handleType: 'data', position: 'right', label: 'Rows' },
   ],
   agent: [
@@ -22,7 +24,10 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
     { id: 'schema-in', type: 'target', handleType: 'schema', position: 'left-bottom', label: 'Schema' },
     { id: 'data-out', type: 'source', handleType: 'data', position: 'right', label: 'Data' },
   ],
-  database: [],
+  database: [
+    { id: 'read-out', type: 'source', handleType: 'connection', position: 'right-top', label: 'Read' },
+    { id: 'write-out', type: 'source', handleType: 'connection', position: 'right-bottom', label: 'Write' },
+  ],
   output: [
     { id: 'data-in', type: 'target', handleType: 'data', position: 'left', label: 'Data' },
   ],
