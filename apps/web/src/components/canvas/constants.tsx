@@ -31,7 +31,8 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
     { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
     { id: 'data-in', type: 'target', handleType: 'data', position: 'left-middle', label: 'Data' },
     { id: 'schema-in', type: 'target', handleType: 'schema', position: 'left-bottom', label: 'Schema' },
-    { id: 'data-out', type: 'source', handleType: 'data', position: 'right', label: 'Data' },
+    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-top', label: 'Data' },
+    { id: 'query-out', type: 'source', handleType: 'query', position: 'right-bottom', label: 'SQL' },
   ],
   database: [
     { id: 'read-out', type: 'source', handleType: 'connection', position: 'right-top', label: 'Read' },

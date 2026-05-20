@@ -100,8 +100,11 @@ export function isValidConnection(
   if (tgtType === 'connection' && srcType !== 'connection') return false;
   if (srcType === 'trigger' && tgtType !== 'trigger') return false;
   if (tgtType === 'trigger' && srcType !== 'trigger') return false;
-  if (srcType === 'data' && tgtType === 'query') return true;
-  return srcType === tgtType;
+
+  const isDataToQuery = srcType === 'data' && tgtType === 'query';
+  if (srcType !== tgtType && !isDataToQuery) return false;
+
+  return true;
 }
 
 export function getHandleAnchor(

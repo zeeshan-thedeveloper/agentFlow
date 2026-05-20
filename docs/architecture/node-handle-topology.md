@@ -16,7 +16,7 @@
 | **Database node** | Connection config — stores which DB to connect to. Outputs a connection reference (integrationId) via Read/Write handles | Yes — `read-out` + `write-out` |
 | **Schema node** | Introspects the DB and outputs schema text as agent context | Yes — `trigger-in` + `db-in` + `schema-out` |
 | **Query Runner node** | Executes SQL against a named DB connection | Yes — `trigger-in` + `query-in` + `db-in` + `data-out` |
-| **Agent node** | LLM reasoning — optionally uses schema context to generate SQL | Yes — `trigger-in` + `data-in` + `schema-in` + `data-out` |
+| **Agent node** | LLM reasoning — optionally uses schema context to generate SQL | Yes — `trigger-in` + `data-in` + `schema-in` + `data-out` + `query-out` |
 | **Trigger node** | Starts the workflow, optionally carries a SQL string | Yes — `trigger-out` + `data-out` + optional `query-out` |
 | **Output node** | Receives final result | Yes — `data-in` |
 
@@ -35,11 +35,12 @@ type HandleType =
 
 Connection rules enforced by `isValidConnection`:
 - Same handle type connects to same handle type
+- **`data` → `query` permitted** — Agent `data-out` can wire to Query Runner `query-in` (same payload as `query-out` → `query-in`)
 - `trigger` → `trigger` only (execution signal)
 - `connection` → `connection` only (DB reference)
 - Schema's `db-in` accepts **only** Database's `read-out` (not `write-out`) — enforced by sourceHandle check
 - Query Runner's `db-in` accepts both `read-out` and `write-out`
-- Mismatched types are rejected visually on drag
+- Other mismatched types are rejected visually on drag
 
 ---
 
@@ -138,7 +139,7 @@ Config panel: named connection dropdown (fallback when `db-in` not wired) + "Con
 
 | Handle | Side | Type | Purpose |
 |---|---|---|---|
-| `query-in` | left-top | `query` | Receives SQL string — from Trigger `query-out` or Agent `data-out` |
+| `query-in` | left-top | `query` | Receives SQL string — from Trigger `query-out`, Agent `query-out`, or Agent `data-out` |
 | `db-in` | left-bottom | `connection` | Receives DB connection reference from Database's `read-out` or `write-out` |
 | `data-out` | right | `data` | Returns query result `{ rows: [...], rowCount: N }` |
 
@@ -164,8 +165,8 @@ Config panel: named connection dropdown (fallback). No action selector — Query
 ●── trigger-in  (left-top)
 ●── data-in     (left-middle)
 ●── schema-in   (left-bottom, violet)
-┌─────────────────────┬──● data-out  (right)
-│  AGENT              │
+┌─────────────────────┬──● data-out   (right-top)
+│  AGENT              ├──● query-out  (right-bottom, cyan)
 │  GPT-4o Mini        │
 │  [HTTP] [SCRAPE]    │
 └─────────────────────┘
@@ -176,7 +177,8 @@ Config panel: named connection dropdown (fallback). No action selector — Query
 | `trigger-in` | left-top | `trigger` | Receives execution signal |
 | `data-in` | left-middle | `data` | User question / prior node output |
 | `schema-in` | left-bottom | `schema` | Schema context from Schema node — optional |
-| `data-out` | right | `data` | Agent output (SQL string, answer, etc.) |
+| `data-out` | right-top | `data` | Agent output for generic downstream (Output, etc.) |
+| `query-out` | right-bottom | `query` | Same agent output, semantic SQL wire to Query Runner `query-in` |
 
 When `schema-in` is connected, executor prepends schema to the system prompt before LLM call — implemented in `agent.handler.ts:74`.
 
@@ -204,7 +206,7 @@ No changes.
     │ trigger-out → trigger-in         │ trigger-out → trigger-in
     ▼                                  ▼
 [Agent] ◀── schema-in ── [Schema] ◀── db-in ── [Database: read-out]
-    │ data-out (SQL)
+    │ query-out (SQL)  — or data-out → query-in
     ▼
 [Query Runner] ◀── db-in ── [Database: read-out or write-out]
     │ data-out (rows)
@@ -341,10 +343,11 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
     { id: 'schema-out', type: 'source', handleType: 'schema',     position: 'right',       label: 'Schema' },
   ],
   agent: [
-    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top',    label: 'Trigger' },
-    { id: 'data-in',    type: 'target', handleType: 'data',    position: 'left-middle', label: 'Data' },
-    { id: 'schema-in',  type: 'target', handleType: 'schema',  position: 'left-bottom', label: 'Schema' },
-    { id: 'data-out',   type: 'source', handleType: 'data',    position: 'right',       label: 'Data' },
+    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top',     label: 'Trigger' },
+    { id: 'data-in',    type: 'target', handleType: 'data',    position: 'left-middle',  label: 'Data' },
+    { id: 'schema-in',  type: 'target', handleType: 'schema',  position: 'left-bottom',  label: 'Schema' },
+    { id: 'data-out',   type: 'source', handleType: 'data',    position: 'right-top',    label: 'Data' },
+    { id: 'query-out',  type: 'source', handleType: 'query',   position: 'right-bottom', label: 'SQL' },
   ],
   'query-runner': [
     { id: 'query-in', type: 'target', handleType: 'query',      position: 'left-top',    label: 'SQL' },
@@ -379,8 +382,8 @@ function isValidConnection(params, nodes, edges): boolean {
   const srcHandleType = srcHandles.find(h => h.id === sourceHandle)?.handleType;
   const tgtHandleType = tgtHandles.find(h => h.id === targetHandle)?.handleType;
 
-  // types must match
-  if (srcHandleType !== tgtHandleType) return false;
+  const isDataToQuery = srcHandleType === 'data' && tgtHandleType === 'query';
+  if (srcHandleType !== tgtHandleType && !isDataToQuery) return false;
 
   // Schema's db-in accepts read-out only (not write-out)
   if (targetHandle === 'db-in' && targetNode?.type === 'schema' && sourceHandle !== 'read-out') {
