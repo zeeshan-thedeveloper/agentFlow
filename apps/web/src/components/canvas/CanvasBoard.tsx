@@ -19,6 +19,7 @@ interface CanvasBoardProps {
   selected: string | null;
   setSelected: (id: string | null) => void;
   runPhases: RunPhasesMap;
+  runOutputs?: Record<string, string>;
   onRemoveNode: (id: string) => void;
 }
 
@@ -47,7 +48,7 @@ const MIN_ZOOM = 0.55;
 const MAX_ZOOM = 1.8;
 
 export default function CanvasBoard({
-  nodes, setNodes, edges, setEdges, selected, setSelected, runPhases, onRemoveNode,
+  nodes, setNodes, edges, setEdges, selected, setSelected, runPhases, runOutputs, onRemoveNode,
 }: CanvasBoardProps) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -435,6 +436,7 @@ export default function CanvasBoard({
             scale={zoom}
             selected={selected === node.id}
             runPhase={runPhases[node.id]}
+            runOutput={runOutputs?.[node.id]}
             onMouseDown={e => startNodeDrag(e, node.id)}
             onClick={() => {
               setSelectedEdge(null);
