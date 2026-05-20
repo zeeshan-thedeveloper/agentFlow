@@ -38,6 +38,12 @@ export class IntegrationHandler implements NodeHandler {
 
     const credentials = await this.credentialResolver.resolve(userId, integrationId);
 
-    return integration.execute(actionId, actionParams, input, credentials);
+    const enrichedParams = {
+      ...actionParams,
+      _userId: userId,
+      _integrationId: integrationId,
+    };
+
+    return integration.execute(actionId, enrichedParams, input, credentials);
   }
 }

@@ -1,4 +1,9 @@
-import type { Integration, IntegrationActionDef, ResolvedCredentials } from '../../integration.interfaces';
+import type {
+  Integration,
+  IntegrationActionDef,
+  ResolvedCredentials,
+  SchemaConfig,
+} from '../../integration.interfaces';
 import { getMongoClient } from './mongo.connection';
 
 const ACTIONS: IntegrationActionDef[] = [
@@ -78,6 +83,12 @@ const ACTIONS: IntegrationActionDef[] = [
       },
     ],
   },
+  {
+    id: 'introspect',
+    name: 'Get Schema',
+    description: 'List all collections in the MongoDB database for use as agent context.',
+    paramSchema: [],
+  },
 ];
 
 const MAX_DOCS = 500;
@@ -90,12 +101,21 @@ export class MongoIntegration implements Integration {
   credentialLabel = 'MongoDB URI';
   actions = ACTIONS;
 
+  constructor(
+    private readonly schemaConfigLoader: (
+      userId: string,
+      integrationId: string,
+    ) => Promise<SchemaConfig | null>,
+  ) {}
+
   async execute(
     actionId: string,
     params: Record<string, unknown>,
     _input: unknown,
     credentials: ResolvedCredentials,
   ): Promise<unknown> {
+    const userId = String(params._userId ?? '');
+    const integrationId = String(params._integrationId ?? '');
     const { connectionString } = credentials;
     if (!connectionString) throw new Error('No MongoDB URI found. Connect a database first.');
 
@@ -108,9 +128,32 @@ export class MongoIntegration implements Integration {
         return this.runUpdateOne(connectionString, params);
       case 'deleteOne':
         return this.runDeleteOne(connectionString, params);
+      case 'introspect':
+        return this.runIntrospect(connectionString, userId, integrationId);
       default:
         throw new Error(`Unknown action: ${actionId}`);
     }
+  }
+
+  private async runIntrospect(
+    connectionString: string,
+    userId: string,
+    integrationId: string,
+  ): Promise<unknown> {
+    const client = await getMongoClient(connectionString);
+    const collections = (await this.getDb(client, connectionString).listCollections().toArray())
+      .map((c) => c.name)
+      .sort();
+
+    const schemaConfig = await this.schemaConfigLoader(userId, integrationId);
+    const allowed = schemaConfig
+      ? collections.filter((c) => schemaConfig.tables[c])
+      : collections;
+
+    return {
+      schema: `Collections: ${allowed.join(', ')}`,
+      tableCount: allowed.length,
+    };
   }
 
   private parseJSON(value: unknown, field: string): Record<string, unknown> {
