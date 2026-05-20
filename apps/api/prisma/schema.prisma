@@ -23,6 +23,7 @@ model User {
   workflows Workflow[]
   apiKeys   UserApiKey[]
   integrationCredentials UserIntegrationCredential[]
+  schemaConfigs          DatabaseSchemaConfig[]
 
   @@map("users")
 }
@@ -84,6 +85,21 @@ model UserIntegrationCredential {
   @@unique([userId, integrationId])
   @@index([userId])
   @@map("user_integration_credentials")
+}
+
+model DatabaseSchemaConfig {
+  id            String   @id @default(cuid())
+  userId        String
+  integrationId String
+  config        Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, integrationId])
+  @@index([userId])
+  @@map("database_schema_configs")
 }
 
 model Account {
