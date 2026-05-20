@@ -7,6 +7,7 @@ interface ConfigPanelProps {
   node: FlowNode;
   onUpdate: (patch: Partial<FlowNode>) => void;
   onClose: () => void;
+  onDelete: () => void;
   onRun?: () => void;
   runOutput?: unknown;
 }
@@ -66,8 +67,8 @@ function formatRunOutput(output: unknown) {
   return JSON.stringify(output, null, 2);
 }
 
-export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput }: ConfigPanelProps) {
-  const t = NODE_TYPES[node.type];
+export default function ConfigPanel({ node, onUpdate, onClose, onDelete, onRun, runOutput }: ConfigPanelProps) {
+  const t = NODE_TYPES[node.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
   const triggerInputMode = node.triggerInputMode ?? 'none';
 
   return (
@@ -425,6 +426,30 @@ export default function ConfigPanel({ node, onUpdate, onClose, onRun, runOutput 
             {node.id}
           </div>
         </Section>
+
+        <div style={{ marginTop: 8, paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
+          <button
+            type="button"
+            onClick={onDelete}
+            style={{
+              width: '100%',
+              height: 34,
+              borderRadius: 7,
+              border: '1px solid rgba(239,68,68,0.48)',
+              background: 'transparent',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: 12,
+              fontWeight: 800,
+            }}
+          >
+            Delete node
+          </button>
+          <p style={{ margin: '8px 0 0', fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.45 }}>
+            Or select the node and press Delete / Backspace. Connected edges are removed automatically.
+          </p>
+        </div>
       </div>
     </div>
   );
