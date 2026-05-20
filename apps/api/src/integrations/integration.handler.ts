@@ -1,4 +1,5 @@
 import type { NodeHandler } from '../handlers/base.handler';
+import { isNodeInput } from '../runs/node-input';
 import { PrismaService } from '../prisma/prisma.service';
 import { CredentialResolver } from './credential.resolver';
 import type { SchemaConfig } from './integration.interfaces';
@@ -25,7 +26,12 @@ export class IntegrationHandler implements NodeHandler {
     const integration = integrationRegistry.get(integrationId);
     if (!integration) throw new Error(`Unknown integration: "${integrationId}".`);
 
-    const actionParams = interpolateParams(rawActionParams, input);
+    const nodeInput = isNodeInput(input) ? input : { data: input };
+    let actionParams = interpolateParams(rawActionParams, nodeInput.data ?? input);
+
+    if (actionId === 'query' && nodeInput.query) {
+      actionParams = { ...actionParams, sql: nodeInput.query };
+    }
 
     const schemaConfigRow = await this.prisma.databaseSchemaConfig.findUnique({
       where: { userId_integrationId: { userId, integrationId } },
@@ -44,6 +50,6 @@ export class IntegrationHandler implements NodeHandler {
       _integrationId: integrationId,
     };
 
-    return integration.execute(actionId, enrichedParams, input, credentials);
+    return integration.execute(actionId, enrichedParams, nodeInput.data ?? input, credentials);
   }
 }
