@@ -14,7 +14,8 @@ export class IntegrationHandler implements NodeHandler {
   ) {}
 
   async execute(params: Record<string, unknown>, input: unknown): Promise<unknown> {
-    const integrationId = String(params.integrationId ?? '');
+    const nodeInput = isNodeInput(input) ? input : { data: input };
+    const integrationId = String(nodeInput.connection ?? params.integrationId ?? '');
     const actionId = String(params.actionId ?? '');
     const userId = String(params.userId ?? '');
     const rawActionParams = (params.actionParams ?? {}) as Record<string, unknown>;
@@ -26,7 +27,6 @@ export class IntegrationHandler implements NodeHandler {
     const integration = integrationRegistry.get(integrationId);
     if (!integration) throw new Error(`Unknown integration: "${integrationId}".`);
 
-    const nodeInput = isNodeInput(input) ? input : { data: input };
     let actionParams = interpolateParams(rawActionParams, nodeInput.data ?? input);
 
     if (actionId === 'query' && nodeInput.query) {
