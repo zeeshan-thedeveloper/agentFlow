@@ -1,39 +1,52 @@
-# ─── Claude Code ─────────────────────────────────────────────────────────────
-.claude/settings.local.json
+# ─── Environment ────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
 
-# ─── Local planning docs ──────────────────────────────────────────────────────
-STATUS.md
-PLAN.md
-TASKS.md
-docs/deployment-options.md
-docs/tasks/
-
-# ─── Node.js ──────────────────────────────────────────────────────────────────
+# ─── Dependencies / build ────────────────────────────────────────────────────
 node_modules/
 .pnpm-store/
-
-# Build output
 dist/
 build/
 .next/
 out/
-
-# Environment files
-.env
-.env.local
-.env.*.local
-
-# pnpm
-pnpm-debug.log*
-
-# TypeScript build info
+coverage/
 *.tsbuildinfo
 
-# Editor
+# ─── IDE / AI assistants ─────────────────────────────────────────────────────
 .vscode/
 .idea/
+.cursor/
+.claude/
+.codex/
 
-# OS
+# ─── Local planning / agent work ────────────────────────────────────────────
+.planning/
+STATUS.md
+PLAN.md
+TASKS.md
+docs/tasks/
+
+# ─── Secrets / certs / service accounts ──────────────────────────────────────
+*.pem
+*.key
+*.p12
+*firebase-adminsdk*.json
+service-account*.json
+
+# ─── DB dumps / local databases / archives ──────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql
+*.bak
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# ─── OS ──────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 
