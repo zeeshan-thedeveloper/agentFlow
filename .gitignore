@@ -26,6 +26,10 @@ STATUS.md
 PLAN.md
 TASKS.md
 docs/tasks/
+CLAUDE.md
+TOKEN_OPTIMIZATION.md
+check-tokens.ps1
+.cursor/rules
 
 # ─── Secrets / certs / service accounts ──────────────────────────────────────
 *.pem
