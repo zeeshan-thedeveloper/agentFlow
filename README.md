@@ -73,29 +73,6 @@ The execution model is intentionally simple: each node is a typed handler, the e
 
 ---
 
-## What's Built
-
-| Area | Status |
-|------|--------|
-| Visual canvas editor | ✅ Implemented |
-| Workflow persistence | ✅ Implemented |
-| Topological execution engine | ✅ Implemented |
-| Handler registry | ✅ Implemented |
-| LLM agent node (OpenAI) | ✅ Implemented |
-| Run history & step audit trail | ✅ Implemented |
-| BYOK encrypted key storage | ✅ Implemented |
-| Database integration nodes | ✅ Implemented |
-| Schema introspection | ✅ Implemented |
-| Google OAuth + demo mode | ✅ Implemented |
-| Docker local stack | ✅ Implemented |
-| Async queue (BullMQ) | 🔲 Planned |
-| Real-time run status (WebSocket/SSE) | 🔲 Planned |
-| Multi-model support (Claude, Gemini) | 🔲 Planned |
-| Conditional branch nodes | 🔲 Planned |
-| HTTP request nodes | 🔲 Planned |
-
----
-
 ## Why Build This?
 
 This is a portfolio project exploring what it takes to build a real AI product — not just an API wrapper or a chatbot.
@@ -124,31 +101,6 @@ The goal was to build something that *actually works end to end* — canvas to e
 | Encryption | Node.js crypto — AES-256-GCM |
 | Infrastructure | Docker, Docker Compose |
 | Package Manager | pnpm 10 workspaces |
-
----
-
-## Roadmap
-
-- [ ] BullMQ async execution queue — background job processing, retries
-- [ ] Real-time run status via WebSocket or Server-Sent Events
-- [ ] Multi-model support — Anthropic Claude, Google Gemini, model selector per node
-- [ ] More node types — HTTP request, conditional branch, data transform
-- [ ] GitHub and Slack integration nodes
-- [ ] Visual step-by-step run replay
-- [ ] Public demo deployment
-- [ ] Expanded test coverage and CI pipeline
-
----
-
-## Honest Limitations
-
-This is a prototype, not a production SaaS:
-
-- Execution is **synchronous** — BullMQ queue is planned but not yet implemented
-- **No multi-tenant hardening** — auth and isolation are basic
-- **LLM reliability** depends on prompt quality and model behavior
-- **Minimal observability** — no tracing, metrics, or alerting
-- **Test coverage** is limited
 
 ---
 
