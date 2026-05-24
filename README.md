@@ -38,9 +38,22 @@ AgentFlow makes the workflow the product: design it on a canvas, run it, see wha
 ## How It Works
 
 ```
-Trigger → Agent → Tool → Output
-                    ↓
-              Run History (every step, every input/output)
+┌─────────────────────────────────────────────────────────────────┐
+│                        Workflow Canvas                          │
+│                                                                 │
+│  ┌─────────┐    ┌─────────┐    ┌──────────┐    ┌──────────┐   │
+│  │ Trigger │───▶│  Agent  │───▶│   Tool   │───▶│  Output  │   │
+│  │         │    │  (LLM)  │    │ (DB/API) │    │          │   │
+│  └─────────┘    └────┬────┘    └────┬─────┘    └──────────┘   │
+│                      │              │                           │
+│               prompt │              │ query / result            │
+│                      ▼              ▼                           │
+│              ┌───────────────────────────────┐                 │
+│              │         Run History           │                 │
+│              │  step · input JSON · output   │                 │
+│              │  JSON · status · duration     │                 │
+│              └───────────────────────────────┘                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 1. **Design** — drag nodes onto the canvas, connect them with edges
