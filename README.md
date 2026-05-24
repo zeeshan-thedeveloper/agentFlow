@@ -105,4 +105,4 @@ The goal was to build something that *actually works end to end* — canvas to e
 
 ## License
 
-MIT
+MIT — free to use, fork, and build on.
