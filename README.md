@@ -3,7 +3,8 @@
 > Build, run, and debug autonomous AI workflows — visually.
 
 <p align="center">
-  <img src="docs/assets/agentflow-canvas.png" alt="AgentFlow canvas showing trigger, AI agent, tool, and output nodes connected in a workflow" width="900" />
+<img width="1918" height="968" alt="image" src="https://github.com/user-attachments/assets/e4421a52-05ab-4c06-a097-a2189689ebc3" />
+
 </p>
 
 <p align="center">
@@ -37,24 +38,9 @@ AgentFlow makes the workflow the product: design it on a canvas, run it, see wha
 
 ## How It Works
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Workflow Canvas                          │
-│                                                                 │
-│  ┌─────────┐    ┌─────────┐    ┌──────────┐    ┌──────────┐   │
-│  │ Trigger │───▶│  Agent  │───▶│   Tool   │───▶│  Output  │   │
-│  │         │    │  (LLM)  │    │ (DB/API) │    │          │   │
-│  └─────────┘    └────┬────┘    └────┬─────┘    └──────────┘   │
-│                      │              │                           │
-│               prompt │              │ query / result            │
-│                      ▼              ▼                           │
-│              ┌───────────────────────────────┐                 │
-│              │         Run History           │                 │
-│              │  step · input JSON · output   │                 │
-│              │  JSON · status · duration     │                 │
-│              └───────────────────────────────┘                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+
+<img width="1900" height="1000" alt="ChatGPT Image May 24, 2026, 02_59_47 PM" src="https://github.com/user-attachments/assets/ffadae93-4cfa-41d0-9f63-4d2441f3d125" />
+
 
 1. **Design** — drag nodes onto the canvas, connect them with edges
 2. **Configure** — set prompts, models, and API keys per node
