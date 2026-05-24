@@ -325,7 +325,7 @@ export default function SettingsView({ initialUser }: SettingsViewProps) {
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
-  background: 'var(--page-bg, #07080f)',
+  background: 'var(--app-bg)',
   color: 'var(--text-primary)',
   fontFamily: 'inherit',
 };
