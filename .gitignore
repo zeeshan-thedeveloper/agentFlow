@@ -25,7 +25,7 @@ coverage/
 STATUS.md
 PLAN.md
 TASKS.md
-docs/tasks/
+docs/
 CLAUDE.md
 TOKEN_OPTIMIZATION.md
 check-tokens.ps1
