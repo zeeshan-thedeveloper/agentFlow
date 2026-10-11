@@ -2,7 +2,7 @@ import { Copy } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FlowNode, RunPhase } from './types';
 import { NODE_TYPES, NH, NW } from './constants';
-import type { Side } from './connections';
+import { isDatabaseNode, type Side } from './connections';
 import NodeConnectors from './NodeConnectors';
 
 function IcoCheck() {
@@ -73,7 +73,9 @@ export default function CanvasNodeCard({
   };
   const [hovered, setHovered] = useState(false);
   const [connectorHovered, setConnectorHovered] = useState(false);
-  const t = NODE_TYPES[worldNode.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
+  const t = isDatabaseNode(worldNode)
+    ? NODE_TYPES.database
+    : NODE_TYPES[worldNode.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
   const showDelete = (selected || hovered) && !connecting;
   const showConnectors = !connecting && (selected || hovered || connectorHovered);
   const isQueued = runPhase === 'queued';
@@ -82,12 +84,11 @@ export default function CanvasNodeCard({
   const isFailed  = runPhase === 'failed';
   const isSchemaNode = worldNode.type === 'schema';
   const isQueryRunnerNode = worldNode.type === 'query-runner';
-  const isDatabaseNode = worldNode.type === 'integration' && worldNode.integrationId?.startsWith('database');
   const subtitle = isSchemaNode
     ? worldNode.connectionName || 'Select connection'
     : isQueryRunnerNode
     ? worldNode.connectionName || 'Select connection'
-    : isDatabaseNode
+    : isDatabaseNode(worldNode)
     ? worldNode.connectionName || worldNode.integrationId?.split(':').pop() || 'Select connection'
     : worldNode.subtitle;
 

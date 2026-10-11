@@ -47,7 +47,7 @@ export function QueryRunnerConfigSection({ node, onUpdate, connectedDbLabel }: P
           }
         />
         <p className="mt-1 text-xs text-gray-400">
-          Used when nothing upstream sends SQL. A connected Agent's output overrides this.
+          Used when nothing upstream sends SQL. Output from a connected Agent overrides this.
         </p>
       </div>
     </div>
