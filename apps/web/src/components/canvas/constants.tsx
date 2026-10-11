@@ -6,7 +6,7 @@ export const NH = 74;
 
 export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
   trigger: [
-    { id: 'trigger-out', type: 'source', handleType: 'trigger', position: 'left', label: 'Trigger' },
+    { id: 'trigger-out', type: 'source', handleType: 'trigger', position: 'right-bottom', label: 'Trigger' },
     {
       id: 'data-out',
       type: 'source',
@@ -15,7 +15,7 @@ export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
       label: 'Data',
       conditional: "inputType === 'text' || triggerInputMode === 'input'",
     },
-    { id: 'query-out', type: 'source', handleType: 'query', position: 'right-bottom', label: 'SQL', conditional: "inputType === 'sql'" },
+    { id: 'query-out', type: 'source', handleType: 'query', position: 'right-top', label: 'SQL', conditional: "inputType === 'sql'" },
   ],
   schema: [
     { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
