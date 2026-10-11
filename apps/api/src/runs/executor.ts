@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { registry } from '../handlers/registry';
-import { assembleNodeInput, handlerPayload } from './node-input';
+import { assembleNodeInput, handlerPayload, isDatabaseConfigNode } from './node-input';
 
 type FlowNode = {
   id: string;
@@ -16,8 +16,6 @@ type FlowNode = {
 type FlowEdge = {
   from: string;
   to: string;
-  sourceHandle?: string;
-  targetHandle?: string;
 };
 
 type WorkflowCanvasJson = {
@@ -48,10 +46,6 @@ function assertCanvasJson(canvasJson: unknown): asserts canvasJson is WorkflowCa
   ) {
     throw new Error('Invalid workflow canvas JSON.');
   }
-}
-
-function isDatabaseConfigNode(node: FlowNode): boolean {
-  return node.type === 'integration' && Boolean(String(node.integrationId ?? '').startsWith('database'));
 }
 
 function resolveHandlerType(node: FlowNode): string {
@@ -113,10 +107,17 @@ export function sortNodesTopologically(canvasJson: unknown): FlowNode[] {
     outgoing.set(node.id, []);
   }
 
+  const seenEdges = new Set<string>();
+
   for (const edge of canvasJson.edges) {
     if (!nodesById.has(edge.from) || !nodesById.has(edge.to)) {
       throw new Error(`Workflow edge references an unknown node: ${edge.from} -> ${edge.to}`);
     }
+
+    // Older saves can hold several wires between the same pair; count each pair once.
+    const edgeKey = `${edge.from}->${edge.to}`;
+    if (seenEdges.has(edgeKey)) continue;
+    seenEdges.add(edgeKey);
 
     outgoing.get(edge.from)?.push(edge.to);
     indegree.set(edge.to, (indegree.get(edge.to) ?? 0) + 1);
@@ -165,6 +166,7 @@ export async function executeWorkflow(
 ): Promise<StepResult[]> {
   assertCanvasJson(canvasJson);
   const sortedNodes = sortNodesTopologically(canvasJson);
+  const nodesById = new Map(canvasJson.nodes.map(node => [node.id, node]));
   const results: StepResult[] = [];
   const stepOutputs = new Map<string, unknown>();
 
@@ -179,7 +181,7 @@ export async function executeWorkflow(
       throw new Error(`No handler registered for node type: ${node.type}`);
     }
 
-    const nodeInput = assembleNodeInput(node.id, canvasJson.edges, stepOutputs);
+    const nodeInput = assembleNodeInput(node.id, nodesById, canvasJson.edges, stepOutputs);
     if (node.type === 'trigger' && context.initialInput !== undefined && nodeInput.data === undefined) {
       nodeInput.data = context.initialInput;
     }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { DEFAULT_CANVAS_JSON, DEFAULT_WORKFLOW_NAME } from '@/components/canvas/defaultWorkflow';
+import { normalizeEdges } from '@/components/canvas/connections';
 import type { FlowEdge, FlowNode, WorkflowCanvasJson } from '@/components/canvas/types';
 
 export const dynamic = 'force-dynamic';
@@ -45,27 +46,9 @@ function isWorkflowCanvasJson(value: unknown): value is WorkflowCanvasJson {
 function normalizeCanvasJson(value: unknown): WorkflowCanvasJson {
   if (!isWorkflowCanvasJson(value)) return DEFAULT_CANVAS_JSON;
 
-  const nodeTypes = new Map(value.nodes.map(node => [node.id, node.type]));
-
   return {
     nodes: value.nodes,
-    edges: value.edges.map(edge => {
-      // Legacy handle ids are only renamed on the node types that define the new id.
-      const sourceIsAgent = nodeTypes.get(edge.from) === 'agent';
-      const targetIsIntegration = nodeTypes.get(edge.to) === 'integration';
-
-      let targetHandle = edge.targetHandle ?? 'data-in';
-      if (targetHandle === 'query-in' && targetIsIntegration) targetHandle = 'agent-in';
-
-      let sourceHandle = edge.sourceHandle ?? (sourceIsAgent ? 'text-out' : 'data-out');
-      if (sourceHandle === 'data-out' && sourceIsAgent) sourceHandle = 'text-out';
-
-      return {
-        ...edge,
-        sourceHandle,
-        targetHandle,
-      };
-    }),
+    edges: normalizeEdges(value.edges),
   };
 }
 
@@ -119,6 +102,8 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: 'Invalid canvas JSON' }, { status: 400 });
   }
 
+  const canvasJson = normalizeCanvasJson(body.canvasJson);
+
   const existing =
     typeof body?.id === 'string'
       ? await prisma.workflow.findFirst({ where: { id: body.id, userId } })
@@ -129,14 +114,14 @@ export async function PUT(request: Request) {
         where: { id: existing.id },
         data: {
           name,
-          canvasJson: body.canvasJson as never,
+          canvasJson: canvasJson as never,
         },
       })
     : await prisma.workflow.create({
         data: {
           userId,
           name,
-          canvasJson: body.canvasJson as never,
+          canvasJson: canvasJson as never,
         },
       });
 

@@ -1,21 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FlowNode, FlowEdge, RunPhasesMap } from './types';
-import { NODE_TYPES, NW, NH } from './constants';
-import type { LibraryNodeType } from './types';
+import { NODE_TYPES } from './constants';
 import CanvasNodeCard from './CanvasNodeCard';
 import {
-  bezierMidpoint,
-  buildEdgePath,
-  edgeColor,
-  edgeHandleLabel,
-} from './edge-utils';
-import {
-  getFanOutYOffset,
-  getHandleAnchor,
-  isValidConnection,
-  listEdgesOnHandle,
-  resolveHandleId,
-} from './handle-utils';
+  edgeKey,
+  edgeMidpoint,
+  edgePath,
+  isDatabaseNode,
+  layoutEdges,
+  nodeSideAnchor,
+  resolveConnection,
+  type Side,
+} from './connections';
 
 interface CanvasBoardProps {
   nodes: FlowNode[];
@@ -44,10 +40,18 @@ interface PanState {
 
 interface ConnectState {
   from: string;
-  sourceHandle: string;
+  side: Side;
+  /** Cursor position in screen (canvas-element) pixels. */
   x: number;
   y: number;
-  valid: boolean;
+}
+
+function arrowId(color: string): string {
+  return `edgeArrow-${color.replace('#', '')}`;
+}
+
+function nodeColor(node: FlowNode): string {
+  return isDatabaseNode(node) ? NODE_TYPES.database.color : NODE_TYPES[node.type]?.color ?? NODE_TYPES.agent.color;
 }
 
 const MIN_ZOOM = 0.55;
@@ -61,7 +65,7 @@ export default function CanvasBoard({
   const [dragging, setDragging] = useState<DragState | null>(null);
   const [panning, setPanning] = useState<PanState | null>(null);
   const [connecting, setConnecting] = useState<ConnectState | null>(null);
-  const [hoverTarget, setHoverTarget] = useState<{ nodeId: string; handleId: string } | null>(null);
+  const [hoverTargetId, setHoverTargetId] = useState<string | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
   const [nodeLayoutHeights, setNodeLayoutHeights] = useState<Record<string, number>>({});
@@ -87,6 +91,10 @@ export default function CanvasBoard({
 
   function screenY(y: number) {
     return y * zoom + pan.y;
+  }
+
+  function worldPoint(point: { x: number; y: number }) {
+    return { x: (point.x - pan.x) / zoom, y: (point.y - pan.y) / zoom };
   }
 
   function clampZoom(value: number) {
@@ -132,10 +140,7 @@ export default function CanvasBoard({
       e.preventDefault();
 
       if (selectedEdge) {
-        setEdges(prev => prev.filter(edge => {
-          const key = `${edge.from}:${edge.sourceHandle ?? 'data-out'}->${edge.to}:${edge.targetHandle ?? 'data-in'}`;
-          return key !== selectedEdge;
-        }));
+        setEdges(prev => prev.filter(edge => edgeKey(edge) !== selectedEdge));
         setSelectedEdge(null);
         return;
       }
@@ -167,16 +172,7 @@ export default function CanvasBoard({
   function onMouseMove(e: React.MouseEvent) {
     if (connecting) {
       const point = getCanvasPoint(e);
-      const valid = hoverTarget
-        ? isValidConnection(
-            connecting.from,
-            connecting.sourceHandle,
-            hoverTarget.nodeId,
-            hoverTarget.handleId,
-            nodes,
-          )
-        : true;
-      setConnecting(current => (current ? { ...current, ...point, valid } : null));
+      setConnecting(current => (current ? { ...current, ...point } : null));
       return;
     }
 
@@ -211,9 +207,10 @@ export default function CanvasBoard({
     setDragging(null);
     setPanning(null);
     setConnecting(null);
+    setHoverTargetId(null);
   }
 
-  function startConnection(e: React.MouseEvent, from: string, sourceHandle: string) {
+  function startConnection(e: React.MouseEvent, from: string, side: Side) {
     e.preventDefault();
     e.stopPropagation();
     const point = getCanvasPoint(e);
@@ -221,104 +218,35 @@ export default function CanvasBoard({
     setSelectedEdge(null);
     setDragging(null);
     setPanning(null);
-    setConnecting({ from, sourceHandle, ...point, valid: true });
+    setConnecting({ from, side, ...point });
   }
 
-  function finishConnection(e: React.MouseEvent, to: string, targetHandle: string) {
+  function finishConnection(e: React.MouseEvent, targetId: string) {
     e.preventDefault();
     e.stopPropagation();
-    if (!connecting || connecting.from === to) return;
+    if (!connecting) return;
 
-    if (!isValidConnection(connecting.from, connecting.sourceHandle, to, targetHandle, nodes)) {
-      setConnecting(null);
-      setHoverTarget(null);
-      return;
+    const check = resolveConnection(connecting.from, targetId, nodes, edges);
+    if (check.ok) {
+      setEdges(prev => [...prev, { from: check.from, to: check.to }]);
     }
-
-    setEdges(prev => {
-      const exists = prev.some(
-        edge =>
-          edge.from === connecting.from &&
-          edge.to === to &&
-          (edge.sourceHandle ?? 'data-out') === connecting.sourceHandle &&
-          (edge.targetHandle ?? 'data-in') === targetHandle,
-      );
-      if (exists) return prev;
-      return [
-        ...prev,
-        {
-          from: connecting.from,
-          to,
-          sourceHandle: connecting.sourceHandle,
-          targetHandle,
-        },
-      ];
-    });
     setConnecting(null);
-    setHoverTarget(null);
+    setHoverTargetId(null);
   }
 
   function removeEdge(edge: FlowEdge) {
-    setEdges(prev =>
-      prev.filter(
-        item =>
-          !(
-            item.from === edge.from &&
-            item.to === edge.to &&
-            (item.sourceHandle ?? 'data-out') === (edge.sourceHandle ?? 'data-out') &&
-            (item.targetHandle ?? 'data-in') === (edge.targetHandle ?? 'data-in')
-          ),
-      ),
-    );
+    setEdges(prev => prev.filter(item => edgeKey(item) !== edgeKey(edge)));
     setSelectedEdge(null);
-  }
-
-  function edgeEndpoints(a: FlowNode, b: FlowNode, edge: FlowEdge) {
-    const sourceHandle =
-      resolveHandleId(a, edge.sourceHandle) ?? (a.type === 'agent' ? 'text-out' : 'data-out');
-    const targetHandle =
-      resolveHandleId(b, edge.targetHandle) ??
-      (b.type === 'query-runner' ? 'query-in' : b.type === 'agent' ? 'text-in' : 'data-in');
-
-    const sourceSiblings = listEdgesOnHandle(edges, a, sourceHandle, 'source');
-    const targetSiblings = listEdgesOnHandle(edges, b, targetHandle, 'target');
-    const sourceIndex = sourceSiblings.findIndex(
-      item =>
-        item.from === edge.from &&
-        item.to === edge.to &&
-        item.sourceHandle === edge.sourceHandle &&
-        item.targetHandle === edge.targetHandle,
-    );
-    const targetIndex = targetSiblings.findIndex(
-      item =>
-        item.from === edge.from &&
-        item.to === edge.to &&
-        item.sourceHandle === edge.sourceHandle &&
-        item.targetHandle === edge.targetHandle,
-    );
-
-    const start = getHandleAnchor(
-      a,
-      sourceHandle,
-      nodeLayoutHeights[a.id] ?? NH,
-      getFanOutYOffset(Math.max(0, sourceIndex), sourceSiblings.length),
-    );
-    const end = getHandleAnchor(
-      b,
-      targetHandle,
-      nodeLayoutHeights[b.id] ?? NH,
-      getFanOutYOffset(Math.max(0, targetIndex), targetSiblings.length),
-    );
-    return {
-      x1: screenX(start.x),
-      y1: screenY(start.y),
-      x2: screenX(end.x),
-      y2: screenY(end.y),
-    };
   }
 
   const nodeMap = Object.fromEntries(nodes.map(node => [node.id, node]));
   const connectingNode = connecting ? nodeMap[connecting.from] : null;
+  const geometry = layoutEdges(nodes, edges, nodeLayoutHeights);
+  const arrowColors = [...new Set(nodes.map(nodeColor))];
+  const hoverCheck =
+    connecting && hoverTargetId && hoverTargetId !== connecting.from
+      ? resolveConnection(connecting.from, hoverTargetId, nodes, edges)
+      : null;
 
   return (
     <div
@@ -346,119 +274,120 @@ export default function CanvasBoard({
         pointerEvents: 'auto', zIndex: 3,
       }}>
         <defs>
-          {(Object.keys(NODE_TYPES) as Array<keyof typeof NODE_TYPES>).map(type => (
-            <filter key={type} id={`glow-${type}`} x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="2.5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
+          {arrowColors.map(color => (
+            <marker
+              key={color}
+              id={arrowId(color)}
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill={color} />
+            </marker>
           ))}
         </defs>
 
-        {edges.map(edge => {
-          const a = nodeMap[edge.from];
-          const b = nodeMap[edge.to];
-          if (!a || !b) return null;
+        {/* Wires are laid out in canvas coordinates; one transform applies pan and zoom. */}
+        <g transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
+          {edges.map(edge => {
+            const key = edgeKey(edge);
+            const shape = geometry.get(key);
+            const source = nodeMap[edge.from];
+            if (!shape || !source) return null;
 
-          const { x1, y1, x2, y2 } = edgeEndpoints(a, b, edge);
-          const path = buildEdgePath(x1, y1, x2, y2);
-          const color = edgeColor(edge.sourceHandle, edge.targetHandle);
-          const label = edgeHandleLabel(edge.sourceHandle, edge.targetHandle);
-          const mid = bezierMidpoint(x1, y1, x2, y2);
-          const edgeKey = `${edge.from}:${edge.sourceHandle ?? 'data-out'}->${edge.to}:${edge.targetHandle ?? 'data-in'}`;
-          const isSelected = selectedEdge === edgeKey;
-          const isHovered = hoveredEdge === edgeKey;
-          const isIncomingActive = runPhases[edge.to] === 'running';
-          const emphasized = isSelected || isHovered;
+            const path = edgePath(shape.start, shape.startSide, shape.end, shape.endSide);
+            const mid = edgeMidpoint(shape.start, shape.startSide, shape.end, shape.endSide);
+            const color = nodeColor(source);
+            const isSelected = selectedEdge === key;
+            const isHovered = hoveredEdge === key;
+            const isIncomingActive = runPhases[edge.to] === 'running';
+            const emphasized = isSelected || isHovered;
 
-          return (
-            <g key={edgeKey}>
-              <path
-                d={path}
-                fill="none"
-                stroke={color}
-                strokeWidth={emphasized ? 2 : 1.5}
-                strokeOpacity={emphasized ? 1 : 0.7}
-                className={isIncomingActive ? 'edgeActive' : undefined}
-                style={{ pointerEvents: 'none' }}
-              />
-              <text
-                x={mid.x}
-                y={mid.y - 6}
-                fontSize={8}
-                fill={color}
-                textAnchor="middle"
-                style={{
-                  pointerEvents: 'none',
-                  opacity: 0.8,
-                  fontWeight: 700,
-                  letterSpacing: '0.06em',
-                  userSelect: 'none',
-                }}
-              >
-                {label}
-              </text>
-              <path
-                d={path}
-                fill="none"
-                stroke="transparent"
-                strokeWidth={18}
-                style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
-                onMouseEnter={() => setHoveredEdge(edgeKey)}
-                onMouseLeave={() => setHoveredEdge(current => (current === edgeKey ? null : current))}
-                onMouseDown={e => {
-                  e.stopPropagation();
-                  setSelected(null);
-                  setSelectedEdge(edgeKey);
-                }}
-                onDoubleClick={e => {
-                  e.stopPropagation();
-                  removeEdge(edge);
-                }}
-              />
-              {isSelected && (
-                <g
-                  transform={`translate(${mid.x} ${mid.y})`}
-                  style={{ cursor: 'pointer' }}
-                  onMouseDown={e => e.stopPropagation()}
-                  onClick={e => {
+            return (
+              <g key={key}>
+                <path
+                  d={path}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth={emphasized ? 2.25 : 1.75}
+                  strokeOpacity={emphasized ? 1 : 0.75}
+                  strokeDasharray={isDatabaseNode(source) && !isIncomingActive ? '5 4' : undefined}
+                  markerEnd={`url(#${arrowId(color)})`}
+                  vectorEffect="non-scaling-stroke"
+                  className={isIncomingActive ? 'edgeActive' : undefined}
+                  style={{ pointerEvents: 'none' }}
+                />
+                <path
+                  d={path}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={16}
+                  vectorEffect="non-scaling-stroke"
+                  style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredEdge(key)}
+                  onMouseLeave={() => setHoveredEdge(current => (current === key ? null : current))}
+                  onMouseDown={e => {
+                    e.stopPropagation();
+                    setSelected(null);
+                    setSelectedEdge(key);
+                  }}
+                  onDoubleClick={e => {
                     e.stopPropagation();
                     removeEdge(edge);
                   }}
-                >
-                  <circle r="10" fill="var(--panel-bg)" stroke={color} strokeWidth="1.5" />
-                  <path d="M-3.5 -3.5L3.5 3.5M3.5 -3.5L-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </g>
-              )}
-            </g>
-          );
-        })}
+                />
+                {isSelected && (
+                  <g
+                    transform={`translate(${mid.x} ${mid.y}) scale(${1 / zoom})`}
+                    style={{ cursor: 'pointer' }}
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={e => {
+                      e.stopPropagation();
+                      removeEdge(edge);
+                    }}
+                  >
+                    <title>Remove connection</title>
+                    <circle r="10" fill="var(--panel-bg)" stroke={color} strokeWidth="1.5" />
+                    <path d="M-3.5 -3.5L3.5 3.5M3.5 -3.5L-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </g>
+                )}
+              </g>
+            );
+          })}
 
-        {connecting && connectingNode && (() => {
-          const start = getHandleAnchor(
-            connectingNode,
-            resolveHandleId(connectingNode, connecting.sourceHandle) ?? 'text-out',
-            nodeLayoutHeights[connectingNode.id] ?? NH,
-          );
-          const x1 = screenX(start.x);
-          const y1 = screenY(start.y);
-          const stroke = connecting.valid
-            ? edgeColor(connecting.sourceHandle)
-            : '#ef4444';
-          return (
-            <path
-              d={buildEdgePath(x1, y1, connecting.x, connecting.y)}
-              fill="none"
-              stroke={stroke}
-              strokeWidth={2 * zoom}
-              strokeDasharray="8 6"
-              strokeOpacity={0.85}
-            />
-          );
-        })()}
+          {connecting && connectingNode && (() => {
+            const start = nodeSideAnchor(connectingNode, connecting.side, nodeLayoutHeights);
+            const end = worldPoint(connecting);
+            const stroke = hoverCheck && !hoverCheck.ok ? '#EF4444' : nodeColor(connectingNode);
+            return (
+              <path
+                d={edgePath(start, connecting.side, end, null)}
+                fill="none"
+                stroke={stroke}
+                strokeWidth={2}
+                strokeDasharray="7 5"
+                strokeOpacity={0.9}
+                vectorEffect="non-scaling-stroke"
+                style={{ pointerEvents: 'none' }}
+              />
+            );
+          })()}
+        </g>
       </svg>
+
+      {connecting && hoverCheck && !hoverCheck.ok && (
+        <div style={{
+          position: 'absolute', left: connecting.x + 14, top: connecting.y + 14, zIndex: 30,
+          pointerEvents: 'none', fontSize: 11, fontWeight: 600, color: '#fff',
+          background: '#EF4444', borderRadius: 6, padding: '4px 8px', whiteSpace: 'nowrap',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+        }}>
+          {hoverCheck.reason}
+        </div>
+      )}
 
       <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none' }}>
         {nodes.map(node => (
@@ -480,12 +409,15 @@ export default function CanvasBoard({
               e.stopPropagation();
               removeNode(node.id);
             }}
-            edges={edges}
-            onStartConnection={(e, handleId) => startConnection(e, node.id, handleId)}
-            onTargetHandleHover={handleId => {
-              setHoverTarget(handleId ? { nodeId: node.id, handleId } : null);
+            connecting={Boolean(connecting)}
+            connectTarget={
+              hoverCheck && hoverTargetId === node.id ? (hoverCheck.ok ? 'valid' : 'invalid') : null
+            }
+            onStartConnection={(e, side) => startConnection(e, node.id, side)}
+            onConnectHover={hovered => {
+              setHoverTargetId(current => (hovered ? node.id : current === node.id ? null : current));
             }}
-            onFinishConnection={(e, handleId) => finishConnection(e, node.id, handleId)}
+            onFinishConnection={e => finishConnection(e, node.id)}
             onLayoutHeight={reportLayoutHeight}
           />
         ))}

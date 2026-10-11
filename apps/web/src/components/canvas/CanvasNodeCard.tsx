@@ -1,8 +1,9 @@
 import { Copy } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { FlowEdge, FlowNode, RunPhase } from './types';
+import type { FlowNode, RunPhase } from './types';
 import { NODE_TYPES, NH, NW } from './constants';
-import TypedNodeHandles from './TypedNodeHandles';
+import type { Side } from './connections';
+import NodeConnectors from './NodeConnectors';
 
 function IcoCheck() {
   return (
@@ -24,10 +25,13 @@ interface CanvasNodeCardProps {
   onMouseDown: (e: React.MouseEvent) => void;
   onClick: () => void;
   onDelete?: (e: React.MouseEvent) => void;
-  edges: FlowEdge[];
-  onStartConnection: (e: React.MouseEvent, handleId: string) => void;
-  onFinishConnection: (e: React.MouseEvent, handleId: string) => void;
-  onTargetHandleHover?: (handleId: string | null) => void;
+  /** True while any wire is being dragged on the canvas. */
+  connecting: boolean;
+  /** Set while a dragged wire hovers this node: whether dropping here would work. */
+  connectTarget: 'valid' | 'invalid' | null;
+  onStartConnection: (e: React.MouseEvent, side: Side) => void;
+  onFinishConnection: (e: React.MouseEvent) => void;
+  onConnectHover: (hovered: boolean) => void;
   onLayoutHeight?: (nodeId: string, height: number) => void;
 }
 
@@ -51,10 +55,11 @@ export default function CanvasNodeCard({
   onMouseDown,
   onClick,
   onDelete,
-  edges,
+  connecting,
+  connectTarget,
   onStartConnection,
   onFinishConnection,
-  onTargetHandleHover,
+  onConnectHover,
   onLayoutHeight,
 }: CanvasNodeCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -67,8 +72,10 @@ export default function CanvasNodeCard({
     scrape_page: 'Scrape',
   };
   const [hovered, setHovered] = useState(false);
+  const [connectorHovered, setConnectorHovered] = useState(false);
   const t = NODE_TYPES[worldNode.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
-  const showDelete = selected || hovered;
+  const showDelete = (selected || hovered) && !connecting;
+  const showConnectors = !connecting && (selected || hovered || connectorHovered);
   const isQueued = runPhase === 'queued';
   const isRunning = runPhase === 'running';
   const isDone    = runPhase === 'done';
@@ -138,21 +145,29 @@ export default function CanvasNodeCard({
         overflow: 'visible',
       }}
     >
-      <TypedNodeHandles
-        worldNode={worldNode}
-        layoutHeight={layoutHeight}
-        scale={scale}
-        edges={edges}
+      <NodeConnectors
+        width={NW * scale}
+        height={layoutHeight * scale}
+        color={t.color}
+        visible={showConnectors}
         onStartConnection={onStartConnection}
-        onFinishConnection={onFinishConnection}
-        onTargetHandleHover={onTargetHandleHover}
+        onHoverChange={setConnectorHovered}
       />
 
       <div
         onMouseDown={onMouseDown}
         onClick={onClick}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseUp={e => {
+          if (connecting) onFinishConnection(e);
+        }}
+        onMouseEnter={() => {
+          setHovered(true);
+          if (connecting) onConnectHover(true);
+        }}
+        onMouseLeave={() => {
+          setHovered(false);
+          if (connecting) onConnectHover(false);
+        }}
         style={{
           position: 'absolute',
           left: 0,
@@ -185,7 +200,7 @@ export default function CanvasNodeCard({
         ref={cardRef}
         style={{
         background: 'var(--card-wash), var(--panel-bg-strong)',
-        border: `1px solid ${selected ? t.color : isFailed ? '#EF444480' : isRunning ? t.color : isQueued ? t.color + '35' : 'var(--border-strong)'}`,
+        border: `1px solid ${connectTarget === 'valid' ? '#22C55E' : connectTarget === 'invalid' ? '#EF4444' : selected ? t.color : isFailed ? '#EF444480' : isRunning ? t.color : isQueued ? t.color + '35' : 'var(--border-strong)'}`,
         borderRadius: 10, padding: '11px 14px',
         display: 'flex', alignItems: 'center', gap: 11,
         position: 'relative', overflow: 'hidden',
@@ -193,7 +208,11 @@ export default function CanvasNodeCard({
         opacity: isQueued ? 0.72 : 1,
         '--glow':  t.glowA,
         '--glow2': t.glowB,
-        boxShadow: selected
+        boxShadow: connectTarget === 'valid'
+          ? '0 0 0 3px rgba(34,197,94,0.28), 0 8px 32px var(--shadow-node-strong)'
+          : connectTarget === 'invalid'
+          ? '0 0 0 3px rgba(239,68,68,0.22), 0 8px 32px var(--shadow-node)'
+          : selected
           ? `0 0 0 2px ${t.color}30, 0 8px 32px var(--shadow-node-strong)`
           : isFailed
           ? '0 0 0 1px rgba(239,68,68,0.25), 0 8px 32px var(--shadow-node)'

@@ -177,19 +177,19 @@ export default function ConfigPanel({
                   {
                     id: 'none',
                     label: 'No input',
-                    desc: 'trigger-out only',
+                    desc: 'Just starts the flow',
                     patch: { triggerInputMode: 'none' as const, inputType: 'text' as const },
                   },
                   {
                     id: 'text',
                     label: 'Text input',
-                    desc: 'trigger-out + data-out',
+                    desc: 'Passes your text to the next node',
                     patch: { triggerInputMode: 'input' as const, inputType: 'text' as const },
                   },
                   {
                     id: 'sql',
                     label: 'SQL input',
-                    desc: 'trigger-out + query-out',
+                    desc: 'Passes a SQL query to the next node',
                     patch: { triggerInputMode: 'input' as const, inputType: 'sql' as const },
                   },
                 ].map(option => {

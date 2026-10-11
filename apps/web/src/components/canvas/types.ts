@@ -11,25 +11,6 @@ export interface SchemaNodeData {
   connectionName: string;
 }
 
-export type HandleType = 'trigger' | 'data' | 'query' | 'schema' | 'connection' | 'text-trigger';
-
-export interface HandleDef {
-  id: string;
-  type: 'source' | 'target';
-  handleType: HandleType;
-  position:
-    | 'left'
-    | 'right'
-    | 'left-top'
-    | 'left-middle'
-    | 'left-bottom'
-    | 'right-top'
-    | 'right-middle'
-    | 'right-bottom';
-  conditional?: string;
-  label?: string;
-}
-
 export type RunPhase = 'queued' | 'running' | 'done' | 'failed';
 export type RunState = 'idle' | 'running' | 'success' | 'error';
 
@@ -61,8 +42,6 @@ export interface FlowNode {
 export interface FlowEdge {
   from: string;
   to: string;
-  sourceHandle?: string;
-  targetHandle?: string;
 }
 
 export interface WorkflowCanvasJson {
