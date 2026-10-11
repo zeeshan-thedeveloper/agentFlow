@@ -1,3 +1,4 @@
+import { isDatabaseNode } from './connections';
 import type { FlowEdge, FlowNode } from './types';
 
 export function findDbInSourceNode(
@@ -5,9 +6,10 @@ export function findDbInSourceNode(
   nodes: FlowNode[],
   edges: FlowEdge[],
 ): FlowNode | undefined {
-  const edge = edges.find(
-    item => item.to === nodeId && (item.targetHandle ?? 'data-in') === 'db-in',
-  );
-  if (!edge) return undefined;
-  return nodes.find(item => item.id === edge.from);
+  for (const edge of edges) {
+    if (edge.to !== nodeId) continue;
+    const source = nodes.find(item => item.id === edge.from);
+    if (source && isDatabaseNode(source)) return source;
+  }
+  return undefined;
 }

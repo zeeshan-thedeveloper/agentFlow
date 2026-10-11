@@ -1,53 +1,8 @@
 import { DatabaseIcon } from 'lucide-react';
-import type { HandleDef, LibraryNodeType, NodeType, NodeTypeConfig } from './types';
+import type { LibraryNodeType, NodeTypeConfig } from './types';
 
 export const NW = 200;
 export const NH = 74;
-
-export const NODE_HANDLES: Record<NodeType | 'database', HandleDef[]> = {
-  trigger: [
-    { id: 'trigger-out', type: 'source', handleType: 'trigger', position: 'right-bottom', label: 'Trigger' },
-    {
-      id: 'data-out',
-      type: 'source',
-      handleType: 'data',
-      position: 'right-top',
-      label: 'Data',
-      conditional: "inputType === 'text' || triggerInputMode === 'input'",
-    },
-    { id: 'query-out', type: 'source', handleType: 'query', position: 'right-top', label: 'SQL', conditional: "inputType === 'sql'" },
-  ],
-  schema: [
-    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
-    { id: 'db-in', type: 'target', handleType: 'connection', position: 'left-bottom', label: 'DB' },
-    { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right', label: 'Schema' },
-  ],
-  'query-runner': [
-    { id: 'query-in', type: 'target', handleType: 'query', position: 'left-top', label: 'SQL' },
-    { id: 'db-in', type: 'target', handleType: 'connection', position: 'left-bottom', label: 'DB' },
-    { id: 'data-out', type: 'source', handleType: 'data', position: 'right', label: 'Rows' },
-  ],
-  agent: [
-    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
-    { id: 'text-in', type: 'target', handleType: 'data', position: 'left-bottom', label: 'Text' },
-    { id: 'text-out', type: 'source', handleType: 'data', position: 'right-top', label: 'Text' },
-    { id: 'text-trigger-out', type: 'source', handleType: 'text-trigger', position: 'right-middle', label: 'Run+Text' },
-    { id: 'query-out', type: 'source', handleType: 'query', position: 'right-bottom', label: 'SQL' },
-  ],
-  database: [
-    { id: 'read-out', type: 'source', handleType: 'connection', position: 'right-top', label: 'Read' },
-    { id: 'write-out', type: 'source', handleType: 'connection', position: 'right-bottom', label: 'Write' },
-  ],
-  output: [
-    { id: 'data-in', type: 'target', handleType: 'data', position: 'left', label: 'Data' },
-  ],
-  integration: [
-    { id: 'trigger-in', type: 'target', handleType: 'trigger', position: 'left-top', label: 'Trigger' },
-    { id: 'agent-in', type: 'target', handleType: 'query', position: 'left', label: 'Agent' },
-    { id: 'schema-out', type: 'source', handleType: 'schema', position: 'right-top', label: 'Schema' },
-    { id: 'data-out', type: 'source', handleType: 'data', position: 'right-bottom', label: 'Data' },
-  ],
-};
 
 export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
   trigger: {
@@ -118,7 +73,7 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
     glowB: 'rgba(16,185,129,0.08)',
     icon: <DatabaseIcon size={16} strokeWidth={1.8} />,
     lib: {
-      desc: 'Named database connection (config only — no workflow handles)',
+      desc: 'A database connection other nodes can use',
       options: ['Configure connection'],
       category: 'integrations',
     },

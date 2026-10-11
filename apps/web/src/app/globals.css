@@ -103,6 +103,10 @@ html.canvas-scroll-lock body {
   animation: edgePulse 0.6s linear infinite;
 }
 
+.nodeConnector:hover {
+  transform: translate(-50%, -50%) scale(1.35) !important;
+}
+
 @keyframes pulseGlow {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
