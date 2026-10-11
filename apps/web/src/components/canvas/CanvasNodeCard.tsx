@@ -1,9 +1,10 @@
 import { Copy } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { FlowNode, RunPhase } from './types';
+import type { FlowNode, RunPhase, ToolCallRecord } from './types';
 import { NODE_TYPES, NH, NW } from './constants';
 import { isDatabaseNode, isMongoDatabase, type Side } from './connections';
 import NodeConnectors from './NodeConnectors';
+import RunToolCalls from './RunToolCalls';
 
 function IcoCheck() {
   return (
@@ -21,6 +22,8 @@ interface CanvasNodeCardProps {
   selected: boolean;
   runPhase: RunPhase | undefined;
   runOutput?: string;
+  /** Tools the agent called in its last run, e.g. the SQL it ran. */
+  runToolCalls?: ToolCallRecord[];
   scale?: number;
   onMouseDown: (e: React.MouseEvent) => void;
   onClick: () => void;
@@ -53,6 +56,7 @@ export default function CanvasNodeCard({
   selected,
   runPhase,
   runOutput,
+  runToolCalls = [],
   scale = 1,
   onMouseDown,
   onClick,
@@ -114,16 +118,17 @@ export default function CanvasNodeCard({
   }, [worldNode.id, worldNode.label, worldNode.subtitle, worldNode.tools, subtitle, databaseNames.length, onLayoutHeight]);
 
   const isAgent = worldNode.type === 'agent';
-  const showOutputPanel = isAgent && isDone && Boolean(runOutput?.trim());
+  const showOutputPanel =
+    isAgent && (isDone || isFailed) && (Boolean(runOutput?.trim()) || runToolCalls.length > 0);
 
   useEffect(() => {
     if (isQueued || isRunning) {
       setOutputExpanded(false);
       setCopyState('idle');
-    } else if (isDone && runOutput?.trim()) {
+    } else if ((isDone || isFailed) && (runOutput?.trim() || runToolCalls.length > 0)) {
       setOutputExpanded(true);
     }
-  }, [isQueued, isRunning, isDone, runOutput]);
+  }, [isQueued, isRunning, isDone, isFailed, runOutput, runToolCalls.length]);
 
   async function handleCopyOutput(e: React.MouseEvent) {
     e.stopPropagation();
@@ -462,7 +467,10 @@ export default function CanvasNodeCard({
                 <Copy size={11 * scale} strokeWidth={2.2} />
               </button>
             </div>
-            {outputExpanded && (
+            {outputExpanded && runToolCalls.length > 0 && (
+              <RunToolCalls calls={runToolCalls} scale={scale} />
+            )}
+            {outputExpanded && runOutput?.trim() && (
               <div
                 style={{
                   padding: `${8 * scale}px ${10 * scale}px ${10 * scale}px`,

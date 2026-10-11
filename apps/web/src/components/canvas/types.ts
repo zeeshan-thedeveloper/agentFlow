@@ -11,6 +11,14 @@ export interface SchemaNodeData {
   connectionName: string;
 }
 
+/** A tool call an agent made during a run, as returned by the API. */
+export interface ToolCallRecord {
+  tool: string;
+  args: Record<string, unknown>;
+  ok: boolean;
+  result: string;
+}
+
 export type RunPhase = 'queued' | 'running' | 'done' | 'failed';
 export type RunState = 'idle' | 'running' | 'success' | 'error';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { FlowNode, FlowEdge, RunState, RunPhasesMap, LibraryNodeType, PersistedWorkflow } from './types';
+import type { FlowNode, FlowEdge, RunState, RunPhasesMap, LibraryNodeType, PersistedWorkflow, ToolCallRecord } from './types';
 import { NODE_TYPES } from './constants';
 import TopBar from './TopBar';
 import NodeLibrary from './NodeLibrary';
@@ -16,6 +16,7 @@ type RunStep = {
   nodeId: string;
   status: 'COMPLETED' | 'FAILED';
   output: unknown;
+  toolCalls?: ToolCallRecord[];
 };
 
 type RunResponse = {
@@ -128,6 +129,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [runPhases, setRunPhases] = useState<RunPhasesMap>({});
   const [nodeOutputs, setNodeOutputs] = useState<Record<string, unknown>>({});
+  const [nodeToolCalls, setNodeToolCalls] = useState<Record<string, ToolCallRecord[]>>({});
   const [nodes, setNodes] = useState<FlowNode[]>(DEFAULT_NODES);
   const [edges, setEdges] = useState<FlowEdge[]>(DEFAULT_EDGES);
 
@@ -216,6 +218,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     setRunError(null);
     setRunPhases(executionNodeIds.length > 0 ? buildProgressPhases(executionNodeIds, 0) : {});
     setNodeOutputs({});
+    setNodeToolCalls({});
     setSaveState('saving');
 
     try {
@@ -301,6 +304,9 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
           : getErrorMessage(runResult, 'Workflow run failed');
       const total = steps.length * 320 + 500;
       setNodeOutputs(Object.fromEntries(steps.map(step => [step.nodeId, step.output])));
+      setNodeToolCalls(Object.fromEntries(
+        runResult.steps.filter(step => step.toolCalls?.length).map(step => [step.nodeId, step.toolCalls!]),
+      ));
 
       if (hasFailure) {
         setRunError(failedStep ? `${failedStep.nodeId}: ${failureMessage}` : failureMessage);
@@ -422,6 +428,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             setSelected={setSelected}
             runPhases={runPhases}
             runOutputs={runOutputs}
+            runToolCalls={nodeToolCalls}
             onRemoveNode={removeNode}
           />
 

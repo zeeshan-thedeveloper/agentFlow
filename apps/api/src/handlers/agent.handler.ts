@@ -1,7 +1,7 @@
 import { createDecipheriv, createHash } from 'crypto';
 import { Logger } from '@nestjs/common';
 import OpenAI from 'openai';
-import type { NodeHandler } from './base.handler';
+import type { HandlerContext, NodeHandler } from './base.handler';
 import { isNodeInput } from '../runs/node-input';
 import { CredentialResolver } from '../integrations/credential.resolver';
 import type { SchemaConfig } from '../integrations/integration.interfaces';
@@ -100,7 +100,7 @@ export class AgentHandler implements NodeHandler {
     return databases;
   }
 
-  async execute(params: Record<string, unknown>, input: unknown): Promise<unknown> {
+  async execute(params: Record<string, unknown>, input: unknown, context?: HandlerContext): Promise<unknown> {
     const nodeInput = isNodeInput(input) ? input : { data: input };
     const userId = params.userId ?? params.workflowOwnerId;
     const model = params.model ?? 'gpt-4o-mini';
@@ -217,20 +217,30 @@ export class AgentHandler implements NodeHandler {
         const tool = tools.find(t => t.definition.name === toolName);
 
         let toolResult: string;
+        let args: Record<string, unknown> = {};
+        let ok = false;
         if (!tool) {
           toolResult = `Error: tool "${toolName}" is not available on this agent node.`;
           this.logger.warn(toolResult);
         } else {
           try {
-            const args = JSON.parse(toolCall.function.arguments || '{}') as Record<string, unknown>;
+            args = JSON.parse(toolCall.function.arguments || '{}') as Record<string, unknown>;
             this.logger.log(`Running tool "${toolName}" with args=${formatLogValue(args)}`);
             toolResult = await tool.run(args, { userId });
+            ok = true;
             this.logger.log(`Tool "${toolName}" completed with result=${formatLogValue(toolResult)}`);
           } catch (err) {
             toolResult = `Error running tool "${toolName}": ${err instanceof Error ? err.message : String(err)}`;
             this.logger.error(toolResult);
           }
         }
+
+        context?.recordToolCall({
+          tool: toolName,
+          args,
+          ok,
+          result: toolResult.length > 2000 ? `${toolResult.slice(0, 2000)}...` : toolResult,
+        });
 
         // Append tool result to working memory before next LLM call.
         messages.push({
