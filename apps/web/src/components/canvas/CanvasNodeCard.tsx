@@ -2,7 +2,7 @@ import { Copy } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FlowNode, RunPhase } from './types';
 import { NODE_TYPES, NH, NW } from './constants';
-import { isDatabaseNode, type Side } from './connections';
+import { isDatabaseNode, isMongoDatabase, type Side } from './connections';
 import NodeConnectors from './NodeConnectors';
 
 function IcoCheck() {
@@ -33,6 +33,8 @@ interface CanvasNodeCardProps {
   onFinishConnection: (e: React.MouseEvent) => void;
   onConnectHover: (hovered: boolean) => void;
   onLayoutHeight?: (nodeId: string, height: number) => void;
+  /** Names of databases wired into this agent. */
+  databaseNames?: string[];
 }
 
 function IcoFailed() {
@@ -61,6 +63,7 @@ export default function CanvasNodeCard({
   onFinishConnection,
   onConnectHover,
   onLayoutHeight,
+  databaseNames = [],
 }: CanvasNodeCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [layoutHeight, setLayoutHeight] = useState(NH);
@@ -89,7 +92,9 @@ export default function CanvasNodeCard({
     : isQueryRunnerNode
     ? worldNode.connectionName || 'Select connection'
     : isDatabaseNode(worldNode)
-    ? worldNode.connectionName || worldNode.integrationId?.split(':').pop() || 'Select connection'
+    ? worldNode.integrationId && worldNode.integrationId !== 'database'
+      ? `${worldNode.connectionName || worldNode.integrationId.split(':').pop()} · ${isMongoDatabase(worldNode) ? 'MongoDB' : 'Read-only'}`
+      : 'Select connection'
     : worldNode.subtitle;
 
   useLayoutEffect(() => {
@@ -106,7 +111,7 @@ export default function CanvasNodeCard({
     const observer = new ResizeObserver(report);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [worldNode.id, worldNode.label, worldNode.subtitle, worldNode.tools, subtitle, onLayoutHeight]);
+  }, [worldNode.id, worldNode.label, worldNode.subtitle, worldNode.tools, subtitle, databaseNames.length, onLayoutHeight]);
 
   const isAgent = worldNode.type === 'agent';
   const showOutputPanel = isAgent && isDone && Boolean(runOutput?.trim());
@@ -299,9 +304,30 @@ export default function CanvasNodeCard({
               {subtitle}
             </div>
           )}
-          {worldNode.type === 'agent' && worldNode.tools && worldNode.tools.length > 0 && (
+          {worldNode.type === 'agent' && ((worldNode.tools?.length ?? 0) > 0 || databaseNames.length > 0) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 5 }}>
-              {worldNode.tools.map(toolName => (
+              {databaseNames.map(name => (
+                <span
+                  key={`db-${name}`}
+                  title="Can query this database (read-only)"
+                  style={{
+                    fontSize: 8,
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: '#10B981',
+                    background: 'rgba(16,185,129,0.12)',
+                    border: '1px solid rgba(16,185,129,0.3)',
+                    borderRadius: 4,
+                    padding: '1px 5px',
+                    lineHeight: 1.6,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  DB · {name}
+                </span>
+              ))}
+              {(worldNode.tools ?? []).map(toolName => (
                 <span
                   key={toolName}
                   style={{

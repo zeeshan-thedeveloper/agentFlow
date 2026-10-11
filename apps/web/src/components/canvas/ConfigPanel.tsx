@@ -482,7 +482,7 @@ export default function ConfigPanel({
         )}
 
         {node.type === 'integration' && (
-          <Section label="Integration">
+          <Section label={node.integrationId?.startsWith('database') ? 'Database' : 'Integration'}>
             <IntegrationConfigSection node={node} onUpdate={onUpdate} />
           </Section>
         )}

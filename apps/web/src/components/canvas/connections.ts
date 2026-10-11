@@ -16,11 +16,15 @@ export type ConnectionCheck =
   | { ok: true; from: string; to: string }
   | { ok: false; reason: string };
 
-// Older nodes that still read a database wire; agents join in once they use databases as tools.
-const DATABASE_TARGETS = new Set<FlowNode['type']>(['schema', 'query-runner']);
+// Agents use a database as a tool; Schema and Query Runner are older nodes kept for saved workflows.
+const DATABASE_TARGETS = new Set<FlowNode['type']>(['agent', 'schema', 'query-runner']);
 
 export function isDatabaseNode(node: FlowNode): boolean {
   return node.type === 'integration' && Boolean(node.integrationId?.startsWith('database'));
+}
+
+export function isMongoDatabase(node: FlowNode): boolean {
+  return node.dbType === 'mongodb' || Boolean(node.integrationId?.includes('mongo'));
 }
 
 export function edgeKey(edge: Pick<FlowEdge, 'from' | 'to'>): string {
@@ -64,8 +68,9 @@ function typeRuleViolation(from: FlowNode, to: FlowNode): string | null {
   if (to.type === 'trigger') return 'Start runs first, so nothing connects into it';
   if (from.type === 'output') return 'Output is the end of a flow';
   if (isDatabaseNode(to)) return 'Connect from the database into the node that uses it';
-  if (isDatabaseNode(from) && !DATABASE_TARGETS.has(to.type)) {
-    return 'A database connects into a Schema or Query Runner node';
+  if (isDatabaseNode(from) && !DATABASE_TARGETS.has(to.type)) return 'Connect a database into an Agent';
+  if (isDatabaseNode(from) && to.type === 'agent' && isMongoDatabase(from)) {
+    return 'Agents can only use PostgreSQL databases for now';
   }
   return null;
 }

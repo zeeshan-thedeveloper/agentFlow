@@ -1,10 +1,18 @@
 import { createDecipheriv, createHash } from 'crypto';
 import { Logger } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
 import OpenAI from 'openai';
 import type { NodeHandler } from './base.handler';
 import { isNodeInput } from '../runs/node-input';
+import { CredentialResolver } from '../integrations/credential.resolver';
+import type { SchemaConfig } from '../integrations/integration.interfaces';
+import { PrismaService } from '../prisma/prisma.service';
 import { resolveTools } from './tools/registry';
+import {
+  createSqlTool,
+  describeDatabase,
+  readableTablesFrom,
+  type AgentDatabase,
+} from './tools/sql-database.tool';
 
 const ALGORITHM = 'aes-256-gcm';
 const DEFAULT_MAX_ITERATIONS = 10;
@@ -42,7 +50,55 @@ function decryptApiKey(encryptedApiKey: string) {
 export class AgentHandler implements NodeHandler {
   private readonly logger = new Logger(AgentHandler.name);
 
-  constructor(private readonly prisma = new PrismaClient()) {}
+  constructor(
+    private readonly prisma: PrismaService = new PrismaService(),
+    private readonly credentialResolver: CredentialResolver = new CredentialResolver(prisma),
+  ) {}
+
+  /** Databases wired into this agent, with credentials and the tables it may read. */
+  private async loadDatabases(userId: string, integrationIds: string[]): Promise<AgentDatabase[]> {
+    const databases: AgentDatabase[] = [];
+    const usedNames = new Set<string>();
+
+    for (const integrationId of [...new Set(integrationIds)]) {
+      if (!integrationId || integrationId === 'database') {
+        throw new Error('A connected Database node has no connection selected. Pick one in its settings.');
+      }
+      if (integrationId.includes('mongo')) {
+        throw new Error('Agents can only query PostgreSQL databases for now; a MongoDB database is connected.');
+      }
+
+      const [{ connectionString }, credential, schemaConfigRow] = await Promise.all([
+        this.credentialResolver.resolve(userId, integrationId),
+        this.prisma.userIntegrationCredential.findUnique({
+          where: { userId_integrationId: { userId, integrationId } },
+          select: { name: true },
+        }),
+        this.prisma.databaseSchemaConfig.findUnique({
+          where: { userId_integrationId: { userId, integrationId } },
+        }),
+      ]);
+      if (!connectionString || connectionString.startsWith('mongodb')) {
+        throw new Error(`Database "${integrationId}" has no PostgreSQL connection string.`);
+      }
+
+      const baseName = credential?.name || integrationId.split(':').pop() || integrationId;
+      let name = baseName;
+      for (let n = 2; usedNames.has(name); n++) name = `${baseName}-${n}`;
+      usedNames.add(name);
+
+      databases.push({
+        name,
+        integrationId,
+        connectionString,
+        readableTables: readableTablesFrom(
+          schemaConfigRow ? (schemaConfigRow.config as unknown as SchemaConfig) : null,
+        ),
+      });
+    }
+
+    return databases;
+  }
 
   async execute(params: Record<string, unknown>, input: unknown): Promise<unknown> {
     const nodeInput = isNodeInput(input) ? input : { data: input };
@@ -87,6 +143,17 @@ export class AgentHandler implements NodeHandler {
     const client = new OpenAI({ apiKey: decryptApiKey(apiKey.encryptedKey) });
     const tools = resolveTools(enabledToolNames);
 
+    const databases = await this.loadDatabases(userId, nodeInput.databases ?? []);
+    if (databases.length > 0) {
+      const schemas = await Promise.all(databases.map(describeDatabase));
+      prompt +=
+        '\n\n## Connected databases\n' +
+        'You can look up data with the run_sql tool. Access is read-only. ' +
+        'Use only these tables and columns:\n' +
+        databases.map((database, index) => `\n### ${database.name}\n${schemas[index]}`).join('\n');
+      tools.push(createSqlTool(databases));
+    }
+
     this.logger.log(`Resolved tools: ${tools.map(tool => tool.definition.name).join(',') || 'none'}`);
 
     // ── Working memory: full conversation lives here for the duration of the run ──
@@ -104,7 +171,10 @@ export class AgentHandler implements NodeHandler {
             {
               role: 'system' as const,
               content:
-                'You have access to enabled runtime tools. Use them when they are relevant. If the user asks to search, browse, look up current information, find URLs, or verify recent facts, call the web_search tool before answering.',
+                'You have access to enabled runtime tools. Use them when they are relevant. If the user asks to search, browse, look up current information, find URLs, or verify recent facts, call the web_search tool before answering.' +
+                (databases.length > 0
+                  ? ' When the answer depends on data in a connected database, query it with run_sql instead of guessing.'
+                  : ''),
             },
           ]
         : []),
