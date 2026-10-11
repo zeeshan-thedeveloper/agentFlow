@@ -45,14 +45,20 @@ function isWorkflowCanvasJson(value: unknown): value is WorkflowCanvasJson {
 function normalizeCanvasJson(value: unknown): WorkflowCanvasJson {
   if (!isWorkflowCanvasJson(value)) return DEFAULT_CANVAS_JSON;
 
+  const nodeTypes = new Map(value.nodes.map(node => [node.id, node.type]));
+
   return {
     nodes: value.nodes,
     edges: value.edges.map(edge => {
-      let targetHandle = edge.targetHandle ?? 'data-in';
-      if (targetHandle === 'query-in') targetHandle = 'agent-in';
+      // Legacy handle ids are only renamed on the node types that define the new id.
+      const sourceIsAgent = nodeTypes.get(edge.from) === 'agent';
+      const targetIsIntegration = nodeTypes.get(edge.to) === 'integration';
 
-      let sourceHandle = edge.sourceHandle ?? 'text-out';
-      if (sourceHandle === 'data-out') sourceHandle = 'text-out';
+      let targetHandle = edge.targetHandle ?? 'data-in';
+      if (targetHandle === 'query-in' && targetIsIntegration) targetHandle = 'agent-in';
+
+      let sourceHandle = edge.sourceHandle ?? (sourceIsAgent ? 'text-out' : 'data-out');
+      if (sourceHandle === 'data-out' && sourceIsAgent) sourceHandle = 'text-out';
 
       return {
         ...edge,

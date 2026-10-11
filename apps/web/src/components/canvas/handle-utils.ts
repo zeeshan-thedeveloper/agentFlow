@@ -140,7 +140,11 @@ export function resolveHandleId(node: FlowNode, handleId: string | undefined): s
   if (node.type === 'agent') {
     if (handleId === 'data-out') return 'text-out';
     if (handleId === 'data-in' || handleId === 'schema-in') return 'text-in';
+  } else if (handleId === 'text-out') {
+    // Older saves renamed every data-out to text-out, which only agents define.
+    return 'data-out';
   }
+  if (node.type === 'integration' && handleId === 'query-in') return 'agent-in';
   return handleId;
 }
 
