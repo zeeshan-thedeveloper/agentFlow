@@ -17,16 +17,18 @@ export interface NodeInput {
   schema?: string;
   query?: string;
   connection?: string;
+  /** Integration ids of databases wired into an agent, used as tools. */
+  databases?: string[];
 }
 
-export type ConnectionRole = 'connection' | 'schema' | 'query' | 'data';
+export type ConnectionRole = 'database-tool' | 'connection' | 'schema' | 'query' | 'data';
 
 export function isDatabaseConfigNode(node: FlowNodeRef): boolean {
   return node.type === 'integration' && String(node.integrationId ?? '').startsWith('database');
 }
 
 export function connectionRole(source: FlowNodeRef, target: FlowNodeRef): ConnectionRole {
-  if (isDatabaseConfigNode(source)) return 'connection';
+  if (isDatabaseConfigNode(source)) return target.type === 'agent' ? 'database-tool' : 'connection';
   if (source.type === 'schema') return 'schema';
   if (target.type === 'query-runner') return 'query';
   if (target.type === 'integration' && source.type === 'agent') return 'query';
@@ -77,6 +79,9 @@ export function assembleNodeInput(
     const value = stepOutputs.get(edge.from);
 
     switch (connectionRole(source, target)) {
+      case 'database-tool':
+        input.databases = [...(input.databases ?? []), asText(value)];
+        break;
       case 'connection':
         input.connection = asText(value);
         break;
@@ -107,7 +112,11 @@ export function isNodeInput(value: unknown): value is NodeInput {
   return (
     value !== null &&
     typeof value === 'object' &&
-    ('data' in value || 'schema' in value || 'query' in value || 'connection' in value)
+    ('data' in value ||
+      'schema' in value ||
+      'query' in value ||
+      'connection' in value ||
+      'databases' in value)
   );
 }
 

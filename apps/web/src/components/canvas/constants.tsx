@@ -73,7 +73,7 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
     glowB: 'rgba(16,185,129,0.08)',
     icon: <DatabaseIcon size={16} strokeWidth={1.8} />,
     lib: {
-      desc: 'A database connection other nodes can use',
+      desc: 'Connect to an Agent to let it look up data',
       options: ['Configure connection'],
       category: 'integrations',
     },

@@ -360,7 +360,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         : nodeType === 'output'
         ? { subtitle: 'Receives result', outputMode: 'Return output' }
         : type === 'database'
-        ? { integrationId: 'database', label: 'Database', actionParams: {} }
+        ? { integrationId: 'database', dbType: 'postgresql', label: 'Database', subtitle: 'Select connection' }
         : nodeType === 'schema'
         ? { integrationId: '', connectionName: '', subtitle: 'Select connection' }
         : nodeType === 'query-runner'

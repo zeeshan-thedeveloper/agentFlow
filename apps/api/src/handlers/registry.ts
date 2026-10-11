@@ -14,7 +14,7 @@ const credentialResolver = new CredentialResolver(prisma);
 // Keep runtime dispatch explicit: canvas node type -> trusted backend handler.
 export const registry: Record<string, NodeHandler> = {
   trigger: new TriggerHandler(),
-  agent: new AgentHandler(),
+  agent: new AgentHandler(prisma, credentialResolver),
   output: new OutputHandler(),
   integration: new IntegrationHandler(credentialResolver, prisma),
   database: new DatabaseHandler(),

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { LibraryNodeType } from './types';
 import { NODE_TYPES } from './constants';
 
-const ACTIVE_NODE_TYPES: LibraryNodeType[] = ['trigger', 'agent', 'schema', 'database', 'query-runner', 'output'];
+// Schema and Query Runner still run in saved workflows; new flows connect a Database straight to an Agent.
+const ACTIVE_NODE_TYPES: LibraryNodeType[] = ['trigger', 'agent', 'database', 'output'];
 
 interface NodeLibraryProps {
   onAddNode: (type: LibraryNodeType) => void;

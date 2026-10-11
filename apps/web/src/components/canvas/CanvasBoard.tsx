@@ -419,6 +419,16 @@ export default function CanvasBoard({
             }}
             onFinishConnection={e => finishConnection(e, node.id)}
             onLayoutHeight={reportLayoutHeight}
+            databaseNames={
+              node.type === 'agent'
+                ? edges
+                    .filter(edge => edge.to === node.id && nodeMap[edge.from] && isDatabaseNode(nodeMap[edge.from]))
+                    .map(edge => {
+                      const db = nodeMap[edge.from];
+                      return db.connectionName || db.integrationId?.split(':').pop() || db.label;
+                    })
+                : undefined
+            }
           />
         ))}
       </div>

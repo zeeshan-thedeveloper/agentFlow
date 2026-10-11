@@ -1,7 +1,6 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { useIntegrations } from '@/hooks/useIntegrations';
 import { DatabaseConnectionSelector } from './DatabaseConnectionSelector';
 import type { FlowNode } from './types';
 
@@ -9,6 +8,14 @@ interface Props {
   node: FlowNode;
   onUpdate: (patch: Partial<FlowNode>) => void;
 }
+
+const labelStyle = {
+  fontSize: 10,
+  fontWeight: 600,
+  color: 'var(--text-faint)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+} satisfies CSSProperties;
 
 const inputStyle = {
   width: '100%',
@@ -22,171 +29,79 @@ const inputStyle = {
   fontFamily: 'inherit',
 } satisfies CSSProperties;
 
-const ENGINE_ACTIONS = {
-  postgresql: ['query', 'insert', 'update', 'execute'],
-  mongodb: ['find', 'insertOne', 'updateOne', 'deleteOne'],
-} satisfies Record<NonNullable<FlowNode['dbType']>, string[]>;
+const ENGINES = {
+  postgresql: { prefix: 'database:pg', name: 'PostgreSQL' },
+  mongodb: { prefix: 'database:mongo', name: 'MongoDB' },
+} satisfies Record<NonNullable<FlowNode['dbType']>, { prefix: string; name: string }>;
 
-function getActionParam(node: FlowNode, name: string) {
-  return node.actionParams?.[name];
-}
-
-function getEngineConfig(dbType: FlowNode['dbType']) {
-  if (dbType === 'postgresql') {
-    return {
-      metadataId: 'database',
-      filterPrefix: 'database:pg',
-      enginePrefix: 'database:pg',
-      connectionName: 'PostgreSQL',
-    };
-  }
-
-  if (dbType === 'mongodb') {
-    return {
-      metadataId: 'database:mongo',
-      filterPrefix: 'database:mongo',
-      enginePrefix: 'database:mongo',
-      connectionName: 'MongoDB',
-    };
-  }
-
-  return null;
-}
-
+/**
+ * A Database node only holds a connection. Wired into an Agent, the agent reads
+ * the schema and runs read-only SQL itself.
+ */
 export function DatabaseConfigSection({ node, onUpdate }: Props) {
-  const { integrations, loading } = useIntegrations();
-  const engineConfig = getEngineConfig(node.dbType);
-  const selectedIntegration = engineConfig
-    ? integrations.find(integration => integration.id === engineConfig.metadataId)
-    : undefined;
-  const allowedActions = node.dbType ? ENGINE_ACTIONS[node.dbType] : [];
-  const actions = selectedIntegration?.actions.filter(action => allowedActions.includes(action.id)) ?? [];
-  const selectedAction = actions.find(action => action.id === node.actionId);
-
-  function updateParam(name: string, value: unknown) {
-    onUpdate({
-      actionParams: {
-        ...node.actionParams,
-        [name]: value,
-      },
-    });
-  }
-
-  if (loading) {
-    return <div style={{ color: 'var(--text-faint)', fontSize: 12 }}>Loading integrations...</div>;
-  }
+  const engine = node.dbType ?? 'postgresql';
+  const engineConfig = ENGINES[engine];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{
+        fontSize: 11, lineHeight: 1.5, color: 'var(--text-secondary)',
+        padding: '9px 11px', borderRadius: 8,
+        background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.28)',
+      }}>
+        Connect this to an <strong>Agent</strong>. The agent sees the tables and columns, writes its own
+        SQL and reads the results to answer.
+      </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-        <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          DB Engine
-        </label>
+        <label style={labelStyle}>Database type</label>
         <select
-          value={node.dbType ?? ''}
+          value={engine}
           onChange={event => onUpdate({
-            dbType: (event.target.value || undefined) as FlowNode['dbType'],
-            actionId: undefined,
-            actionParams: {},
+            dbType: event.target.value as NonNullable<FlowNode['dbType']>,
+            integrationId: 'database',
+            connectionName: undefined,
+            subtitle: 'Select connection',
           })}
           style={inputStyle}
         >
-          <option value="">Select database type...</option>
           <option value="postgresql">PostgreSQL</option>
-          <option value="mongodb">MongoDB</option>
+          <option value="mongodb">MongoDB (not usable by agents yet)</option>
         </select>
       </div>
 
-      {engineConfig && (
-        <DatabaseConnectionSelector
-          selectedIntegrationId={node.integrationId}
-          filterPrefix={engineConfig.filterPrefix}
-          enginePrefix={engineConfig.enginePrefix}
-          engine={node.dbType}
-          integrationName={engineConfig.connectionName}
-          onSelect={id => onUpdate({
+      <DatabaseConnectionSelector
+        selectedIntegrationId={node.integrationId}
+        filterPrefix={engineConfig.prefix}
+        enginePrefix={engineConfig.prefix}
+        engine={engine}
+        integrationName={engineConfig.name}
+        onSelect={id => {
+          const name = id ? id.split(':').pop() ?? id : undefined;
+          onUpdate({
+            dbType: engine,
             integrationId: id || 'database',
-            actionId: undefined,
-            actionParams: {},
-            subtitle: id ? id.split(':').pop() ?? id : 'Select connection',
-          })}
-        />
-      )}
+            connectionName: name,
+            subtitle: name ?? 'Select connection',
+          });
+        }}
+      />
 
-      {selectedAction && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Parameters
-          </label>
-          {selectedAction.paramSchema.map(param => (
-            <div key={param.name} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700 }}>
-                {param.label}
-                {param.required && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}
-              </label>
-
-              {param.type === 'text' ? (
-                <textarea
-                  rows={4}
-                  placeholder={param.placeholder}
-                  value={String(getActionParam(node, param.name) ?? '')}
-                  onChange={event => updateParam(param.name, event.target.value)}
-                  style={{
-                    ...inputStyle,
-                    resize: 'vertical',
-                    fontSize: 11,
-                    lineHeight: 1.6,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    color: 'var(--text-secondary)',
-                  }}
-                />
-              ) : param.type === 'number' ? (
-                <input
-                  type="number"
-                  placeholder={param.placeholder}
-                  value={String(getActionParam(node, param.name) ?? '')}
-                  onChange={event => updateParam(param.name, event.target.value)}
-                  style={inputStyle}
-                />
-              ) : param.type === 'boolean' ? (
-                <input
-                  type="checkbox"
-                  checked={Boolean(getActionParam(node, param.name))}
-                  onChange={event => updateParam(param.name, event.target.checked)}
-                  style={{ accentColor: 'var(--brand)', alignSelf: 'flex-start', margin: 0 }}
-                />
-              ) : param.type === 'select' && param.options ? (
-                <select
-                  value={String(getActionParam(node, param.name) ?? '')}
-                  onChange={event => updateParam(param.name, event.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="">Select...</option>
-                  {param.options.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type={param.secret ? 'password' : 'text'}
-                  placeholder={param.placeholder}
-                  value={String(getActionParam(node, param.name) ?? '')}
-                  onChange={event => updateParam(param.name, event.target.value)}
-                  style={inputStyle}
-                />
-              )}
-
-              {param.description && (
-                <div style={{ color: 'var(--text-faint)', fontSize: 10, lineHeight: 1.45 }}>
-                  {param.description}
-                </div>
-              )}
-            </div>
-          ))}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <label style={labelStyle}>Access</label>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <span style={{
+            fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', whiteSpace: 'nowrap',
+            color: '#10B981', background: 'rgba(16,185,129,0.12)',
+            border: '1px solid rgba(16,185,129,0.35)', borderRadius: 5, padding: '2px 7px',
+          }}>
+            READ-ONLY
+          </span>
+          <span style={{ fontSize: 11, lineHeight: 1.45, color: 'var(--text-faint)' }}>
+            Agents can look data up but never change it. Use ⚙ on a connection to choose which tables they see.
+          </span>
         </div>
-      )}
+      </div>
     </div>
   );
 }
