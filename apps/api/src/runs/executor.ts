@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import type { ToolCallRecord } from '../handlers/base.handler';
 import { registry } from '../handlers/registry';
 import { assembleNodeInput, handlerPayload, isDatabaseConfigNode } from './node-input';
 
@@ -33,6 +34,8 @@ export type StepResult = {
   input: unknown;
   output: unknown;
   status: 'COMPLETED' | 'FAILED';
+  /** Tools the node called while running (agents only), in order. */
+  toolCalls?: ToolCallRecord[];
 };
 
 const logger = new Logger('WorkflowExecutor');
@@ -187,13 +190,16 @@ export async function executeWorkflow(
     }
 
     const input = handlerPayload(node.type, nodeInput);
+    const toolCalls: ToolCallRecord[] = [];
 
     try {
       const params = buildNodeParams(node, context);
       logger.log(
         `Starting node ${node.id} (${node.type}) input=${formatLogValue(input)} params=${formatNodeParams(params)}`,
       );
-      const output = await handler.execute(params, input);
+      const output = await handler.execute(params, input, {
+        recordToolCall: call => toolCalls.push(call),
+      });
       logger.log(`Completed node ${node.id} (${node.type}) output=${formatLogValue(output)}`);
 
       results.push({
@@ -201,6 +207,7 @@ export async function executeWorkflow(
         input,
         output,
         status: 'COMPLETED',
+        ...(toolCalls.length > 0 ? { toolCalls } : {}),
       });
 
       stepOutputs.set(node.id, output);
@@ -214,6 +221,7 @@ export async function executeWorkflow(
         input,
         output: error instanceof Error ? error.message : String(error),
         status: 'FAILED',
+        ...(toolCalls.length > 0 ? { toolCalls } : {}),
       });
 
       break;
