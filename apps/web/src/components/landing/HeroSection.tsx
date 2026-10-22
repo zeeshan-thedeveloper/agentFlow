@@ -18,13 +18,13 @@ export function HeroSection() {
         <div className="mx-auto max-w-4xl text-center">
           <div className="reveal l-pill inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm">
             <span className="pulse-dot" />
-            Multi-agent orchestration for production teams
+            AI agents that work with your apps
           </div>
           <h1 className="reveal l-text mt-8 text-5xl font-black leading-[0.98] tracking-tight sm:text-6xl lg:text-7xl">
             Build AI workflows on a <span className="gradient-text">visual canvas</span>
           </h1>
           <p className="reveal l-text-secondary mx-auto mt-6 max-w-2xl text-lg leading-8">
-            Design, test, and deploy agentic systems with model routing, tools, memory, human review, and observability in one elegant workspace.
+            Wire agents to Gmail, Drive, Slack, Telegram, GitHub and your database, start them from a chat message or a click, and watch every step run.
           </p>
           <div className="reveal mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a href="/login" className="btn-primary-landing rounded-xl px-6 py-3 text-sm font-bold">
@@ -45,7 +45,7 @@ export function HeroSection() {
                 <span className="h-3 w-3 rounded-full bg-yellow-300/80" />
                 <span className="h-3 w-3 rounded-full bg-emerald-400/80" />
               </div>
-              <div className="l-text-faint font-mono text-xs">agentflow://customer-support-triage</div>
+              <div className="l-text-faint font-mono text-xs">agentflow://slack-support-bot</div>
               <div className="l-surface h-7 w-24 rounded-lg" />
             </div>
             <div className="l-canvas-bg dot-bg relative h-[470px] overflow-hidden">
@@ -65,16 +65,16 @@ export function HeroSection() {
                 <path className="edge-dash" d="M590 258 C700 288 682 338 800 338" stroke="url(#edgeGradCyan)" strokeWidth="2.5" fill="none" />
               </svg>
               <div className="l-overlay absolute left-5 top-5 flex gap-2 rounded-xl p-2 backdrop-blur">
-                {['Select', 'Agent', 'Tool', 'Run'].map((item) => (
+                {['Trigger', 'Agent', 'Apps', 'Run'].map((item) => (
                   <span key={item} className="l-surface l-text-muted rounded-lg px-3 py-2 text-xs font-semibold">{item}</span>
                 ))}
               </div>
-              <MiniNode className="node-trigger left-[7%] top-[28%]" label="Trigger" title="New ticket" meta="Zendesk webhook" />
-              <MiniNode className="node-agent left-[42%] top-[42%]" label="Agent" title="Triage specialist" meta="GPT-4.1 + policy memory" />
-              <MiniNode className="node-agent right-[7%] top-[27%]" label="Tool" title="CRM lookup" meta="Fetch account history" />
-              <MiniNode className="node-output bottom-[21%] right-[7%]" label="Output" title="Draft response" meta="Human approval gate" />
+              <MiniNode className="node-trigger left-[7%] top-[28%]" label="Trigger" title="Slack mention" meta="@AgentFlow in #support" />
+              <MiniNode className="node-agent left-[42%] top-[42%]" label="Agent" title="Support agent" meta="GPT-4.1 Mini" />
+              <MiniNode className="node-agent right-[7%] top-[27%]" label="App" title="Google Drive" meta="Search the help docs" />
+              <MiniNode className="node-output bottom-[21%] right-[7%]" label="Output" title="Reply in chat" meta="Answers in the thread" />
               <div className="l-overlay absolute bottom-5 left-5 rounded-xl p-3 backdrop-blur">
-                <div className="l-text-faint mb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Run trace</div>
+                <div className="l-text-faint mb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Run</div>
                 <div className="l-text-muted flex items-center gap-2 text-xs"><span className="h-2 w-2 rounded-full bg-emerald-400" /> 4 nodes completed in 2.8s</div>
               </div>
               <div className="l-overlay absolute bottom-5 right-5 h-28 w-40 rounded-xl p-2 backdrop-blur">

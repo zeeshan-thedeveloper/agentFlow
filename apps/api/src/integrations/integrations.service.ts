@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { MongoClient } from 'mongodb';
 import { Client } from 'pg';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertPublicDatabase } from '../common/network-guard';
 import { encryptCredential } from './credential.crypto';
 import { CredentialResolver } from './credential.resolver';
 import type { SchemaConfig } from './integration.interfaces';
@@ -113,6 +114,7 @@ export class IntegrationsService {
     const connectionString = credentials.connectionString as string;
 
     const isMongo = integrationId.includes('mongo');
+    await assertPublicDatabase(connectionString);
 
     if (isMongo) {
       const client = new MongoClient(connectionString, { serverSelectionTimeoutMS: 5000 });

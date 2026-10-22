@@ -17,3 +17,9 @@ services:
     ports:
       - '127.0.0.1:18001:18001'
     network_mode: host
+    # Keep at most ~30 MB of logs per container; older lines are deleted rather than kept forever.
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'

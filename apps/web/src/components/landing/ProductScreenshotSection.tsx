@@ -17,23 +17,19 @@ export function ProductScreenshotSection() {
         <div className="reveal mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
             <p className="l-accent-cyan text-sm font-bold uppercase tracking-[0.24em]">Product</p>
-            <h2 className="l-text mt-4 max-w-3xl text-4xl font-black tracking-tight sm:text-5xl">A complete control room for agent operations.</h2>
+            <h2 className="l-text mt-4 max-w-3xl text-4xl font-black tracking-tight sm:text-5xl">Build, run and review in one place.</h2>
           </div>
-          <p className="l-text-muted max-w-sm leading-7">The canvas, run history, and configuration panels stay together so teams can move fast without losing context.</p>
+          <p className="l-text-muted max-w-sm leading-7">The canvas, run history and node settings sit side by side, so you can change a workflow and see what it did without switching screens.</p>
         </div>
         <div className="reveal glass overflow-hidden rounded-2xl shadow-glow">
           <div className="grid min-h-[620px] lg:grid-cols-[230px_1fr_270px]">
             <aside className="landing-sidebar border-b p-4 lg:border-b-0 lg:border-r">
               <div className="l-surface mb-5 h-9 rounded-lg" />
-              {['Triggers', 'Agents', 'Models', 'Tools', 'Memory', 'Outputs'].map((item, index) => (
+              {['Trigger', 'Agent', 'Database', 'Output', 'Apps', 'History'].map((item, index) => (
                 <div key={item} className={`mb-2 rounded-lg px-3 py-2 text-sm ${index === 1 ? 'landing-sidebar-item-active' : 'landing-sidebar-item'}`}>
                   {item}
                 </div>
               ))}
-              <div className="landing-config-card mt-8 rounded-xl p-3">
-                <div className="l-text-faint text-xs font-semibold">Runs today</div>
-                <div className="l-text mt-2 text-2xl font-black">12,842</div>
-              </div>
             </aside>
             <div className="l-canvas-bg dot-bg relative min-h-[460px]">
               <svg className="absolute inset-0 h-full w-full" viewBox="0 0 620 620" fill="none" aria-hidden="true">
@@ -52,18 +48,18 @@ export function ProductScreenshotSection() {
                 <path className="edge-dash" d="M385 320 C480 350 455 440 535 440" stroke="url(#edgeGradCyanProduct)" strokeWidth="2.5" />
                 <path className="edge-dash" d="M190 440 C250 390 250 330 310 320" stroke="url(#edgeGradCyanProduct)" strokeWidth="2.5" />
               </svg>
-              <CanvasNode className="node-trigger left-[5%] top-[22%]" label="Webhook" title="Lead created" />
-              <CanvasNode className="node-agent left-[38%] top-[42%]" label="Agent" title="Research buyer" />
-              <CanvasNode className="node-agent right-[4%] top-[22%]" label="Tool" title="CRM enrich" />
-              <CanvasNode className="node-output bottom-[18%] right-[4%]" label="Action" title="Send summary" />
-              <CanvasNode className="node-agent bottom-[18%] left-[15%]" label="Eval" title="Score fit" />
+              <CanvasNode className="node-trigger left-[5%] top-[22%]" label="Trigger" title="Telegram message" />
+              <CanvasNode className="node-agent left-[38%] top-[42%]" label="Agent" title="Research assistant" />
+              <CanvasNode className="node-agent right-[4%] top-[22%]" label="App" title="Gmail" />
+              <CanvasNode className="node-output bottom-[18%] right-[4%]" label="Output" title="Reply in chat" />
+              <CanvasNode className="node-agent bottom-[18%] left-[15%]" label="Database" title="Read-only query" />
             </div>
             <aside className="landing-sidebar border-t p-4 lg:border-l lg:border-t-0">
               <div className="mb-5">
                 <div className="l-text-faint text-xs font-bold uppercase tracking-[0.18em]">Config</div>
-                <h3 className="l-text mt-2 font-bold">Research buyer</h3>
+                <h3 className="l-text mt-2 font-bold">Research assistant</h3>
               </div>
-              {['Model', 'Temperature', 'Memory', 'Tool access'].map((item) => (
+              {['Model', 'Prompt', 'Tools', 'Max iterations'].map((item) => (
                 <div key={item} className="landing-config-card mb-4 rounded-xl p-3">
                   <div className="l-text-faint text-xs">{item}</div>
                   <div className="landing-progress-track mt-2 h-2 rounded-full">

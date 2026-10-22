@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/
 import { Prisma, PrismaClient } from '@prisma/client';
 import { executeWorkflow, StepResult, type RunProgress } from './executor';
 import type { TriggerEvent } from '../connectors/trigger-event';
+import { summarizeForLog } from '../common/log-summary';
 
 type RunWorkflowInput = {
   input?: unknown;
@@ -70,7 +71,7 @@ export class RunsService implements OnModuleDestroy {
     }
 
     this.logger.log(
-      `Run requested: workflowId=${workflow.id} userId=${workflow.userId} input=${formatLogValue(body.input)} nodes=${describeWorkflowNodes(workflow.canvasJson)}`,
+      `Run requested: workflowId=${workflow.id} userId=${workflow.userId} input=${summarizeForLog(body.input)} nodes=${describeWorkflowNodes(workflow.canvasJson)}`,
     );
 
     const run = await this.prisma.agentRun.create({
@@ -279,13 +280,4 @@ function describeWorkflowNodes(canvasJson: Prisma.JsonValue): string {
       return `${id}:${type}${tools ? `[tools=${tools}]` : ''}`;
     })
     .join(',');
-}
-
-function formatLogValue(value: unknown): string {
-  const text = typeof value === 'string' ? value : JSON.stringify(value);
-  if (!text) {
-    return 'undefined';
-  }
-
-  return text.length > 500 ? `${text.slice(0, 500)}...` : text;
 }

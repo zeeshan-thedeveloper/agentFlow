@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { Pool, PoolClient } from 'pg';
+import { assertPublicDatabase } from '../../../common/network-guard';
 
 const pools = new Map<string, Pool>();
 
@@ -22,6 +23,8 @@ function buildPool(connectionString: string): Pool {
 }
 
 export async function getClient(connectionString: string): Promise<PoolClient> {
+  // Checked on every checkout, so a host that later resolves somewhere private is refused too.
+  await assertPublicDatabase(connectionString);
   const key = hashConnectionString(connectionString);
 
   if (!pools.has(key)) {

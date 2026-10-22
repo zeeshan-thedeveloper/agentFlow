@@ -6,6 +6,7 @@ import { isNodeInput } from '../runs/node-input';
 import { CredentialResolver } from '../integrations/credential.resolver';
 import type { SchemaConfig } from '../integrations/integration.interfaces';
 import { PrismaService } from '../prisma/prisma.service';
+import { summarizeForLog } from '../common/log-summary';
 import { ConnectorStore } from '../connectors/connector.store';
 import { createConnectorTools, isConnectorKind } from '../connectors/connector.tools';
 import { describeTriggerEvent, isTriggerEvent } from '../connectors/trigger-event';
@@ -118,7 +119,7 @@ export class AgentHandler implements NodeHandler {
       : [];
 
     this.logger.log(
-      `Starting agent node: model=${String(model)} enabledTools=${enabledToolNames.join(',') || 'none'} input=${formatLogValue(input)}`,
+      `Starting agent node: model=${String(model)} enabledTools=${enabledToolNames.join(',') || 'none'} input=${summarizeForLog(input)}`,
     );
 
     if (typeof userId !== 'string' || !userId) {
@@ -246,10 +247,10 @@ export class AgentHandler implements NodeHandler {
         } else {
           try {
             args = JSON.parse(toolCall.function.arguments || '{}') as Record<string, unknown>;
-            this.logger.log(`Running tool "${toolName}" with args=${formatLogValue(args)}`);
+            this.logger.log(`Running tool "${toolName}" with args=${Object.keys(args).join(',') || 'none'}`);
             toolResult = await tool.run(args, { userId });
             ok = true;
-            this.logger.log(`Tool "${toolName}" completed with result=${formatLogValue(toolResult)}`);
+            this.logger.log(`Tool "${toolName}" completed with result=${summarizeForLog(toolResult)}`);
           } catch (err) {
             toolResult = `Error running tool "${toolName}": ${err instanceof Error ? err.message : String(err)}`;
             this.logger.error(toolResult);
@@ -277,13 +278,4 @@ export class AgentHandler implements NodeHandler {
     const content = lastAssistant && 'content' in lastAssistant ? lastAssistant.content : null;
     return typeof content === 'string' ? content : 'Agent reached max iterations without a final answer.';
   }
-}
-
-function formatLogValue(value: unknown): string {
-  const text = typeof value === 'string' ? value : JSON.stringify(value);
-  if (!text) {
-    return 'undefined';
-  }
-
-  return text.length > 500 ? `${text.slice(0, 500)}...` : text;
 }
