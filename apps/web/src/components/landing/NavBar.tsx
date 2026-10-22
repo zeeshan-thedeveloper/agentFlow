@@ -25,7 +25,7 @@ export function NavBar() {
           {links.map((link) => (
             <a
               key={link}
-              href={link === 'Docs' ? '#' : `#${link.toLowerCase().replaceAll(' ', '-')}`}
+              href={link === 'Docs' ? '#' : `/#${link.toLowerCase().replaceAll(' ', '-')}`}
               className="landing-nav-link text-sm font-medium"
             >
               {link}

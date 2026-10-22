@@ -121,6 +121,11 @@ export default async function LoginPage({
                 <p className="l-text-faint text-center text-xs leading-5">
                   Free to start · No credit card required
                 </p>
+                <p className="l-text-faint text-center text-xs leading-5">
+                  By continuing you agree to the{' '}
+                  <Link href="/terms" className="l-link underline">Terms of Service</Link> and{' '}
+                  <Link href="/privacy" className="l-link underline">Privacy Policy</Link>.
+                </p>
               </div>
 
               <div className="l-surface mt-8 rounded-xl p-4">
