@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { signOut } from 'next-auth/react';
 import ThemeToggle from '@/components/ThemeToggle';
+import { BrandMark } from '@/components/BrandMark';
 import KeysSettingsDialog from './KeysSettingsDialog';
 import type { RunState } from './types';
 
@@ -61,18 +62,7 @@ export default function TopBar({
       flexShrink: 0, zIndex: 100, boxShadow: 'inset 0 -1px 0 var(--border-strong)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginRight: 8 }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8,
-          background: 'var(--brand-soft)', border: '1px solid rgba(108,99,255,0.35)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 1.5C4 1.5 1.5 4 1.5 7S4 12.5 7 12.5 12.5 10 12.5 7 10 1.5 7 1.5z"
-              stroke="var(--brand-text)" strokeWidth="1.2" />
-            <path d="M4.5 7h2m0 0V4.5m0 2.5L9 4.5"
-              stroke="var(--brand-text)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
+        <BrandMark size={28} />
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: 0 }}>
           AgentFlow
         </span>
