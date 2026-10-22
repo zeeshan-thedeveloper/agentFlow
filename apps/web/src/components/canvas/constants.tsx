@@ -1,8 +1,19 @@
-import { DatabaseIcon } from 'lucide-react';
-import type { LibraryNodeType, NodeTypeConfig } from './types';
+import { DatabaseIcon, GitBranch, HardDrive, Hash, Mail, MessagesSquare, Send } from 'lucide-react';
+import type { ConnectorKind, ConnectorProvider, FlowNode, LibraryNodeType, NodeTypeConfig } from './types';
 
 export const NW = 200;
 export const NH = 74;
+
+function connectorType(label: string, color: string, icon: NodeTypeConfig['icon'], desc: string): NodeTypeConfig {
+  return {
+    label,
+    color,
+    glowA: `color-mix(in srgb, ${color} 22%, transparent)`,
+    glowB: `color-mix(in srgb, ${color} 8%, transparent)`,
+    icon,
+    lib: { desc, options: ['Connect to an Agent'], category: 'apps' },
+  };
+}
 
 export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
   trigger: {
@@ -16,7 +27,7 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
           stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
-    lib: { desc: 'Starts the workflow', options: ['Manual', 'Cron Schedule'] },
+    lib: { desc: 'Starts the workflow', options: ['Manual', 'Cron Schedule', 'Slack message', 'Telegram message'] },
   },
   agent: {
     label: 'Agent',
@@ -117,4 +128,49 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
       category: 'integrations',
     },
   },
+  gmail: connectorType('Gmail', '#EA4335', <Mail size={16} strokeWidth={1.8} />, 'Let an Agent search, read and send email'),
+  drive: connectorType('Google Drive', '#1A73E8', <HardDrive size={16} strokeWidth={1.8} />, 'Let an Agent search and read your files'),
+  gchat: connectorType('Google Chat', '#00AC47', <MessagesSquare size={16} strokeWidth={1.8} />, 'Let an Agent read your Chat spaces'),
+  slack: connectorType('Slack', '#E01E5A', <Hash size={16} strokeWidth={1.8} />, 'Let an Agent read and post in Slack'),
+  telegram: connectorType('Telegram', '#229ED9', <Send size={16} strokeWidth={1.8} />, 'Let an Agent message people on Telegram'),
+  github: connectorType('GitHub', '#8B5CF6', <GitBranch size={16} strokeWidth={1.8} />, 'Let an Agent work with your repos'),
 };
+
+export const CONNECTOR_KINDS: ConnectorKind[] = ['gmail', 'drive', 'gchat', 'slack', 'telegram', 'github'];
+
+export function isConnectorKind(value: unknown): value is ConnectorKind {
+  return CONNECTOR_KINDS.includes(value as ConnectorKind);
+}
+
+export const CONNECTOR_INFO: Record<ConnectorKind, {
+  provider: ConnectorProvider;
+  /** What the agent can do through this node. */
+  abilities: string;
+  /** Label for the opt-in that lets the agent change things, when the app has one. */
+  writeLabel?: string;
+}> = {
+  gmail: { provider: 'google', abilities: 'Search and read email.', writeLabel: 'Allow sending email' },
+  drive: { provider: 'google', abilities: 'Search and read Docs, Sheets, Slides and text files. Read-only.' },
+  gchat: { provider: 'google', abilities: 'List Chat spaces and read messages. Read-only; Google Workspace accounts only.' },
+  slack: { provider: 'slack', abilities: 'List channels, read channels the bot is in, and post messages.' },
+  telegram: { provider: 'telegram', abilities: 'Send messages to chats that have talked to the bot.' },
+  github: { provider: 'github', abilities: 'Read repos, issues, pull requests and files.', writeLabel: 'Allow opening issues and commenting' },
+};
+
+/** The line under an app node's name: what an agent wired to it may do. */
+export function connectorSubtitle(node: Pick<FlowNode, 'connector' | 'allowWrite'>): string {
+  switch (node.connector) {
+    case 'gmail': return node.allowWrite ? 'Read & send email' : 'Read-only';
+    case 'github': return node.allowWrite ? 'Read, open issues & comment' : 'Read-only';
+    case 'slack': return 'Read & post messages';
+    case 'telegram': return 'Send messages';
+    default: return 'Read-only';
+  }
+}
+
+/** The look of a canvas node: connectors and databases by what they connect to, others by node type. */
+export function nodeTypeConfig(node: Pick<FlowNode, 'type' | 'connector' | 'integrationId'>): NodeTypeConfig {
+  if (node.type === 'connector' && isConnectorKind(node.connector)) return NODE_TYPES[node.connector];
+  if (node.type === 'integration' && node.integrationId?.startsWith('database')) return NODE_TYPES.database;
+  return NODE_TYPES[node.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
+}

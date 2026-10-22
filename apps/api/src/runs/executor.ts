@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import type { NodeHandler, ToolCallRecord } from '../handlers/base.handler';
 import { registry } from '../handlers/registry';
+import type { TriggerEvent } from '../connectors/trigger-event';
 import { assembleNodeInput, handlerPayload, isDatabaseConfigNode } from './node-input';
 
 type FlowNode = {
@@ -36,6 +37,8 @@ type WorkflowCanvasJson = {
 type ExecutorContext = {
   userId?: string;
   initialInput?: unknown;
+  /** The Slack or Telegram message that started the run, if one did. */
+  triggerEvent?: TriggerEvent;
 };
 
 export type StepResult = {
@@ -66,6 +69,7 @@ function assertCanvasJson(canvasJson: unknown): asserts canvasJson is WorkflowCa
 function resolveHandlerType(node: FlowNode): string {
   if (node.type === 'schema') return 'integration';
   if (node.type === 'query-runner') return 'query-runner';
+  if (node.type === 'connector') return 'connector';
   if (isDatabaseConfigNode(node)) return 'database';
   return node.type;
 }
@@ -91,6 +95,14 @@ function buildNodeParams(node: FlowNode, context: ExecutorContext): Record<strin
   if (isDatabaseConfigNode(node)) {
     return {
       integrationId: node.integrationId,
+      ...context,
+    };
+  }
+
+  if (node.type === 'connector') {
+    return {
+      connector: node.connector,
+      allowWrite: node.allowWrite === true,
       ...context,
     };
   }

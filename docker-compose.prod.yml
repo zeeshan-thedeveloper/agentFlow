@@ -9,6 +9,11 @@ services:
       REDIS_URL: redis://localhost:6379/1
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       API_KEY_ENCRYPTION_SECRET: ${API_KEY_ENCRYPTION_SECRET}
+      # Shared with the web app; the API refuses every request without it (except chat webhooks).
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+      # Gmail, Drive and Google Chat connectors exchange and refresh OAuth tokens on the API.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
     ports:
       - '127.0.0.1:18001:18001'
     network_mode: host

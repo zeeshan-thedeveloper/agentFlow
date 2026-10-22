@@ -12,7 +12,7 @@ import {
 import type { SchemaConfig } from './integration.interfaces';
 import { IntegrationsService } from './integrations.service';
 
-type AuthenticatedRequest = {
+export type AuthenticatedRequest = {
   headers?: {
     'x-user-id'?: string | string[];
   };
@@ -29,7 +29,7 @@ type AuthenticatedRequest = {
   };
 };
 
-function requireUserId(req: AuthenticatedRequest): string {
+export function requireUserId(req: AuthenticatedRequest): string {
   const forwardedUserId = req.headers?.['x-user-id'];
   const userId =
     (Array.isArray(forwardedUserId) ? forwardedUserId[0] : forwardedUserId) ??

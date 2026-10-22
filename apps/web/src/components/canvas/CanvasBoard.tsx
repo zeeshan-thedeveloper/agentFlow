@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FlowNode, FlowEdge, RunPhasesMap, ToolCallRecord } from './types';
-import { NODE_TYPES } from './constants';
+import { nodeTypeConfig } from './constants';
 import CanvasNodeCard from './CanvasNodeCard';
 import {
   edgeKey,
   edgeMidpoint,
   edgePath,
   isDatabaseNode,
+  isToolNode,
   isWaitEdge,
   layoutEdges,
   nodeSideAnchor,
@@ -53,7 +54,7 @@ function arrowId(color: string): string {
 }
 
 function nodeColor(node: FlowNode): string {
-  return isDatabaseNode(node) ? NODE_TYPES.database.color : NODE_TYPES[node.type]?.color ?? NODE_TYPES.agent.color;
+  return nodeTypeConfig(node).color;
 }
 
 // Wait wires carry no data, so they are drawn neutral instead of in the source's color.
@@ -257,9 +258,9 @@ export default function CanvasBoard({
   const arrowColors = [...new Set([...nodes.map(nodeColor), WAIT_EDGE_COLOR])];
   const selectedEdgeItem = edges.find(edge => edgeKey(edge) === selectedEdge);
   const selectedEdgeShape = selectedEdge ? geometry.get(selectedEdge) : undefined;
-  // A database wire hands the agent a tool, so making it wait-only would make no sense.
+  // A database or app wire hands the agent a tool, so making it wait-only would make no sense.
   const canToggleSelectedEdge =
-    Boolean(selectedEdgeItem) && !(nodeMap[selectedEdgeItem!.from] && isDatabaseNode(nodeMap[selectedEdgeItem!.from]));
+    Boolean(selectedEdgeItem) && !(nodeMap[selectedEdgeItem!.from] && isToolNode(nodeMap[selectedEdgeItem!.from]));
   const hoverCheck =
     connecting && hoverTargetId && hoverTargetId !== connecting.from
       ? resolveConnection(connecting.from, hoverTargetId, nodes, edges)
@@ -333,7 +334,7 @@ export default function CanvasBoard({
                   strokeWidth={emphasized ? 2.25 : 1.75}
                   strokeOpacity={emphasized ? 1 : 0.75}
                   strokeDasharray={
-                    isIncomingActive ? undefined : isWait ? '2 5' : isDatabaseNode(source) ? '5 4' : undefined
+                    isIncomingActive ? undefined : isWait ? '2 5' : isToolNode(source) ? '5 4' : undefined
                   }
                   strokeLinecap={isWait ? 'round' : undefined}
                   markerEnd={`url(#${arrowId(color)})`}
@@ -481,6 +482,14 @@ export default function CanvasBoard({
                       const db = nodeMap[edge.from];
                       return db.connectionName || db.integrationId?.split(':').pop() || db.label;
                     })
+                : undefined
+            }
+            connectorKinds={
+              node.type === 'agent'
+                ? edges.flatMap(edge => {
+                    const source = edge.to === node.id ? nodeMap[edge.from] : undefined;
+                    return source?.type === 'connector' && source.connector ? [source.connector] : [];
+                  })
                 : undefined
             }
           />

@@ -7,16 +7,20 @@ import { IntegrationHandler } from '../integrations/integration.handler';
 import { DatabaseHandler } from './database.handler';
 import { QueryRunnerHandler } from './query-runner.handler';
 import { PrismaService } from '../prisma/prisma.service';
+import { ConnectorStore } from '../connectors/connector.store';
+import { ConnectorHandler } from './connector.handler';
 
 const prisma = new PrismaService();
 const credentialResolver = new CredentialResolver(prisma);
+const connectorStore = new ConnectorStore(prisma);
 
 // Keep runtime dispatch explicit: canvas node type -> trusted backend handler.
 export const registry: Record<string, NodeHandler> = {
   trigger: new TriggerHandler(),
-  agent: new AgentHandler(prisma, credentialResolver),
-  output: new OutputHandler(),
+  agent: new AgentHandler(prisma, credentialResolver, connectorStore),
+  output: new OutputHandler(connectorStore),
   integration: new IntegrationHandler(credentialResolver, prisma),
   database: new DatabaseHandler(),
   'query-runner': new QueryRunnerHandler(credentialResolver, prisma),
+  connector: new ConnectorHandler(),
 };

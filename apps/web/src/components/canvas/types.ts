@@ -2,8 +2,14 @@ import type { ReactElement } from 'react';
 
 export const SCHEMA_NODE = 'schema' as const;
 
-export type NodeType = 'trigger' | 'agent' | 'output' | 'integration' | 'query-runner' | typeof SCHEMA_NODE;
-export type LibraryNodeType = NodeType | 'database';
+export type NodeType = 'trigger' | 'agent' | 'output' | 'integration' | 'query-runner' | 'connector' | typeof SCHEMA_NODE;
+
+/** The apps a connector node can stand for; wiring one into an Agent gives it that app's tools. */
+export type ConnectorKind = 'gmail' | 'drive' | 'gchat' | 'slack' | 'telegram' | 'github';
+/** Accounts a user connects; Google covers Gmail, Drive and Google Chat. */
+export type ConnectorProvider = 'google' | 'slack' | 'telegram' | 'github';
+
+export type LibraryNodeType = Exclude<NodeType, 'connector'> | 'database' | ConnectorKind;
 
 export interface SchemaNodeData {
   type: typeof SCHEMA_NODE;
@@ -34,6 +40,8 @@ export interface FlowNode {
   triggerInputMode?: 'none' | 'input';
   inputType?: 'text' | 'sql';
   triggerInput?: string;
+  /** Slack and Telegram triggers: only messages containing this text start the run. */
+  triggerKeyword?: string;
   prompt?: string;
   provider?: 'openai';
   model?: string;
@@ -45,6 +53,9 @@ export interface FlowNode {
   dbType?: 'postgresql' | 'mongodb';
   actionId?: string;
   actionParams?: Record<string, unknown>;
+  connector?: ConnectorKind;
+  /** Gmail: may send email. GitHub: may open issues and comment. */
+  allowWrite?: boolean;
 }
 
 /** 'data' (the default) runs the target after the source and passes its output; 'wait' only orders them. */

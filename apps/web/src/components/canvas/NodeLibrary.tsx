@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import type { LibraryNodeType } from './types';
-import { NODE_TYPES } from './constants';
+import { CONNECTOR_KINDS, NODE_TYPES } from './constants';
 
 // Schema and Query Runner still run in saved workflows; new flows connect a Database straight to an Agent.
 const ACTIVE_NODE_TYPES: LibraryNodeType[] = ['trigger', 'agent', 'database', 'output'];
+// Apps are wired into an Agent to give it tools, like a Database.
+const APP_NODE_TYPES: LibraryNodeType[] = CONNECTOR_KINDS;
 
 interface NodeLibraryProps {
   onAddNode: (type: LibraryNodeType) => void;
@@ -31,6 +33,16 @@ export default function NodeLibrary({ onAddNode }: NodeLibraryProps) {
         display: 'flex', flexDirection: 'column', gap: 6,
       }}>
         {ACTIVE_NODE_TYPES.map(type => (
+          <LibNode key={type} type={type} onAdd={() => onAddNode(type)} />
+        ))}
+
+        <div style={{
+          fontSize: 10, fontWeight: 600, color: 'var(--text-muted)',
+          textTransform: 'uppercase', letterSpacing: '0.08em', padding: '12px 4px 2px',
+        }}>
+          Apps
+        </div>
+        {APP_NODE_TYPES.map(type => (
           <LibNode key={type} type={type} onAdd={() => onAddNode(type)} />
         ))}
       </div>

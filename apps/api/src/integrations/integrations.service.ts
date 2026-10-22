@@ -1,32 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { createCipheriv, createHash, randomBytes } from 'crypto';
 import { MongoClient } from 'mongodb';
 import { Client } from 'pg';
 import { PrismaService } from '../prisma/prisma.service';
+import { encryptCredential } from './credential.crypto';
 import { CredentialResolver } from './credential.resolver';
 import type { SchemaConfig } from './integration.interfaces';
 import { integrationRegistry } from './integration.registry';
 import { testConnection } from './providers/database/database.connection';
 import { maskConnectionString } from './providers/database/database.sanitizer';
-
-function getEncryptionKey() {
-  const secret = process.env.API_KEY_ENCRYPTION_SECRET ?? process.env.NEXTAUTH_SECRET;
-
-  if (!secret || secret.length < 32) {
-    throw new Error('API_KEY_ENCRYPTION_SECRET must be set to at least 32 characters.');
-  }
-
-  return createHash('sha256').update(secret).digest();
-}
-
-function encryptCredential(plaintext: string): string {
-  const key = getEncryptionKey();
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const encrypted = cipher.update(plaintext, 'utf8', 'hex') + cipher.final('hex');
-  const authTag = cipher.getAuthTag();
-  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
-}
 
 @Injectable()
 export class IntegrationsService {

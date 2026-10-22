@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FlowNode, FlowEdge, RunPlan, RunState, RunPhasesMap, LibraryNodeType, PersistedWorkflow, ToolCallRecord } from './types';
-import { NODE_TYPES } from './constants';
+import { NODE_TYPES, isConnectorKind } from './constants';
 import TopBar from './TopBar';
 import NodeLibrary from './NodeLibrary';
 import CanvasBoard from './CanvasBoard';
@@ -97,6 +97,8 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   const [nodeToolCalls, setNodeToolCalls] = useState<Record<string, ToolCallRecord[]>>({});
   const [nodes, setNodes] = useState<FlowNode[]>(DEFAULT_NODES);
   const [edges, setEdges] = useState<FlowEdge[]>(DEFAULT_EDGES);
+  // Outcome of connecting an app through a redirect (Google), read from the URL on return.
+  const [connectNotice, setConnectNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [runOrder, setRunOrder] = useState<RunPlan>(() => savedRunPlan(DEFAULT_CANVAS_JSON));
 
   const selNode = nodes.find(n => n.id === selected) ?? null;
@@ -110,6 +112,15 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     }
     return outputs;
   }, [nodeOutputs]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connectError = params.get('connectError');
+    const connected = params.get('connected');
+    if (!connectError && !connected) return;
+    setConnectNotice(connectError ? { ok: false, text: connectError } : { ok: true, text: 'Google connected.' });
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -220,10 +231,18 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         triggerInput,
       });
 
-      // Execute the saved workflow through the Nest backend instead of the old mock timer.
+      // Runs can take minutes, so the browser calls the API directly with a short-lived
+      // run token from the web app instead of going through a proxied request.
+      const tokenResponse = await fetch(`/api/workflows/${workflow.id}/run-token`, { method: 'POST' });
+      const { token } = (await tokenResponse.json().catch(() => ({}))) as { token?: string | null };
+      if (!tokenResponse.ok) throw new Error('Could not start the run. Try signing in again.');
+
       const response = await fetch(`${API_BASE_URL}/workflows/${workflow.id}/run`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ input: triggerInput }),
       });
 
@@ -340,6 +359,20 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   }
 
   function addNode(type: LibraryNodeType) {
+    if (isConnectorKind(type)) {
+      const id = `${type}-${Date.now()}`;
+      setNodes(p => [...p, {
+        id,
+        type: 'connector',
+        connector: type,
+        label: NODE_TYPES[type].label,
+        x: 160 + Math.random() * 300,
+        y: 140 + Math.random() * 220,
+      }]);
+      setSelected(id);
+      return;
+    }
+
     const nodeType = type === 'database' ? 'integration' : type === 'schema' ? 'schema' : type;
     const id = `${type}-${Date.now()}`;
     const cfg = NODE_TYPES[type];
@@ -428,6 +461,29 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             disabled={runState === 'running'}
           />
 
+          {connectNotice && !runError && (
+            <div
+              role="status"
+              style={{
+                position: 'absolute', left: 18, right: 18, top: 14, zIndex: 50,
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8,
+                border: `1px solid ${connectNotice.ok ? 'rgba(34,197,94,0.42)' : 'rgba(239,68,68,0.42)'}`,
+                background: `color-mix(in srgb, var(--panel-bg) 92%, ${connectNotice.ok ? '#22c55e' : '#ef4444'})`,
+                boxShadow: '0 14px 36px var(--shadow-soft)', fontSize: 12, color: 'var(--text-secondary)',
+              }}
+            >
+              <span style={{ flex: 1 }}>{connectNotice.text}</span>
+              <button
+                type="button"
+                title="Dismiss"
+                onClick={() => setConnectNotice(null)}
+                style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13 }}
+              >
+                x
+              </button>
+            </div>
+          )}
+
           {runError && (
             <div style={{
               position: 'absolute',
@@ -500,6 +556,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             onUpdate={patch => updateNode(selNode.id, patch)}
             onDelete={() => removeNode(selNode.id)}
             onRun={handleRun}
+            onSaveWorkflow={saveWorkflow}
             runOutput={nodeOutputs[selNode.id]}
           />
         )}
