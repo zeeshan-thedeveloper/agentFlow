@@ -1,7 +1,7 @@
 const columns = [
-  { title: 'Product', links: ['Canvas', 'Model routing', 'Tracing', 'Deployments'] },
-  { title: 'Resources', links: ['Docs', 'Templates', 'Changelog', 'Security'] },
-  { title: 'Company', links: ['About', 'Careers', 'Contact', 'Status'] },
+  { title: 'Product', links: [{ label: 'Features', href: '/#features' }, { label: 'How it works', href: '/#how-it-works' }, { label: 'Sign in', href: '/login' }] },
+  { title: 'Legal', links: [{ label: 'Privacy Policy', href: '/privacy' }, { label: 'Terms of Service', href: '/terms' }] },
+  { title: 'Contact', links: [{ label: 'Email us', href: 'mailto:zeeshanahmedd0010@gmail.com' }] },
 ];
 
 export function Footer() {
@@ -19,24 +19,15 @@ export function Footer() {
               </svg>
               <span className="l-text text-lg font-bold">AgentFlow</span>
             </div>
-            <p className="l-text-muted mt-5 max-w-sm leading-7">A visual orchestration platform for teams building production-grade AI agents.</p>
-            <div className="mt-6 flex gap-3">
-              {['M6 18L18 6M8 6h10v10', 'M7 7h10v10H7zM4 4h10', 'M5 12h14M12 5v14'].map((path, index) => (
-                <a key={path} href="#" className="landing-icon-btn flex h-10 w-10 items-center justify-center rounded-lg" aria-label={`Social link ${index + 1}`}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d={path} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </a>
-              ))}
-            </div>
+            <p className="l-text-muted mt-5 max-w-sm leading-7">A visual builder for AI agent workflows that work with your apps.</p>
           </div>
           {columns.map((column) => (
             <div key={column.title}>
               <h3 className="l-text-faint text-sm font-bold uppercase tracking-[0.18em]">{column.title}</h3>
               <ul className="mt-4 space-y-3">
                 {column.links.map((link) => (
-                  <li key={link}>
-                    <a href="#" className="landing-nav-link text-sm">{link}</a>
+                  <li key={link.label}>
+                    <a href={link.href} className="landing-nav-link text-sm">{link.label}</a>
                   </li>
                 ))}
               </ul>

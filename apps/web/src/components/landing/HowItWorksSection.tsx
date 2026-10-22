@@ -1,21 +1,21 @@
 const steps = [
   {
     step: '01',
-    title: 'Sketch the workflow',
-    description: 'Drag triggers, agents, models, and tools into a readable execution graph.',
-    code: ['trigger: new_lead', 'agent: research_lead', 'tools: [crm, web_search]'],
+    title: 'Build the workflow',
+    description: 'Drag a trigger, agents and outputs onto the canvas, and wire in the apps and databases each agent may use.',
+    code: ['trigger: slack_message', 'agent: support_agent', 'apps: [google_drive, github]'],
   },
   {
     step: '02',
-    title: 'Test every path',
-    description: 'Run scenarios, inspect traces, compare models, and tune prompts before release.',
-    code: ['scenario: enterprise_account', 'eval: response_quality >= 0.92', 'latency_budget: 4s'],
+    title: 'Connect your accounts',
+    description: 'Add your OpenAI key and connect Google, Slack, Telegram or GitHub, then choose what each agent is allowed to do.',
+    code: ['openai: connected', 'gmail: read-only', 'github: read + comment'],
   },
   {
     step: '03',
-    title: 'Deploy and observe',
-    description: 'Publish with environment secrets, approvals, rollback history, and live run metrics.',
-    code: ['env: production', 'approval: required', 'deploy: v24.05'],
+    title: 'Run and watch',
+    description: 'Click Run or let a chat message start it, follow each step live on the canvas, and review the results in History.',
+    code: ['run: started from slack', 'steps: 3 of 3 done', 'output: replied in thread'],
   },
 ];
 
@@ -25,7 +25,7 @@ export function HowItWorksSection() {
       <div className="mx-auto max-w-7xl">
         <div className="reveal mx-auto max-w-3xl text-center">
           <p className="l-accent-violet text-sm font-bold uppercase tracking-[0.24em]">How it Works</p>
-          <h2 className="l-text mt-4 text-4xl font-black tracking-tight sm:text-5xl">From idea to production in one flow.</h2>
+          <h2 className="l-text mt-4 text-4xl font-black tracking-tight sm:text-5xl">From idea to a working agent in one flow.</h2>
         </div>
         <div className="mt-14 grid gap-5 lg:grid-cols-3">
           {steps.map((item) => (

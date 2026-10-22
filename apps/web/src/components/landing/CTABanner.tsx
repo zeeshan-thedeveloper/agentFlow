@@ -4,7 +4,7 @@ export function CTABanner() {
       <div className="reveal cta-banner mx-auto max-w-7xl overflow-hidden rounded-3xl p-8 text-center shadow-glow md:p-14">
         <h2 className="l-text mx-auto max-w-3xl text-4xl font-black tracking-tight sm:text-5xl">Build your first agent workflow today.</h2>
         <p className="l-text-secondary mx-auto mt-5 max-w-2xl leading-8">
-          Start with a blank canvas, connect your preferred models, and turn repeatable work into reliable autonomous systems.
+          Start with a blank canvas, connect your OpenAI key and the apps you use, and hand repeatable work to an agent.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <a href="/login" className="btn-primary-landing rounded-xl px-6 py-3 text-sm font-bold">Get started free</a>

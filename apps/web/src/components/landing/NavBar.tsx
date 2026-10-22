@@ -1,6 +1,6 @@
 import { LandingThemeToggle } from './LandingThemeToggle';
 
-const links = ['Features', 'How it Works', 'Docs'];
+const links = ['Features', 'How it Works'];
 
 export function NavBar() {
   return (
@@ -25,7 +25,7 @@ export function NavBar() {
           {links.map((link) => (
             <a
               key={link}
-              href={link === 'Docs' ? '#' : `/#${link.toLowerCase().replaceAll(' ', '-')}`}
+              href={`/#${link.toLowerCase().replaceAll(' ', '-')}`}
               className="landing-nav-link text-sm font-medium"
             >
               {link}
