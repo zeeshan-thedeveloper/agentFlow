@@ -1,3 +1,5 @@
+import { BrandMark } from '@/components/BrandMark';
+
 const columns = [
   { title: 'Product', links: [{ label: 'Features', href: '/#features' }, { label: 'How it works', href: '/#how-it-works' }, { label: 'Sign in', href: '/login' }] },
   { title: 'Legal', links: [{ label: 'Privacy Policy', href: '/privacy' }, { label: 'Terms of Service', href: '/terms' }] },
@@ -11,12 +13,7 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-5">
           <div className="md:col-span-2">
             <div className="flex items-center gap-3">
-              <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true">
-                <rect width="34" height="34" rx="10" className="landing-logo-bg" />
-                <path d="M11 17H23" stroke="#8b5cf6" strokeWidth="2.4" strokeLinecap="round" />
-                <circle cx="10" cy="17" r="4.2" fill="#22d3ee" />
-                <circle cx="24" cy="17" r="4.2" fill="#8b5cf6" />
-              </svg>
+              <BrandMark size={34} />
               <span className="l-text text-lg font-bold">AgentFlow</span>
             </div>
             <p className="l-text-muted mt-5 max-w-sm leading-7">A visual builder for AI agent workflows that work with your apps.</p>

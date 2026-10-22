@@ -320,10 +320,6 @@ html:has(.landing-body) {
   background-color: var(--l-glow-cyan);
 }
 
-.landing-body .landing-logo-bg {
-  fill: var(--panel-bg);
-}
-
 .landing-body .landing-theme-toggle {
   display: flex;
   height: 2.5rem;
