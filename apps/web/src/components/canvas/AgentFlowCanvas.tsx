@@ -7,6 +7,8 @@ import TopBar from './TopBar';
 import NodeLibrary from './NodeLibrary';
 import CanvasBoard from './CanvasBoard';
 import ConfigPanel from './ConfigPanel';
+import RunOrderBar from './RunOrderBar';
+import { orderNodesForRun } from './runOrder';
 import { DEFAULT_EDGES, DEFAULT_NODES, DEFAULT_RUN_MODE, DEFAULT_WORKFLOW_NAME } from './defaultWorkflow';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -55,45 +57,6 @@ function getErrorMessage(value: unknown, fallback: string) {
   return fallback;
 }
 
-function sortNodesForRun(nodes: FlowNode[], edges: FlowEdge[]) {
-  const nodesById = new Map(nodes.map(node => [node.id, node]));
-  const indegree = new Map(nodes.map(node => [node.id, 0]));
-  const outgoing = new Map(nodes.map(node => [node.id, [] as string[]]));
-
-  for (const edge of edges) {
-    if (!nodesById.has(edge.from) || !nodesById.has(edge.to)) continue;
-    outgoing.get(edge.from)?.push(edge.to);
-    indegree.set(edge.to, (indegree.get(edge.to) ?? 0) + 1);
-  }
-
-  const queue = nodes
-    .filter(node => indegree.get(node.id) === 0)
-    .sort((a, b) => a.id.localeCompare(b.id));
-  const sorted: FlowNode[] = [];
-
-  while (queue.length > 0) {
-    const node = queue.shift();
-    if (!node) continue;
-
-    sorted.push(node);
-
-    for (const nextNodeId of outgoing.get(node.id) ?? []) {
-      const nextIndegree = (indegree.get(nextNodeId) ?? 0) - 1;
-      indegree.set(nextNodeId, nextIndegree);
-
-      if (nextIndegree === 0) {
-        const nextNode = nodesById.get(nextNodeId);
-        if (nextNode) {
-          queue.push(nextNode);
-          queue.sort((a, b) => a.id.localeCompare(b.id));
-        }
-      }
-    }
-  }
-
-  return sorted.length === nodes.length ? sorted : nodes;
-}
-
 function formatRunOutput(output: unknown): string | undefined {
   if (output == null) return undefined;
   if (typeof output === 'string') return output.trim() || undefined;
@@ -135,8 +98,10 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   const [nodes, setNodes] = useState<FlowNode[]>(DEFAULT_NODES);
   const [edges, setEdges] = useState<FlowEdge[]>(DEFAULT_EDGES);
   const [runMode, setRunMode] = useState<RunMode>(DEFAULT_RUN_MODE);
+  const [runOrder, setRunOrder] = useState<string[]>([]);
 
   const selNode = nodes.find(n => n.id === selected) ?? null;
+  const orderedNodes = useMemo(() => orderNodesForRun(nodes, edges, runOrder), [nodes, edges, runOrder]);
 
   const runOutputs = useMemo(() => {
     const outputs: Record<string, string> = {};
@@ -163,6 +128,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         setNodes(workflow.canvasJson.nodes);
         setEdges(workflow.canvasJson.edges);
         setRunMode(workflow.canvasJson.runMode ?? 'sequential');
+        setRunOrder(workflow.canvasJson.runOrder ?? []);
       } catch {
         if (!cancelled) setSaveState('error');
       }
@@ -182,7 +148,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
       body: JSON.stringify({
         id: workflowId,
         name,
-        canvasJson: { nodes, edges, runMode },
+        canvasJson: { nodes, edges, runMode, runOrder },
       }),
     });
 
@@ -203,7 +169,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   }
 
   async function handleRun() {
-    const executionNodeIds = sortNodesForRun(nodes, edges).map(node => node.id);
+    const executionNodeIds = orderedNodes.map(node => node.id);
     let progressTimer: ReturnType<typeof setInterval> | undefined;
     let progressIndex = 0;
 
@@ -441,7 +407,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         <NodeLibrary onAddNode={addNode} />
 
-        <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
+        <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
           <CanvasBoard
             nodes={nodes}
             setNodes={setNodes}
@@ -453,6 +419,18 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             runOutputs={runOutputs}
             runToolCalls={nodeToolCalls}
             onRemoveNode={removeNode}
+          />
+
+          <RunOrderBar
+            orderedNodes={orderedNodes}
+            nodes={nodes}
+            edges={edges}
+            runMode={runMode}
+            runPhases={runPhases}
+            selected={selected}
+            onSelect={setSelected}
+            onReorder={setRunOrder}
+            disabled={runState === 'running'}
           />
 
           {runError && (

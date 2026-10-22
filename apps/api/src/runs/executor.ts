@@ -28,6 +28,8 @@ type WorkflowCanvasJson = {
   edges: FlowEdge[];
   /** Saved workflows from before run modes existed have none and keep running one node at a time. */
   runMode?: RunMode;
+  /** Node ids in the order the user picked; breaks ties between nodes free to run at once. */
+  runOrder?: string[];
 };
 
 type ExecutorContext = {
@@ -138,14 +140,28 @@ function buildGraph(canvasJson: WorkflowCanvasJson) {
   return { nodesById, upstream, downstream };
 }
 
-const byId = (a: FlowNode, b: FlowNode) => a.id.localeCompare(b.id);
+/**
+ * Orders nodes that are free to run at the same moment: first by the saved run
+ * order, then by id for nodes it doesn't list.
+ */
+function runPriority(canvasJson: WorkflowCanvasJson) {
+  const runOrder = Array.isArray(canvasJson.runOrder) ? canvasJson.runOrder : [];
+  const ranks = new Map(runOrder.map((id, index) => [id, index]));
+  return (a: FlowNode, b: FlowNode) => {
+    const ra = ranks.get(a.id) ?? Infinity;
+    const rb = ranks.get(b.id) ?? Infinity;
+    if (ra !== rb) return ra < rb ? -1 : 1;
+    return a.id.localeCompare(b.id);
+  };
+}
 
 export function sortNodesTopologically(canvasJson: unknown): FlowNode[] {
   assertCanvasJson(canvasJson);
   const { nodesById, upstream, downstream } = buildGraph(canvasJson);
   const remaining = new Map([...upstream].map(([id, deps]) => [id, deps.size]));
+  const byPriority = runPriority(canvasJson);
 
-  const queue = canvasJson.nodes.filter(node => remaining.get(node.id) === 0).sort(byId);
+  const queue = canvasJson.nodes.filter(node => remaining.get(node.id) === 0).sort(byPriority);
   const sorted: FlowNode[] = [];
 
   while (queue.length > 0) {
@@ -157,7 +173,7 @@ export function sortNodesTopologically(canvasJson: unknown): FlowNode[] {
       remaining.set(nextNodeId, nextRemaining);
       if (nextRemaining === 0) {
         queue.push(nodesById.get(nextNodeId)!);
-        queue.sort(byId);
+        queue.sort(byPriority);
       }
     }
   }
@@ -172,7 +188,7 @@ export function sortNodesTopologically(canvasJson: unknown): FlowNode[] {
 /**
  * Runs every node once all the nodes wired into it have finished. In parallel
  * mode every ready node starts at once; in sequential mode one runs at a time,
- * in node id order. A failure skips only the nodes downstream of it, so other
+ * in the saved run order. A failure skips only the nodes downstream of it, so other
  * branches still finish.
  */
 export async function executeWorkflow(
@@ -194,7 +210,8 @@ export async function executeWorkflow(
   const waves = new Map<string, number>();
   const blocked = new Set<string>();
   const running = new Map<string, Promise<StepResult>>();
-  const ready = canvasJson.nodes.filter(node => remaining.get(node.id) === 0).sort(byId);
+  const byPriority = runPriority(canvasJson);
+  const ready = canvasJson.nodes.filter(node => remaining.get(node.id) === 0).sort(byPriority);
   let startedCount = 0;
 
   logger.log(`Run mode: ${runMode}`);
@@ -265,7 +282,7 @@ export async function executeWorkflow(
         });
       } else {
         ready.push(nextNode);
-        ready.sort(byId);
+        ready.sort(byPriority);
       }
     }
   }

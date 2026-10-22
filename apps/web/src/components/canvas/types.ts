@@ -64,6 +64,8 @@ export interface WorkflowCanvasJson {
   edges: FlowEdge[];
   /** Missing on workflows saved before run modes existed; those run sequentially. */
   runMode?: RunMode;
+  /** Node ids in the order picked in the run order bar; breaks ties between nodes free to run at once. */
+  runOrder?: string[];
 }
 
 export interface PersistedWorkflow {
