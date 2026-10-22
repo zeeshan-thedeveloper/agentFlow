@@ -1,4 +1,4 @@
-import type { FlowEdge, FlowNode } from './types';
+import type { FlowEdge, FlowNode, RunMode } from './types';
 
 export const DEFAULT_WORKFLOW_NAME = 'GitHub Issue Monitor';
 
@@ -41,7 +41,10 @@ export const DEFAULT_EDGES: FlowEdge[] = [
   { from: 'agent-1', to: 'output-1' },
 ];
 
+export const DEFAULT_RUN_MODE: RunMode = 'parallel';
+
 export const DEFAULT_CANVAS_JSON = {
   nodes: DEFAULT_NODES,
   edges: DEFAULT_EDGES,
+  runMode: DEFAULT_RUN_MODE,
 };

@@ -118,7 +118,8 @@ export class RunsService implements OnModuleDestroy {
     const nodeTypes = this.getNodeTypeMap(canvasJson);
 
     // AgentStep has no status column today, so status stays in executor output/API response.
-    for (const step of steps) {
+    // Skipped nodes never ran, so they get no step record.
+    for (const step of steps.filter(item => item.status !== 'SKIPPED')) {
       await this.prisma.agentStep.create({
         data: {
           runId,

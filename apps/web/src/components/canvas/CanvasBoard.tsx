@@ -7,6 +7,7 @@ import {
   edgeMidpoint,
   edgePath,
   isDatabaseNode,
+  isWaitEdge,
   layoutEdges,
   nodeSideAnchor,
   resolveConnection,
@@ -54,6 +55,9 @@ function arrowId(color: string): string {
 function nodeColor(node: FlowNode): string {
   return isDatabaseNode(node) ? NODE_TYPES.database.color : NODE_TYPES[node.type]?.color ?? NODE_TYPES.agent.color;
 }
+
+// Wait wires carry no data, so they are drawn neutral instead of in the source's color.
+const WAIT_EDGE_COLOR = '#94A3B8';
 
 const MIN_ZOOM = 0.55;
 const MAX_ZOOM = 1.8;
@@ -240,10 +244,22 @@ export default function CanvasBoard({
     setSelectedEdge(null);
   }
 
+  function toggleEdgeKind(edge: FlowEdge) {
+    setEdges(prev => prev.map(item => {
+      if (edgeKey(item) !== edgeKey(edge)) return item;
+      return isWaitEdge(item) ? { from: item.from, to: item.to } : { ...item, kind: 'wait' };
+    }));
+  }
+
   const nodeMap = Object.fromEntries(nodes.map(node => [node.id, node]));
   const connectingNode = connecting ? nodeMap[connecting.from] : null;
   const geometry = layoutEdges(nodes, edges, nodeLayoutHeights);
-  const arrowColors = [...new Set(nodes.map(nodeColor))];
+  const arrowColors = [...new Set([...nodes.map(nodeColor), WAIT_EDGE_COLOR])];
+  const selectedEdgeItem = edges.find(edge => edgeKey(edge) === selectedEdge);
+  const selectedEdgeShape = selectedEdge ? geometry.get(selectedEdge) : undefined;
+  // A database wire hands the agent a tool, so making it wait-only would make no sense.
+  const canToggleSelectedEdge =
+    Boolean(selectedEdgeItem) && !(nodeMap[selectedEdgeItem!.from] && isDatabaseNode(nodeMap[selectedEdgeItem!.from]));
   const hoverCheck =
     connecting && hoverTargetId && hoverTargetId !== connecting.from
       ? resolveConnection(connecting.from, hoverTargetId, nodes, edges)
@@ -301,7 +317,8 @@ export default function CanvasBoard({
 
             const path = edgePath(shape.start, shape.startSide, shape.end, shape.endSide);
             const mid = edgeMidpoint(shape.start, shape.startSide, shape.end, shape.endSide);
-            const color = nodeColor(source);
+            const isWait = isWaitEdge(edge);
+            const color = isWait ? WAIT_EDGE_COLOR : nodeColor(source);
             const isSelected = selectedEdge === key;
             const isHovered = hoveredEdge === key;
             const isIncomingActive = runPhases[edge.to] === 'running';
@@ -315,7 +332,10 @@ export default function CanvasBoard({
                   stroke={color}
                   strokeWidth={emphasized ? 2.25 : 1.75}
                   strokeOpacity={emphasized ? 1 : 0.75}
-                  strokeDasharray={isDatabaseNode(source) && !isIncomingActive ? '5 4' : undefined}
+                  strokeDasharray={
+                    isIncomingActive ? undefined : isWait ? '2 5' : isDatabaseNode(source) ? '5 4' : undefined
+                  }
+                  strokeLinecap={isWait ? 'round' : undefined}
                   markerEnd={`url(#${arrowId(color)})`}
                   vectorEffect="non-scaling-stroke"
                   className={isIncomingActive ? 'edgeActive' : undefined}
@@ -378,6 +398,38 @@ export default function CanvasBoard({
           })()}
         </g>
       </svg>
+
+      {selectedEdgeItem && selectedEdgeShape && canToggleSelectedEdge && (() => {
+        const mid = edgeMidpoint(
+          selectedEdgeShape.start, selectedEdgeShape.startSide, selectedEdgeShape.end, selectedEdgeShape.endSide,
+        );
+        const isWait = isWaitEdge(selectedEdgeItem);
+        return (
+          <button
+            type="button"
+            title={
+              isWait
+                ? 'Runs after the source but receives none of its output. Click to pass the output along.'
+                : 'Runs after the source and receives its output. Click to only wait for it.'
+            }
+            onMouseDown={e => e.stopPropagation()}
+            onClick={e => {
+              e.stopPropagation();
+              toggleEdgeKind(selectedEdgeItem);
+            }}
+            style={{
+              position: 'absolute', left: screenX(mid.x), top: screenY(mid.y) + 18, zIndex: 30,
+              transform: 'translateX(-50%)', whiteSpace: 'nowrap',
+              padding: '3px 9px', borderRadius: 99, fontSize: 10, fontWeight: 600, fontFamily: 'inherit',
+              border: '1px solid var(--border-strong)', background: 'var(--panel-bg)',
+              color: 'var(--text-secondary)', cursor: 'pointer',
+              boxShadow: '0 4px 14px var(--shadow-soft)',
+            }}
+          >
+            {isWait ? 'Wait only · switch to pass data' : 'Passes data · switch to wait only'}
+          </button>
+        );
+      })()}
 
       {connecting && hoverCheck && !hoverCheck.ok && (
         <div style={{

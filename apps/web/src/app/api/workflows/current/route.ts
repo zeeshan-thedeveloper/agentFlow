@@ -49,6 +49,7 @@ function normalizeCanvasJson(value: unknown): WorkflowCanvasJson {
   return {
     nodes: value.nodes,
     edges: normalizeEdges(value.edges),
+    ...(value.runMode === 'parallel' || value.runMode === 'sequential' ? { runMode: value.runMode } : {}),
   };
 }
 

@@ -1,8 +1,9 @@
 import { NH, NW } from './constants';
 import type { FlowEdge, FlowNode } from './types';
 
-// Every wire means the same thing: run the target after the source and pass the
-// source's output along. What the output is used for follows from the node types.
+// A data wire runs the target after the source and passes the source's output
+// along; what the output is used for follows from the node types. A wait wire
+// only makes the target run after the source.
 
 export type Side = 'top' | 'right' | 'bottom' | 'left';
 export const SIDES: Side[] = ['top', 'right', 'bottom', 'left'];
@@ -31,6 +32,10 @@ export function edgeKey(edge: Pick<FlowEdge, 'from' | 'to'>): string {
   return `${edge.from}->${edge.to}`;
 }
 
+export function isWaitEdge(edge: FlowEdge): boolean {
+  return edge.kind === 'wait';
+}
+
 /** One wire per node pair, without the handle ids older saves carried. */
 export function normalizeEdges(edges: FlowEdge[]): FlowEdge[] {
   const seen = new Set<string>();
@@ -40,7 +45,7 @@ export function normalizeEdges(edges: FlowEdge[]): FlowEdge[] {
     const key = edgeKey(edge);
     if (edge.from === edge.to || seen.has(key)) continue;
     seen.add(key);
-    result.push({ from: edge.from, to: edge.to });
+    result.push(isWaitEdge(edge) ? { from: edge.from, to: edge.to, kind: 'wait' } : { from: edge.from, to: edge.to });
   }
 
   return result;

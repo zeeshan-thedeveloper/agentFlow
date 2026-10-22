@@ -1,8 +1,10 @@
-// Edges are plain "run after + pass output" links; any handle ids from older
-// saves are ignored. What a link carries is decided by the node types it joins.
+// A data edge means "run after + pass output"; a wait edge only means "run after".
+// Any handle ids from older saves are ignored. What a data link carries is decided
+// by the node types it joins.
 type FlowEdge = {
   from: string;
   to: string;
+  kind?: 'data' | 'wait';
 };
 
 export type FlowNodeRef = {
@@ -71,7 +73,7 @@ export function assembleNodeInput(
   const seenSources = new Set<string>();
 
   for (const edge of edges) {
-    if (edge.to !== nodeId || seenSources.has(edge.from)) continue;
+    if (edge.to !== nodeId || edge.kind === 'wait' || seenSources.has(edge.from)) continue;
     seenSources.add(edge.from);
 
     const source = nodesById.get(edge.from);
