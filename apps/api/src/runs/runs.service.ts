@@ -1,9 +1,12 @@
 import { Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { executeWorkflow, StepResult } from './executor';
+import type { TriggerEvent } from '../connectors/trigger-event';
 
 type RunWorkflowInput = {
   input?: unknown;
+  /** Set only by the Slack and Telegram webhooks. */
+  triggerEvent?: TriggerEvent;
 };
 
 @Injectable()
@@ -15,7 +18,8 @@ export class RunsService implements OnModuleDestroy {
     await this.prisma.$disconnect();
   }
 
-  async runWorkflow(workflowId: string, body: RunWorkflowInput = {}) {
+  /** `requesterId`, when given, must own the workflow; webhook-started runs omit it after matching the owner themselves. */
+  async runWorkflow(workflowId: string, body: RunWorkflowInput = {}, requesterId?: string) {
     const workflow = await this.prisma.workflow.findUnique({
       where: {
         id: workflowId,
@@ -27,7 +31,8 @@ export class RunsService implements OnModuleDestroy {
       },
     });
 
-    if (!workflow) {
+    // Someone else's workflow answers the same as a missing one, so ids can't be probed.
+    if (!workflow || (requesterId !== undefined && workflow.userId !== requesterId)) {
       throw new NotFoundException(`Workflow ${workflowId} not found.`);
     }
 
@@ -58,6 +63,7 @@ export class RunsService implements OnModuleDestroy {
       const stepResults = await executeWorkflow(workflow.canvasJson, {
         userId: workflow.userId,
         initialInput: body.input,
+        triggerEvent: body.triggerEvent,
       });
 
       await this.createStepRecords(run.id, workflow.canvasJson, stepResults);
@@ -99,7 +105,15 @@ export class RunsService implements OnModuleDestroy {
     }
   }
 
-  async findSteps(runId: string) {
+  async findSteps(runId: string, requesterId: string) {
+    const run = await this.prisma.agentRun.findUnique({
+      where: { id: runId },
+      select: { workflow: { select: { userId: true } } },
+    });
+    if (!run || run.workflow.userId !== requesterId) {
+      throw new NotFoundException(`Run ${runId} not found.`);
+    }
+
     return this.prisma.agentStep.findMany({
       where: {
         runId,

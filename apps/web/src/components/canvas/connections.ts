@@ -24,6 +24,15 @@ export function isDatabaseNode(node: FlowNode): boolean {
   return node.type === 'integration' && Boolean(node.integrationId?.startsWith('database'));
 }
 
+export function isConnectorNode(node: FlowNode): boolean {
+  return node.type === 'connector';
+}
+
+/** Databases and connectors are wired into an Agent to hand it tools, not to pass data along. */
+export function isToolNode(node: FlowNode): boolean {
+  return isDatabaseNode(node) || isConnectorNode(node);
+}
+
 export function isMongoDatabase(node: FlowNode): boolean {
   return node.dbType === 'mongodb' || Boolean(node.integrationId?.includes('mongo'));
 }
@@ -73,6 +82,8 @@ function typeRuleViolation(from: FlowNode, to: FlowNode): string | null {
   if (to.type === 'trigger') return 'Start runs first, so nothing connects into it';
   if (from.type === 'output') return 'Output is the end of a flow';
   if (isDatabaseNode(to)) return 'Connect from the database into the node that uses it';
+  if (isConnectorNode(to)) return 'Connect from the app into the Agent that uses it';
+  if (isConnectorNode(from) && to.type !== 'agent') return 'Connect an app into an Agent';
   if (isDatabaseNode(from) && !DATABASE_TARGETS.has(to.type)) return 'Connect a database into an Agent';
   if (isDatabaseNode(from) && to.type === 'agent' && isMongoDatabase(from)) {
     return 'Agents can only use PostgreSQL databases for now';

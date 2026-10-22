@@ -1,7 +1,7 @@
 import { Copy } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { FlowNode, RunPhase, ToolCallRecord } from './types';
-import { NODE_TYPES, NH, NW } from './constants';
+import type { ConnectorKind, FlowNode, RunPhase, ToolCallRecord } from './types';
+import { NH, NODE_TYPES, NW, connectorSubtitle, nodeTypeConfig } from './constants';
 import { isDatabaseNode, isMongoDatabase, type Side } from './connections';
 import NodeConnectors from './NodeConnectors';
 import RunToolCalls from './RunToolCalls';
@@ -38,6 +38,8 @@ interface CanvasNodeCardProps {
   onLayoutHeight?: (nodeId: string, height: number) => void;
   /** Names of databases wired into this agent. */
   databaseNames?: string[];
+  /** Apps wired into an agent, shown as badges. */
+  connectorKinds?: ConnectorKind[];
 }
 
 function IcoFailed() {
@@ -68,6 +70,7 @@ export default function CanvasNodeCard({
   onConnectHover,
   onLayoutHeight,
   databaseNames = [],
+  connectorKinds = [],
 }: CanvasNodeCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [layoutHeight, setLayoutHeight] = useState(NH);
@@ -80,9 +83,7 @@ export default function CanvasNodeCard({
   };
   const [hovered, setHovered] = useState(false);
   const [connectorHovered, setConnectorHovered] = useState(false);
-  const t = isDatabaseNode(worldNode)
-    ? NODE_TYPES.database
-    : NODE_TYPES[worldNode.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
+  const t = nodeTypeConfig(worldNode);
   const showDelete = (selected || hovered) && !connecting;
   const showConnectors = !connecting && (selected || hovered || connectorHovered);
   const isQueued = runPhase === 'queued';
@@ -95,6 +96,8 @@ export default function CanvasNodeCard({
     ? worldNode.connectionName || 'Select connection'
     : isQueryRunnerNode
     ? worldNode.connectionName || 'Select connection'
+    : worldNode.type === 'connector'
+    ? connectorSubtitle(worldNode)
     : isDatabaseNode(worldNode)
     ? worldNode.integrationId && worldNode.integrationId !== 'database'
       ? `${worldNode.connectionName || worldNode.integrationId.split(':').pop()} · ${isMongoDatabase(worldNode) ? 'MongoDB' : 'Read-only'}`
@@ -115,7 +118,7 @@ export default function CanvasNodeCard({
     const observer = new ResizeObserver(report);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [worldNode.id, worldNode.label, worldNode.subtitle, worldNode.tools, subtitle, databaseNames.length, onLayoutHeight]);
+  }, [worldNode.id, worldNode.label, worldNode.subtitle, worldNode.tools, subtitle, databaseNames.length, connectorKinds.length, onLayoutHeight]);
 
   const isAgent = worldNode.type === 'agent';
   const showOutputPanel =
@@ -309,8 +312,32 @@ export default function CanvasNodeCard({
               {subtitle}
             </div>
           )}
-          {worldNode.type === 'agent' && ((worldNode.tools?.length ?? 0) > 0 || databaseNames.length > 0) && (
+          {worldNode.type === 'agent' && ((worldNode.tools?.length ?? 0) > 0 || databaseNames.length > 0 || connectorKinds.length > 0) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 5 }}>
+              {[...new Set(connectorKinds)].map(kind => {
+                const app = NODE_TYPES[kind];
+                return (
+                  <span
+                    key={`app-${kind}`}
+                    title={`Can use ${app.label}`}
+                    style={{
+                      fontSize: 8,
+                      fontWeight: 700,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      color: app.color,
+                      background: `${app.color}1f`,
+                      border: `1px solid ${app.color}4d`,
+                      borderRadius: 4,
+                      padding: '1px 5px',
+                      lineHeight: 1.6,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {app.label}
+                  </span>
+                );
+              })}
               {databaseNames.map(name => (
                 <span
                   key={`db-${name}`}

@@ -1,8 +1,7 @@
 'use client';
 
 import { Fragment, useState, type DragEvent } from 'react';
-import { NODE_TYPES } from './constants';
-import { isDatabaseNode } from './connections';
+import { nodeTypeConfig } from './constants';
 import { moveInPlan, planViolation, type PlanDrop } from './runOrder';
 import type { FlowEdge, FlowNode, RunPhasesMap, RunPlan } from './types';
 
@@ -19,7 +18,7 @@ interface RunOrderBarProps {
 }
 
 function colorOf(node: FlowNode): string {
-  return isDatabaseNode(node) ? NODE_TYPES.database.color : NODE_TYPES[node.type]?.color ?? NODE_TYPES.agent.color;
+  return nodeTypeConfig(node).color;
 }
 
 const sameDrop = (a: PlanDrop | null, b: PlanDrop) =>

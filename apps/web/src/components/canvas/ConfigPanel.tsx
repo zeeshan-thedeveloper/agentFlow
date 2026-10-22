@@ -3,7 +3,8 @@ import { findDbInSourceNode } from './db-connection';
 import { IntegrationConfigSection } from './IntegrationConfigSection';
 import { QueryRunnerConfigSection } from './QueryRunnerConfigSection';
 import { SchemaConfigSection } from './SchemaConfigSection';
-import { NODE_TYPES } from './constants';
+import { CONNECTOR_INFO, NODE_TYPES, isConnectorKind, nodeTypeConfig } from './constants';
+import { ConnectorSetup } from './ConnectorSetup';
 
 interface ConfigPanelProps {
   node: FlowNode;
@@ -14,7 +15,17 @@ interface ConfigPanelProps {
   onDelete: () => void;
   onRun?: () => void;
   runOutput?: unknown;
+  /** Saves the workflow; used before connecting an app leaves the page. */
+  onSaveWorkflow?: () => Promise<unknown>;
 }
+
+/** Trigger types started by a message in a chat app, and the connection each needs. */
+const CHAT_TRIGGERS: Record<string, 'slack' | 'telegram'> = {
+  'Slack message': 'slack',
+  'Telegram message': 'telegram',
+};
+
+export const REPLY_IN_CHAT = 'Reply in chat';
 
 const AVAILABLE_TOOLS: { name: string; label: string; description: string }[] = [
   {
@@ -60,6 +71,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 }
 
 function getTriggerSubtitle(triggerType: string, inputMode: FlowNode['triggerInputMode']) {
+  if (CHAT_TRIGGERS[triggerType]) return triggerType;
   const mode = inputMode === 'input' ? 'Input' : 'No input';
   return `${triggerType} · ${mode}`;
 }
@@ -80,10 +92,14 @@ export default function ConfigPanel({
   onDelete,
   onRun,
   runOutput,
+  onSaveWorkflow,
 }: ConfigPanelProps) {
-  const t = NODE_TYPES[node.type as keyof typeof NODE_TYPES] ?? NODE_TYPES.integration;
+  const t = nodeTypeConfig(node);
   const triggerInputMode = node.triggerInputMode ?? 'none';
   const dbSourceNode = findDbInSourceNode(node.id, nodes, edges);
+  const chatTrigger = node.type === 'trigger' ? CHAT_TRIGGERS[node.triggerType ?? 'Manual'] : undefined;
+  const connector = node.type === 'connector' && isConnectorKind(node.connector) ? CONNECTOR_INFO[node.connector] : null;
+  const wiredToAgent = edges.some(edge => edge.from === node.id && nodes.find(n => n.id === edge.to)?.type === 'agent');
 
   return (
     <div style={{
@@ -171,7 +187,34 @@ export default function ConfigPanel({
               </div>
             </Section>
 
-            <Section label="Output">
+            {chatTrigger && (
+              <>
+                <Section label="Connection">
+                  <ConnectorSetup provider={chatTrigger} onBeforeLeave={onSaveWorkflow} />
+                </Section>
+                <Section label="Only messages containing">
+                  <input
+                    value={node.triggerKeyword ?? ''}
+                    onChange={e => onUpdate({ triggerKeyword: e.target.value })}
+                    placeholder="Any message"
+                    style={{
+                      width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
+                      borderRadius: 7, padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)',
+                      outline: 'none', fontFamily: 'inherit',
+                    }}
+                  />
+                  <p style={{ margin: '8px 0 0', fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.5 }}>
+                    {chatTrigger === 'slack'
+                      ? 'Runs when someone mentions the bot in a channel or messages it directly.'
+                      : 'Runs when someone messages the bot.'}{' '}
+                    The message text goes to the next node. Save the workflow for new messages to use it, and set an
+                    Output to &ldquo;Reply in chat&rdquo; to answer in the same conversation.
+                  </p>
+                </Section>
+              </>
+            )}
+
+            {!chatTrigger && <Section label="Output">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
                   {
@@ -230,9 +273,9 @@ export default function ConfigPanel({
                   );
                 })}
               </div>
-            </Section>
+            </Section>}
 
-            {triggerInputMode === 'input' && (
+            {triggerInputMode === 'input' && !chatTrigger && (
               <Section label="Input Value">
                 <textarea
                   value={node.triggerInput ?? ''}
@@ -408,16 +451,35 @@ export default function ConfigPanel({
         {node.type === 'output' && (
           <>
             <Section label="Output">
-              <div style={{
-                width: '100%',
-                border: '1px solid var(--border-strong)',
-                background: 'var(--surface-bg)',
-                borderRadius: 7,
-                padding: '8px 10px',
-                color: 'var(--text-secondary)',
-                fontSize: 12,
-              }}>
-                {node.outputMode ?? 'Return output'}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[
+                  { id: 'Return output', desc: 'Keep the result in the run' },
+                  { id: REPLY_IN_CHAT, desc: 'Also send it back to the Slack or Telegram message that started the run' },
+                ].map(option => {
+                  const active = (node.outputMode ?? 'Return output') === option.id;
+                  return (
+                    <label key={option.id} style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 9,
+                      padding: '7px 10px', borderRadius: 7, cursor: 'pointer',
+                      border: `1px solid ${active ? '#3B82F650' : 'var(--border-subtle)'}`,
+                      background: active ? 'rgba(59,130,246,0.06)' : 'transparent',
+                    }}>
+                      <input
+                        type="radio"
+                        checked={active}
+                        onChange={() => onUpdate({
+                          outputMode: option.id,
+                          subtitle: option.id === REPLY_IN_CHAT ? 'Replies in chat' : 'Receives result',
+                        })}
+                        style={{ accentColor: '#3B82F6', margin: '2px 0 0' }}
+                      />
+                      <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: 12, color: active ? 'var(--text-primary)' : 'var(--text-muted)' }}>{option.id}</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>{option.desc}</span>
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </Section>
 
@@ -485,6 +547,42 @@ export default function ConfigPanel({
           <Section label={node.integrationId?.startsWith('database') ? 'Database' : 'Integration'}>
             <IntegrationConfigSection node={node} onUpdate={onUpdate} />
           </Section>
+        )}
+
+        {connector && node.connector && (
+          <>
+            <Section label="Connection">
+              <ConnectorSetup provider={connector.provider} onBeforeLeave={onSaveWorkflow} />
+            </Section>
+            <Section label="What the agent can do">
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{connector.abilities}</p>
+              {connector.writeLabel && (
+                <label style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 9, marginTop: 8,
+                  padding: '8px 10px', borderRadius: 7, cursor: 'pointer',
+                  border: `1px solid ${node.allowWrite ? `${t.color}55` : 'var(--border-subtle)'}`,
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={node.allowWrite === true}
+                    onChange={e => onUpdate({ allowWrite: e.target.checked })}
+                    style={{ accentColor: t.color, margin: '2px 0 0', flexShrink: 0 }}
+                  />
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{connector.writeLabel}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.45 }}>
+                      Off by default. Text the agent reads can try to trick it, so only allow this when the workflow needs it.
+                    </span>
+                  </span>
+                </label>
+              )}
+              {!wiredToAgent && (
+                <p style={{ margin: '8px 0 0', fontSize: 10, color: '#F59E0B', lineHeight: 1.45 }}>
+                  Connect this node into an Agent to give it these tools.
+                </p>
+              )}
+            </Section>
+          </>
         )}
 
         <Section label="Node ID">

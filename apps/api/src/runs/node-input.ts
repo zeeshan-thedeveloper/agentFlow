@@ -14,6 +14,12 @@ export type FlowNodeRef = {
   integrationId?: unknown;
 };
 
+/** A connector node (Gmail, Slack, GitHub, ...) wired into an agent. */
+export interface ConnectorRef {
+  kind: string;
+  allowWrite: boolean;
+}
+
 export interface NodeInput {
   data?: unknown;
   schema?: string;
@@ -21,9 +27,11 @@ export interface NodeInput {
   connection?: string;
   /** Integration ids of databases wired into an agent, used as tools. */
   databases?: string[];
+  /** Connector nodes wired into an agent, used as tools. */
+  connectors?: ConnectorRef[];
 }
 
-export type ConnectionRole = 'database-tool' | 'connection' | 'schema' | 'query' | 'data';
+export type ConnectionRole = 'database-tool' | 'connector-tool' | 'connection' | 'schema' | 'query' | 'data';
 
 export function isDatabaseConfigNode(node: FlowNodeRef): boolean {
   return node.type === 'integration' && String(node.integrationId ?? '').startsWith('database');
@@ -31,10 +39,15 @@ export function isDatabaseConfigNode(node: FlowNodeRef): boolean {
 
 export function connectionRole(source: FlowNodeRef, target: FlowNodeRef): ConnectionRole {
   if (isDatabaseConfigNode(source)) return target.type === 'agent' ? 'database-tool' : 'connection';
+  if (source.type === 'connector' && target.type === 'agent') return 'connector-tool';
   if (source.type === 'schema') return 'schema';
   if (target.type === 'query-runner') return 'query';
   if (target.type === 'integration' && source.type === 'agent') return 'query';
   return 'data';
+}
+
+function isConnectorRef(value: unknown): value is ConnectorRef {
+  return typeof (value as ConnectorRef | null)?.kind === 'string';
 }
 
 function schemaFromStepOutput(value: unknown): string {
@@ -84,6 +97,9 @@ export function assembleNodeInput(
       case 'database-tool':
         input.databases = [...(input.databases ?? []), asText(value)];
         break;
+      case 'connector-tool':
+        if (isConnectorRef(value)) input.connectors = [...(input.connectors ?? []), value];
+        break;
       case 'connection':
         input.connection = asText(value);
         break;
@@ -118,7 +134,8 @@ export function isNodeInput(value: unknown): value is NodeInput {
       'schema' in value ||
       'query' in value ||
       'connection' in value ||
-      'databases' in value)
+      'databases' in value ||
+      'connectors' in value)
   );
 }
 

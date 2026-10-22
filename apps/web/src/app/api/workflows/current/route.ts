@@ -8,7 +8,7 @@ import type { FlowEdge, FlowNode, WorkflowCanvasJson } from '@/components/canvas
 
 export const dynamic = 'force-dynamic';
 
-const ALLOWED_NODE_TYPES = ['trigger', 'agent', 'output', 'integration', 'schema', 'query-runner'] as const;
+const ALLOWED_NODE_TYPES = ['trigger', 'agent', 'output', 'integration', 'schema', 'query-runner', 'connector'] as const;
 
 function isFlowNode(value: unknown): value is FlowNode {
   if (!value || typeof value !== 'object') return false;

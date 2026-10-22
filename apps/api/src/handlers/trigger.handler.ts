@@ -2,7 +2,8 @@ import type { NodeHandler } from './base.handler';
 
 export class TriggerHandler implements NodeHandler {
   async execute(params: Record<string, unknown>, input: unknown): Promise<unknown> {
-    // Manual triggers are the default for now; cron validation is only a gate.
+    // Manual triggers are the default; Slack and Telegram triggers are started by
+    // their webhooks with the message as input. Cron validation is only a gate.
     const triggerType = params.triggerType ?? 'manual';
     const triggerInputMode = params.triggerInputMode ?? 'none';
 
@@ -12,7 +13,7 @@ export class TriggerHandler implements NodeHandler {
 
     const normalizedTriggerType = triggerType.toLowerCase();
 
-    if (!['manual', 'cron', 'cron schedule'].includes(normalizedTriggerType)) {
+    if (!['manual', 'cron', 'cron schedule', 'slack message', 'telegram message'].includes(normalizedTriggerType)) {
       throw new Error(`Unsupported trigger type: ${triggerType}`);
     }
 
