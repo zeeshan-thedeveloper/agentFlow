@@ -21,15 +21,16 @@ type FlowEdge = {
   kind?: 'data' | 'wait';
 };
 
-export type RunMode = 'parallel' | 'sequential';
+/** Steps that run in order; the node ids in one step run side by side. */
+export type RunPlan = string[][];
 
 type WorkflowCanvasJson = {
   nodes: FlowNode[];
   edges: FlowEdge[];
-  /** Saved workflows from before run modes existed have none and keep running one node at a time. */
-  runMode?: RunMode;
-  /** Node ids in the order the user picked; breaks ties between nodes free to run at once. */
-  runOrder?: string[];
+  /** The run plan from the canvas's run order bar. Older saves may hold a flat list of ids. */
+  runOrder?: RunPlan | string[];
+  /** Only on workflows saved before run plans existed; picks their starting plan. */
+  runMode?: 'parallel' | 'sequential';
 };
 
 type ExecutorContext = {
@@ -43,10 +44,7 @@ export type StepResult = {
   output: unknown;
   /** SKIPPED: never ran because a node it depends on failed or was skipped. */
   status: 'COMPLETED' | 'FAILED' | 'SKIPPED';
-  /**
-   * Steps with the same wave ran side by side. Parallel runs use the node's depth
-   * in the graph; sequential runs number each step in turn.
-   */
+  /** The index of the plan step the node ran in; steps with the same wave ran side by side. */
   wave: number;
   /** Tools the node called while running (agents only), in order. */
   toolCalls?: ToolCallRecord[];
@@ -63,11 +61,6 @@ function assertCanvasJson(canvasJson: unknown): asserts canvasJson is WorkflowCa
   ) {
     throw new Error('Invalid workflow canvas JSON.');
   }
-}
-
-export function runModeOf(canvasJson: unknown): RunMode {
-  const runMode = (canvasJson as WorkflowCanvasJson | null)?.runMode;
-  return runMode === 'parallel' ? 'parallel' : 'sequential';
 }
 
 function resolveHandlerType(node: FlowNode): string {
@@ -140,28 +133,14 @@ function buildGraph(canvasJson: WorkflowCanvasJson) {
   return { nodesById, upstream, downstream };
 }
 
-/**
- * Orders nodes that are free to run at the same moment: first by the saved run
- * order, then by id for nodes it doesn't list.
- */
-function runPriority(canvasJson: WorkflowCanvasJson) {
-  const runOrder = Array.isArray(canvasJson.runOrder) ? canvasJson.runOrder : [];
-  const ranks = new Map(runOrder.map((id, index) => [id, index]));
-  return (a: FlowNode, b: FlowNode) => {
-    const ra = ranks.get(a.id) ?? Infinity;
-    const rb = ranks.get(b.id) ?? Infinity;
-    if (ra !== rb) return ra < rb ? -1 : 1;
-    return a.id.localeCompare(b.id);
-  };
-}
+const byId = (a: FlowNode, b: FlowNode) => a.id.localeCompare(b.id);
 
 export function sortNodesTopologically(canvasJson: unknown): FlowNode[] {
   assertCanvasJson(canvasJson);
   const { nodesById, upstream, downstream } = buildGraph(canvasJson);
   const remaining = new Map([...upstream].map(([id, deps]) => [id, deps.size]));
-  const byPriority = runPriority(canvasJson);
 
-  const queue = canvasJson.nodes.filter(node => remaining.get(node.id) === 0).sort(byPriority);
+  const queue = canvasJson.nodes.filter(node => remaining.get(node.id) === 0).sort(byId);
   const sorted: FlowNode[] = [];
 
   while (queue.length > 0) {
@@ -173,7 +152,7 @@ export function sortNodesTopologically(canvasJson: unknown): FlowNode[] {
       remaining.set(nextNodeId, nextRemaining);
       if (nextRemaining === 0) {
         queue.push(nodesById.get(nextNodeId)!);
-        queue.sort(byPriority);
+        queue.sort(byId);
       }
     }
   }
@@ -185,11 +164,54 @@ export function sortNodesTopologically(canvasJson: unknown): FlowNode[] {
   return sorted;
 }
 
+/** The steps saved on the canvas, including workflows saved before run plans existed. */
+function savedRunPlan(canvasJson: WorkflowCanvasJson, sorted: FlowNode[]): RunPlan {
+  if (Array.isArray(canvasJson.runOrder)) {
+    // A flat list of ids (an earlier save format) means one node per step.
+    return canvasJson.runOrder.map(step => (Array.isArray(step) ? step : [step]));
+  }
+  // Older workflows ran one node at a time unless they were set to parallel.
+  if (canvasJson.runMode === 'parallel') return [];
+  return sorted.map(node => [node.id]);
+}
+
 /**
- * Runs every node once all the nodes wired into it have finished. In parallel
- * mode every ready node starts at once; in sequential mode one runs at a time,
- * in the saved run order. A failure skips only the nodes downstream of it, so other
- * branches still finish.
+ * The steps to run, in order. Follows the saved plan, but moves a node to a
+ * later step when a node wired into it isn't in an earlier one; nodes the plan
+ * doesn't list join the earliest step their wires allow. Matches the canvas's
+ * resolveRunPlan.
+ */
+export function buildRunPlan(canvasJson: unknown): RunPlan {
+  assertCanvasJson(canvasJson);
+  const sorted = sortNodesTopologically(canvasJson);
+  const { upstream } = buildGraph(canvasJson);
+  const plan = savedRunPlan(canvasJson, sorted);
+
+  const wanted = new Map<string, number>();
+  plan.forEach((step, index) => step.forEach(id => { if (!wanted.has(id)) wanted.set(id, index); }));
+
+  const placed = new Map<string, number>();
+  for (const node of sorted) {
+    const earliest = Math.max(-1, ...[...upstream.get(node.id)!].map(id => placed.get(id)!)) + 1;
+    placed.set(node.id, Math.max(wanted.get(node.id) ?? earliest, earliest));
+  }
+
+  const position = new Map(plan.flat().map((id, index) => [id, index]));
+  const rank = (id: string) => position.get(id) ?? Infinity;
+  const steps = new Map<number, string[]>();
+  for (const node of sorted) {
+    const index = placed.get(node.id)!;
+    steps.set(index, [...(steps.get(index) ?? []), node.id]);
+  }
+  return [...steps.keys()]
+    .sort((a, b) => a - b)
+    .map(index => steps.get(index)!.sort((a, b) => rank(a) - rank(b)));
+}
+
+/**
+ * Runs the plan one step at a time; the nodes in a step run side by side, and
+ * the next step starts once they have all finished. A failure skips only the
+ * nodes downstream of it, so other branches still finish.
  */
 export async function executeWorkflow(
   canvasJson: unknown,
@@ -197,30 +219,15 @@ export async function executeWorkflow(
   handlers: Record<string, NodeHandler> = registry,
 ): Promise<StepResult[]> {
   assertCanvasJson(canvasJson);
-  // Also rejects cycles, so the scheduler below always drains.
-  sortNodesTopologically(canvasJson);
-
-  const runMode = runModeOf(canvasJson);
-  const concurrency = runMode === 'parallel' ? Infinity : 1;
+  // Also rejects cycles.
+  const plan = buildRunPlan(canvasJson);
   const { edges } = canvasJson;
-  const { nodesById, upstream, downstream } = buildGraph(canvasJson);
-  const remaining = new Map([...upstream].map(([id, deps]) => [id, deps.size]));
+  const { nodesById, upstream } = buildGraph(canvasJson);
   const results: StepResult[] = [];
   const stepOutputs = new Map<string, unknown>();
-  const waves = new Map<string, number>();
   const blocked = new Set<string>();
-  const running = new Map<string, Promise<StepResult>>();
-  const byPriority = runPriority(canvasJson);
-  const ready = canvasJson.nodes.filter(node => remaining.get(node.id) === 0).sort(byPriority);
-  let startedCount = 0;
 
-  logger.log(`Run mode: ${runMode}`);
-
-  function waveFor(node: FlowNode): number {
-    if (runMode === 'sequential') return startedCount;
-    const depWaves = [...upstream.get(node.id)!].map(id => waves.get(id) ?? 0);
-    return depWaves.length > 0 ? Math.max(...depWaves) + 1 : 0;
-  }
+  logger.log(`Run plan: ${plan.map(step => step.join(' + ')).join(' -> ')}`);
 
   async function runNode(node: FlowNode, wave: number): Promise<StepResult> {
     const handler = handlers[resolveHandlerType(node)];
@@ -254,50 +261,30 @@ export async function executeWorkflow(
     }
   }
 
-  // Called once a node has a final result; releases or skips what waits on it.
-  function settle(result: StepResult) {
-    results.push(result);
-    waves.set(result.nodeId, result.wave);
-    if (result.status === 'COMPLETED') {
-      stepOutputs.set(result.nodeId, result.output);
-    } else {
-      blocked.add(result.nodeId);
-    }
-
-    for (const nextNodeId of downstream.get(result.nodeId) ?? []) {
-      const nextRemaining = (remaining.get(nextNodeId) ?? 0) - 1;
-      remaining.set(nextNodeId, nextRemaining);
-      if (nextRemaining > 0) continue;
-
-      const nextNode = nodesById.get(nextNodeId)!;
-      const blocker = [...upstream.get(nextNodeId)!].find(id => blocked.has(id));
-      if (blocker) {
-        logger.log(`Skipping node ${nextNodeId}: upstream node ${blocker} did not complete`);
-        settle({
-          nodeId: nextNodeId,
-          input: null,
-          output: `Skipped because ${blocker} did not complete.`,
-          status: 'SKIPPED',
-          wave: result.wave + 1,
-        });
-      } else {
-        ready.push(nextNode);
-        ready.sort(byPriority);
+  for (const [wave, step] of plan.entries()) {
+    const toRun: FlowNode[] = [];
+    for (const nodeId of step) {
+      const blocker = [...upstream.get(nodeId)!].find(id => blocked.has(id));
+      if (!blocker) {
+        toRun.push(nodesById.get(nodeId)!);
+        continue;
       }
+      logger.log(`Skipping node ${nodeId}: upstream node ${blocker} did not complete`);
+      blocked.add(nodeId);
+      results.push({
+        nodeId,
+        input: null,
+        output: `Skipped because ${blocker} did not complete.`,
+        status: 'SKIPPED',
+        wave,
+      });
     }
-  }
 
-  while (ready.length > 0 || running.size > 0) {
-    while (ready.length > 0 && running.size < concurrency) {
-      const node = ready.shift()!;
-      const wave = waveFor(node);
-      startedCount++;
-      running.set(node.id, runNode(node, wave));
+    for (const result of await Promise.all(toRun.map(node => runNode(node, wave)))) {
+      results.push(result);
+      if (result.status === 'COMPLETED') stepOutputs.set(result.nodeId, result.output);
+      else blocked.add(result.nodeId);
     }
-
-    const finished = await Promise.race(running.values());
-    running.delete(finished.nodeId);
-    settle(finished);
   }
 
   return results;

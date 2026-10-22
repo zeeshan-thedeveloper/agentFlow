@@ -1,15 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { FlowNode, FlowEdge, RunMode, RunState, RunPhasesMap, LibraryNodeType, PersistedWorkflow, ToolCallRecord } from './types';
+import type { FlowNode, FlowEdge, RunPlan, RunState, RunPhasesMap, LibraryNodeType, PersistedWorkflow, ToolCallRecord } from './types';
 import { NODE_TYPES } from './constants';
 import TopBar from './TopBar';
 import NodeLibrary from './NodeLibrary';
 import CanvasBoard from './CanvasBoard';
 import ConfigPanel from './ConfigPanel';
 import RunOrderBar from './RunOrderBar';
-import { orderNodesForRun } from './runOrder';
-import { DEFAULT_EDGES, DEFAULT_NODES, DEFAULT_RUN_MODE, DEFAULT_WORKFLOW_NAME } from './defaultWorkflow';
+import { resolveRunPlan, savedRunPlan } from './runOrder';
+import { DEFAULT_CANVAS_JSON, DEFAULT_EDGES, DEFAULT_NODES, DEFAULT_WORKFLOW_NAME } from './defaultWorkflow';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -68,12 +68,12 @@ function formatRunOutput(output: unknown): string | undefined {
   return JSON.stringify(output, null, 2);
 }
 
-function buildProgressPhases(nodeIds: string[], runningIndex: number): RunPhasesMap {
+function buildProgressPhases(plan: RunPlan, runningStep: number): RunPhasesMap {
   return Object.fromEntries(
-    nodeIds.map((nodeId, index) => [
+    plan.flatMap((step, index) => step.map(nodeId => [
       nodeId,
-      index < runningIndex ? 'done' : index === runningIndex ? 'running' : 'queued',
-    ]),
+      index < runningStep ? 'done' : index === runningStep ? 'running' : 'queued',
+    ])),
   ) as RunPhasesMap;
 }
 
@@ -97,11 +97,10 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   const [nodeToolCalls, setNodeToolCalls] = useState<Record<string, ToolCallRecord[]>>({});
   const [nodes, setNodes] = useState<FlowNode[]>(DEFAULT_NODES);
   const [edges, setEdges] = useState<FlowEdge[]>(DEFAULT_EDGES);
-  const [runMode, setRunMode] = useState<RunMode>(DEFAULT_RUN_MODE);
-  const [runOrder, setRunOrder] = useState<string[]>([]);
+  const [runOrder, setRunOrder] = useState<RunPlan>(() => savedRunPlan(DEFAULT_CANVAS_JSON));
 
   const selNode = nodes.find(n => n.id === selected) ?? null;
-  const orderedNodes = useMemo(() => orderNodesForRun(nodes, edges, runOrder), [nodes, edges, runOrder]);
+  const runPlan = useMemo(() => resolveRunPlan(nodes, edges, runOrder), [nodes, edges, runOrder]);
 
   const runOutputs = useMemo(() => {
     const outputs: Record<string, string> = {};
@@ -127,8 +126,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         setName(workflow.name);
         setNodes(workflow.canvasJson.nodes);
         setEdges(workflow.canvasJson.edges);
-        setRunMode(workflow.canvasJson.runMode ?? 'sequential');
-        setRunOrder(workflow.canvasJson.runOrder ?? []);
+        setRunOrder(savedRunPlan(workflow.canvasJson));
       } catch {
         if (!cancelled) setSaveState('error');
       }
@@ -148,7 +146,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
       body: JSON.stringify({
         id: workflowId,
         name,
-        canvasJson: { nodes, edges, runMode, runOrder },
+        canvasJson: { nodes, edges, runOrder: runPlan },
       }),
     });
 
@@ -169,13 +167,13 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   }
 
   async function handleRun() {
-    const executionNodeIds = orderedNodes.map(node => node.id);
+    const executionNodeIds = runPlan.flat();
     let progressTimer: ReturnType<typeof setInterval> | undefined;
-    let progressIndex = 0;
+    let progressStep = 0;
 
     console.info('[AgentFlow] Run clicked', {
       workflowId,
-      executionNodeIds,
+      runPlan,
       nodes: nodes.map(node => ({
         id: node.id,
         type: node.type,
@@ -186,16 +184,16 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
 
     setRunState('running');
     setRunError(null);
-    setRunPhases(executionNodeIds.length > 0 ? buildProgressPhases(executionNodeIds, 0) : {});
+    setRunPhases(buildProgressPhases(runPlan, 0));
     setNodeOutputs({});
     setNodeToolCalls({});
     setSaveState('saving');
 
     try {
-      if (executionNodeIds.length > 1) {
+      if (runPlan.length > 1) {
         progressTimer = setInterval(() => {
-          progressIndex = Math.min(progressIndex + 1, executionNodeIds.length - 1);
-          setRunPhases(buildProgressPhases(executionNodeIds, progressIndex));
+          progressStep = Math.min(progressStep + 1, runPlan.length - 1);
+          setRunPhases(buildProgressPhases(runPlan, progressStep));
         }, 900);
       }
 
@@ -314,12 +312,12 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
       setRunState('error');
       setRunError(message);
       setRunPhases(previous => {
-        const fallbackNodeId = executionNodeIds[progressIndex] ?? executionNodeIds[0];
-        if (!fallbackNodeId) return previous;
+        const fallbackStep = runPlan[progressStep] ?? runPlan[0];
+        if (!fallbackStep) return previous;
 
         return {
           ...previous,
-          [fallbackNodeId]: 'failed',
+          ...Object.fromEntries(fallbackStep.map(nodeId => [nodeId, 'failed'])),
         };
       });
       setTimeout(() => {
@@ -397,8 +395,6 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         setName={setName}
         runState={runState}
         onRun={handleRun}
-        runMode={runMode}
-        onRunModeChange={setRunMode}
         saveState={saveState}
         onSave={handleSave}
         user={user}
@@ -422,14 +418,13 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
           />
 
           <RunOrderBar
-            orderedNodes={orderedNodes}
+            plan={runPlan}
             nodes={nodes}
             edges={edges}
-            runMode={runMode}
             runPhases={runPhases}
             selected={selected}
             onSelect={setSelected}
-            onReorder={setRunOrder}
+            onChange={setRunOrder}
             disabled={runState === 'running'}
           />
 

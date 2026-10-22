@@ -56,16 +56,16 @@ export interface FlowEdge {
   kind?: EdgeKind;
 }
 
-/** 'parallel' starts every ready node at once; 'sequential' runs one node at a time. */
-export type RunMode = 'parallel' | 'sequential';
+/** Steps that run left to right; the node ids in one step run at the same time. */
+export type RunPlan = string[][];
 
 export interface WorkflowCanvasJson {
   nodes: FlowNode[];
   edges: FlowEdge[];
-  /** Missing on workflows saved before run modes existed; those run sequentially. */
-  runMode?: RunMode;
-  /** Node ids in the order picked in the run order bar; breaks ties between nodes free to run at once. */
-  runOrder?: string[];
+  /** The run plan set in the run order bar. Older saves may hold a flat list of ids. */
+  runOrder?: RunPlan | string[];
+  /** Only on workflows saved before run plans existed; read to pick their starting plan. */
+  runMode?: 'parallel' | 'sequential';
 }
 
 export interface PersistedWorkflow {

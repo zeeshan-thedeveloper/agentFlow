@@ -43,6 +43,14 @@ function isWorkflowCanvasJson(value: unknown): value is WorkflowCanvasJson {
   );
 }
 
+function normalizeRunOrder(runOrder: unknown[]): WorkflowCanvasJson['runOrder'] {
+  if (runOrder.every(id => typeof id === 'string')) return runOrder as string[];
+  return runOrder
+    .filter(Array.isArray)
+    .map(step => step.filter((id: unknown): id is string => typeof id === 'string'))
+    .filter(step => step.length > 0);
+}
+
 function normalizeCanvasJson(value: unknown): WorkflowCanvasJson {
   if (!isWorkflowCanvasJson(value)) return DEFAULT_CANVAS_JSON;
 
@@ -50,7 +58,7 @@ function normalizeCanvasJson(value: unknown): WorkflowCanvasJson {
     nodes: value.nodes,
     edges: normalizeEdges(value.edges),
     ...(value.runMode === 'parallel' || value.runMode === 'sequential' ? { runMode: value.runMode } : {}),
-    ...(Array.isArray(value.runOrder) ? { runOrder: value.runOrder.filter(id => typeof id === 'string') } : {}),
+    ...(Array.isArray(value.runOrder) ? { runOrder: normalizeRunOrder(value.runOrder) } : {}),
   };
 }
 
