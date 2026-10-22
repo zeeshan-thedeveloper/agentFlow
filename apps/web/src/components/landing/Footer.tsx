@@ -46,8 +46,8 @@ export function Footer() {
         <div className="landing-footer-divider l-text-faint mt-12 flex flex-col justify-between gap-4 pt-6 text-sm sm:flex-row">
           <span>© 2026 AgentFlow. All rights reserved.</span>
           <div className="flex gap-5">
-            <a href="#" className="landing-nav-link">Privacy</a>
-            <a href="#" className="landing-nav-link">Terms</a>
+            <a href="/privacy" className="landing-nav-link">Privacy</a>
+            <a href="/terms" className="landing-nav-link">Terms</a>
           </div>
         </div>
       </div>
