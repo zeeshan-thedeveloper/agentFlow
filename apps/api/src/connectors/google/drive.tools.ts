@@ -1,5 +1,5 @@
 import type { Tool } from '../../handlers/tools/base.tool';
-import { googleError, type GoogleSession } from './google.client';
+import { DRIVE_READ_SCOPE, googleError, type GoogleSession } from './google.client';
 
 const API = 'https://www.googleapis.com/drive/v3/files';
 const MAX_SEARCH_RESULTS = 20;
@@ -22,6 +22,12 @@ function literal(value: string): string {
 }
 
 export function createDriveTools(session: GoogleSession): Tool[] {
+  if (!session.hasScope(DRIVE_READ_SCOPE)) {
+    throw new Error(
+      'Reading Google Drive isn\'t enabled for this Google connection. Reconnect Google with "Also let agents read email and Drive" ticked (test users only for now).',
+    );
+  }
+
   const search: Tool = {
     definition: {
       name: 'drive_search',

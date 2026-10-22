@@ -3,7 +3,7 @@ import { randomBytes } from 'crypto';
 import { requireUserId, type AuthenticatedRequest } from '../integrations/integrations.controller';
 import { CONNECTOR_PROVIDERS, ConnectorStore, type ConnectorProvider } from './connector.store';
 import { githubIdentity } from './github/github.client';
-import { GOOGLE_CHAT_SCOPES, exchangeGoogleCode, googleAuthUrl, revokeGoogleToken } from './google/google.client';
+import { GOOGLE_READ_SCOPES, exchangeGoogleCode, googleAuthUrl, revokeGoogleToken } from './google/google.client';
 import { slackIdentity } from './slack/slack.client';
 import { telegramApi } from './telegram/telegram.client';
 
@@ -38,7 +38,7 @@ export class ConnectorsController {
             // Used to show the Slack events URL; Telegram's webhook is set up automatically.
             id: connector.id,
             ...(provider === 'google'
-              ? { chat: GOOGLE_CHAT_SCOPES.every(scope => (connector.data as { scopes: string[] }).scopes.includes(scope)) }
+              ? { read: GOOGLE_READ_SCOPES.every(scope => (connector.data as { scopes: string[] }).scopes.includes(scope)) }
               : {}),
           }
         : { connected: false };
@@ -50,11 +50,11 @@ export class ConnectorsController {
   googleAuthUrl(
     @Query('redirectUri') redirectUri: string,
     @Query('state') state: string,
-    @Query('chat') chat: string,
+    @Query('read') read: string,
     @Req() req: AuthenticatedRequest,
   ) {
     requireUserId(req);
-    return { url: googleAuthUrl(requireString(redirectUri, 'redirectUri'), requireString(state, 'state'), chat === '1') };
+    return { url: googleAuthUrl(requireString(redirectUri, 'redirectUri'), requireString(state, 'state'), read === '1') };
   }
 
   @Post('google')

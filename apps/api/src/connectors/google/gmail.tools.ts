@@ -1,5 +1,5 @@
 import type { Tool } from '../../handlers/tools/base.tool';
-import { googleError, type GoogleSession } from './google.client';
+import { GMAIL_READ_SCOPE, GMAIL_SEND_SCOPE, googleError, type GoogleSession } from './google.client';
 
 const API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const MAX_SEARCH_RESULTS = 20;
@@ -197,5 +197,8 @@ export function createGmailTools(session: GoogleSession, allowSend: boolean): To
     },
   };
 
-  return allowSend ? [search, read, send] : [search, read];
+  // Each tool needs both the node's setting and the Google permission behind it.
+  const canRead = session.hasScope(GMAIL_READ_SCOPE);
+  const canSend = allowSend && session.hasScope(GMAIL_SEND_SCOPE);
+  return [...(canRead ? [search, read] : []), ...(canSend ? [send] : [])];
 }

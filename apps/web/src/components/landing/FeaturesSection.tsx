@@ -11,7 +11,7 @@ const features = [
   },
   {
     title: 'Your apps as tools',
-    description: 'Give agents Gmail, Google Drive, Google Chat, Slack, Telegram and GitHub. Read-only by default; sending and changes are opt-in for each node.',
+    description: 'Give agents Gmail, Google Drive, Slack, Telegram and GitHub. Sending email and making changes are off until you allow them on a node.',
     icon: 'M8 7h8v4H8zM5 15h14M7 19h10',
   },
   {

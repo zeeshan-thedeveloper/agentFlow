@@ -7,7 +7,7 @@ import { STATE_COOKIE, canvasUrl, googleRedirectUri } from '../oauth';
 
 export const dynamic = 'force-dynamic';
 
-// Sends the user to Google's consent screen. ?chat=1 also asks for Google Chat access.
+// Sends the user to Google's consent screen. ?read=1 also asks to read email and Drive.
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const params = new URLSearchParams({
     redirectUri: googleRedirectUri(req),
     state,
-    chat: req.nextUrl.searchParams.get('chat') === '1' ? '1' : '0',
+    read: req.nextUrl.searchParams.get('read') === '1' ? '1' : '0',
   });
   const upstream = await fetch(new URL(`/connectors/google/auth-url?${params}`, API_BASE), {
     headers: internalApiHeaders(userId),

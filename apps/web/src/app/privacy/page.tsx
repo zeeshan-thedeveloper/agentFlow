@@ -35,7 +35,7 @@ export default function PrivacyPage() {
         <p><strong>API keys.</strong> Keys you add for AI and search providers (for example OpenAI and Tavily). They are encrypted before they are stored and are only decrypted to make requests you started.</p>
         <p><strong>Connected apps.</strong> When you connect an app we store what is needed to act for you there, encrypted:</p>
         <ul>
-          <li>Google (Gmail, Google Drive, Google Chat): OAuth access and refresh tokens, the account&apos;s email address and the permissions you granted.</li>
+          <li>Google (Gmail, Google Drive): OAuth access and refresh tokens, the account&apos;s email address and the permissions you granted.</li>
           <li>Slack: your bot token, signing secret and workspace name.</li>
           <li>Telegram: your bot token and the bot&apos;s username.</li>
           <li>GitHub: your personal access token and GitHub username.</li>
@@ -49,9 +49,13 @@ export default function PrivacyPage() {
       <LegalSection id="google-user-data" title="Google user data">
         <p>If you connect a Google account, AgentFlow asks only for the permissions its features need:</p>
         <ul>
-          <li><strong>Gmail</strong> (read, and send): an agent you wired to a Gmail node can search and read your messages to do the task in its prompt. It can send email only if you turned on &ldquo;Allow sending email&rdquo; for that node; this is off by default.</li>
-          <li><strong>Google Drive</strong> (read-only): an agent can search your files and read the text of Docs, Sheets, Slides and text files. It cannot change or delete files.</li>
-          <li><strong>Google Chat</strong> (read-only, optional): an agent can list your spaces and read messages in them. It cannot post, edit or delete.</li>
+          <li><strong>Sign-in</strong> (your name, email address and profile picture): to create your account and show who is signed in.</li>
+          <li><strong>Gmail: send email</strong>: an agent you wired to a Gmail node can send a plain-text email from your account, only if you turned on &ldquo;Allow sending email&rdquo; for that node. This is off by default, and this permission does not let AgentFlow read your mailbox.</li>
+        </ul>
+        <p>When connecting, you can also choose to let agents read email and Drive files. This optional access is available only to the app&apos;s test users while Google reviews it:</p>
+        <ul>
+          <li><strong>Gmail: read</strong>: an agent wired to a Gmail node can search and read your messages to do the task in its prompt.</li>
+          <li><strong>Google Drive: read-only</strong>: an agent wired to a Drive node can search your files and read the text of Docs, Sheets, Slides and text files. It cannot change or delete files.</li>
         </ul>
         <p>Google data is accessed only while a workflow you built is running, and only by the agents you connected to that Google app. It is shown back only to you, in your run results and run history, or sent where your workflow sends it (for example, a reply in your own Slack). To carry out the task, the content an agent reads is sent to the AI provider configured on that agent (OpenAI, using your own API key), under that provider&apos;s API terms.</p>
         <p>We do not use Google user data to serve advertising, we do not sell it, we do not use it to develop, improve or train generalized AI or machine-learning models, and people do not read it unless you ask us to for support, it is needed for security, or the law requires it.</p>
@@ -63,7 +67,7 @@ export default function PrivacyPage() {
           , including the Limited Use requirements.
         </p>
         <p>
-          You can disconnect Google from any Gmail, Drive or Chat node&apos;s settings, which deletes the stored tokens and asks Google to revoke them. You can also remove AgentFlow at{' '}
+          You can disconnect Google from any Gmail or Drive node&apos;s settings, which deletes the stored tokens and asks Google to revoke them. You can also remove AgentFlow at{' '}
           <a href="https://myaccount.google.com/permissions" className="l-link" target="_blank" rel="noreferrer">myaccount.google.com/permissions</a>.
         </p>
       </LegalSection>
