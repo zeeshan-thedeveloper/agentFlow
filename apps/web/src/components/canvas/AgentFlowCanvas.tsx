@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useWorkflowRuns, type RunResult, type WorkflowRun } from '@/hooks/useWorkflowRuns';
 import type { FlowNode, FlowEdge, RunPlan, RunState, RunPhasesMap, LibraryNodeType, PersistedWorkflow, ToolCallRecord } from './types';
 import { NODE_TYPES, isConnectorKind } from './constants';
 import TopBar from './TopBar';
 import NodeLibrary from './NodeLibrary';
 import CanvasBoard from './CanvasBoard';
 import ConfigPanel from './ConfigPanel';
+import RunHistoryPanel from './RunHistoryPanel';
 import RunOrderBar from './RunOrderBar';
 import { resolveRunPlan, savedRunPlan } from './runOrder';
 import { DEFAULT_CANVAS_JSON, DEFAULT_EDGES, DEFAULT_NODES, DEFAULT_WORKFLOW_NAME } from './defaultWorkflow';
@@ -57,6 +59,34 @@ function getErrorMessage(value: unknown, fallback: string) {
   return fallback;
 }
 
+/** Canvas phases for a run in progress on the server; skipped nodes go back to idle. */
+function livePhasesMap(live: NonNullable<WorkflowRun['livePhases']>): RunPhasesMap {
+  return Object.fromEntries(Object.entries(live).filter(([, phase]) => phase !== 'skipped')) as RunPhasesMap;
+}
+
+function resultPhases(results: RunResult[] | null): RunPhasesMap {
+  return Object.fromEntries(
+    (results ?? [])
+      .filter(result => result.status !== 'SKIPPED')
+      .map(result => [result.nodeId, result.status === 'FAILED' ? 'failed' : 'done']),
+  ) as RunPhasesMap;
+}
+
+function resultOutputs(results: RunResult[] | null) {
+  const shown = (results ?? []).filter(result => result.status !== 'SKIPPED');
+  return {
+    outputs: Object.fromEntries(shown.map(result => [result.nodeId, result.output])),
+    toolCalls: Object.fromEntries(shown.filter(result => result.toolCalls?.length).map(result => [result.nodeId, result.toolCalls!])),
+  };
+}
+
+function describeChatRun(run: WorkflowRun): { source: string; quote: string } {
+  const trigger = run.trigger;
+  const source = trigger?.source === 'telegram' ? 'Telegram' : 'Slack';
+  const text = trigger && 'text' in trigger ? trigger.text ?? '' : '';
+  return { source, quote: text ? ` “${text.length > 80 ? `${text.slice(0, 80)}…` : text}”` : '' };
+}
+
 function formatRunOutput(output: unknown): string | undefined {
   if (output == null) return undefined;
   if (typeof output === 'string') return output.trim() || undefined;
@@ -99,6 +129,15 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   const [edges, setEdges] = useState<FlowEdge[]>(DEFAULT_EDGES);
   // Outcome of connecting an app through a redirect (Google), read from the URL on return.
   const [connectNotice, setConnectNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const { runs, refresh: refreshRuns } = useWorkflowRuns(workflowId);
+  // A run started from Slack or Telegram that the canvas is animating.
+  const [watchedRunId, setWatchedRunId] = useState<string | null>(null);
+  const [chatNotice, setChatNotice] = useState<{ tone: 'live' | 'ok' | 'error'; text: string } | null>(null);
+  const seenRunIds = useRef<Set<string> | null>(null);
+  const runStateRef = useRef(runState);
+  runStateRef.current = runState;
+  const watchClearTimer = useRef<ReturnType<typeof setTimeout>>();
   const [runOrder, setRunOrder] = useState<RunPlan>(() => savedRunPlan(DEFAULT_CANVAS_JSON));
 
   const selNode = nodes.find(n => n.id === selected) ?? null;
@@ -112,6 +151,68 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     }
     return outputs;
   }, [nodeOutputs]);
+
+  // Notice runs that a Slack or Telegram message started since the page loaded.
+  useEffect(() => {
+    if (!runs) return;
+    if (!seenRunIds.current) {
+      // Runs from before the page loaded are history, not news.
+      seenRunIds.current = new Set(runs.map(run => run.id));
+      return;
+    }
+    const seen = seenRunIds.current;
+    for (const run of [...runs].reverse()) {
+      if (seen.has(run.id)) continue;
+      seen.add(run.id);
+      const fromChat = run.trigger?.source === 'slack' || run.trigger?.source === 'telegram';
+      // A run started with the Run button animates itself.
+      if (fromChat && runStateRef.current !== 'running') setWatchedRunId(run.id);
+    }
+  }, [runs]);
+
+  // Follow the watched run: light nodes up as the server reports them, then show the results.
+  useEffect(() => {
+    const run = watchedRunId ? runs?.find(item => item.id === watchedRunId) : undefined;
+    if (!run) return;
+    const { source, quote } = describeChatRun(run);
+    clearTimeout(watchClearTimer.current);
+
+    if (run.livePhases) {
+      setRunPhases(livePhasesMap(run.livePhases));
+      setChatNotice({ tone: 'live', text: `${source} message${quote} is running…` });
+      return;
+    }
+
+    const { outputs, toolCalls } = resultOutputs(run.results);
+    setRunPhases(resultPhases(run.results));
+    setNodeOutputs(outputs);
+    setNodeToolCalls(toolCalls);
+    setChatNotice(
+      run.status === 'COMPLETED'
+        ? { tone: 'ok', text: `${source} message${quote} handled.` }
+        : { tone: 'error', text: `${source} message${quote} failed${run.summary ? `: ${run.summary}` : '.'} Open History for details.` },
+    );
+    setWatchedRunId(null);
+    watchClearTimer.current = setTimeout(() => {
+      setRunPhases({});
+      setChatNotice(null);
+    }, 6000);
+  }, [watchedRunId, runs]);
+
+  useEffect(() => () => clearTimeout(watchClearTimer.current), []);
+
+  // The history panel and the node settings share the right side.
+  useEffect(() => {
+    if (selected) setHistoryOpen(false);
+  }, [selected]);
+
+  function showRunOnCanvas(run: WorkflowRun) {
+    clearTimeout(watchClearTimer.current);
+    const { outputs, toolCalls } = resultOutputs(run.results);
+    setRunPhases(resultPhases(run.results));
+    setNodeOutputs(outputs);
+    setNodeToolCalls(toolCalls);
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -195,6 +296,9 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
 
     setRunState('running');
     setRunError(null);
+    setWatchedRunId(null);
+    setChatNotice(null);
+    clearTimeout(watchClearTimer.current);
     setRunPhases(buildProgressPhases(runPlan, 0));
     setNodeOutputs({});
     setNodeToolCalls({});
@@ -318,6 +422,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
       }
 
       setTimeout(() => setRunState(hasFailure ? 'error' : 'success'), total);
+      void refreshRuns();
       setTimeout(() => {
         setRunState('idle');
         setRunPhases({});
@@ -430,6 +535,12 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         onRun={handleRun}
         saveState={saveState}
         onSave={handleSave}
+        historyOpen={historyOpen}
+        onToggleHistory={() => {
+          setHistoryOpen(open => !open);
+          setSelected(null);
+        }}
+        liveRun={Boolean(runs?.some(run => run.livePhases && run.trigger?.source !== 'manual'))}
         user={user}
       />
 
@@ -460,6 +571,39 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             onChange={setRunOrder}
             disabled={runState === 'running'}
           />
+
+          {chatNotice && !connectNotice && !runError && (
+            <div
+              role="status"
+              style={{
+                position: 'absolute', left: 18, right: 18, top: 14, zIndex: 50,
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8,
+                border: `1px solid ${chatNotice.tone === 'error' ? 'rgba(239,68,68,0.42)' : chatNotice.tone === 'ok' ? 'rgba(34,197,94,0.42)' : 'rgba(108,99,255,0.42)'}`,
+                background: `color-mix(in srgb, var(--panel-bg) 92%, ${chatNotice.tone === 'error' ? '#ef4444' : chatNotice.tone === 'ok' ? '#22c55e' : '#6c63ff'})`,
+                boxShadow: '0 14px 36px var(--shadow-soft)', fontSize: 12, color: 'var(--text-secondary)',
+              }}
+            >
+              {chatNotice.tone === 'live' && (
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--brand)', animation: 'pulseGlow 1s infinite', flexShrink: 0 }} />
+              )}
+              <span style={{ flex: 1 }}>{chatNotice.text}</span>
+              <button
+                type="button"
+                onClick={() => setHistoryOpen(true)}
+                style={{ border: 'none', background: 'transparent', color: 'var(--brand-text)', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' }}
+              >
+                History
+              </button>
+              <button
+                type="button"
+                title="Dismiss"
+                onClick={() => setChatNotice(null)}
+                style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13 }}
+              >
+                x
+              </button>
+            </div>
+          )}
 
           {connectNotice && !runError && (
             <div
@@ -547,7 +691,16 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
           )}
         </div>
 
-        {selNode && (
+        {historyOpen && (
+          <RunHistoryPanel
+            runs={runs}
+            nodes={nodes}
+            onClose={() => setHistoryOpen(false)}
+            onShowRun={showRunOnCanvas}
+          />
+        )}
+
+        {!historyOpen && selNode && (
           <ConfigPanel
             node={selNode}
             nodes={nodes}

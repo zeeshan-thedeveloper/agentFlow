@@ -175,6 +175,10 @@ model AgentRun {
   startedAt   DateTime  @default(now())
   completedAt DateTime?
   summary     String?
+  /// What started the run: { source: 'manual' | 'slack' | 'telegram', from?, text?, channel? }.
+  trigger     Json?
+  /// Each node's outcome, in run order: { nodeId, status, wave, output, toolCalls? }[].
+  results     Json?
 
   workflow Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   steps    AgentStep[]

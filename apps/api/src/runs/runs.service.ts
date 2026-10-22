@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
-import { executeWorkflow, StepResult } from './executor';
+import { executeWorkflow, StepResult, type RunProgress } from './executor';
 import type { TriggerEvent } from '../connectors/trigger-event';
 
 type RunWorkflowInput = {
@@ -9,10 +9,43 @@ type RunWorkflowInput = {
   triggerEvent?: TriggerEvent;
 };
 
+/** A node's state while its run is in progress. */
+export type LivePhase = 'queued' | 'running' | 'done' | 'failed' | 'skipped';
+
+/** What started a run, as shown in the run history. */
+type RunTrigger =
+  | { source: 'manual'; text?: string }
+  | { source: 'slack'; from: string; channel: string; text: string }
+  | { source: 'telegram'; from: string; chatId: number; text: string };
+
+const MAX_SAVED_OUTPUT_CHARS = 4000;
+const MAX_LISTED_RUNS = 50;
+
+function describeTrigger(body: RunWorkflowInput): RunTrigger {
+  const event = body.triggerEvent;
+  if (event?.source === 'slack') return { source: 'slack', from: event.user, channel: event.channel, text: event.text };
+  if (event?.source === 'telegram') return { source: 'telegram', from: event.from, chatId: event.chatId, text: event.text };
+  return { source: 'manual', ...(typeof body.input === 'string' && body.input ? { text: body.input } : {}) };
+}
+
+/** A step result small enough to keep in the run history. */
+function savedResult(result: StepResult) {
+  const output = typeof result.output === 'string' ? result.output : JSON.stringify(result.output ?? null);
+  return {
+    nodeId: result.nodeId,
+    status: result.status,
+    wave: result.wave,
+    output: output.length > MAX_SAVED_OUTPUT_CHARS ? `${output.slice(0, MAX_SAVED_OUTPUT_CHARS)}...` : output,
+    ...(result.toolCalls ? { toolCalls: result.toolCalls } : {}),
+  };
+}
+
 @Injectable()
 export class RunsService implements OnModuleDestroy {
   private readonly logger = new Logger(RunsService.name);
   private readonly prisma = new PrismaClient();
+  /** Node phases of runs in progress in this process, by run id; the canvas polls them to animate. */
+  private readonly live = new Map<string, Record<string, LivePhase>>();
 
   async onModuleDestroy(): Promise<void> {
     await this.prisma.$disconnect();
@@ -44,8 +77,21 @@ export class RunsService implements OnModuleDestroy {
       data: {
         workflowId: workflow.id,
         status: 'PENDING',
+        trigger: describeTrigger(body) as Prisma.InputJsonValue,
       },
     });
+
+    const nodeIds = [...this.getNodeTypeMap(workflow.canvasJson).keys()];
+    const phases: Record<string, LivePhase> = Object.fromEntries(nodeIds.map(id => [id, 'queued' as const]));
+    this.live.set(run.id, phases);
+    const onProgress = (event: RunProgress) => {
+      if (event.type === 'step') {
+        for (const id of event.nodeIds) phases[id] = 'running';
+      } else {
+        const { nodeId, status } = event.result;
+        phases[nodeId] = status === 'COMPLETED' ? 'done' : status === 'FAILED' ? 'failed' : 'skipped';
+      }
+    };
 
     try {
       await this.prisma.agentRun.update({
@@ -64,6 +110,7 @@ export class RunsService implements OnModuleDestroy {
         userId: workflow.userId,
         initialInput: body.input,
         triggerEvent: body.triggerEvent,
+        onProgress,
       });
 
       await this.createStepRecords(run.id, workflow.canvasJson, stepResults);
@@ -79,6 +126,7 @@ export class RunsService implements OnModuleDestroy {
         data: {
           status: hasFailure ? 'FAILED' : 'COMPLETED',
           completedAt: new Date(),
+          results: stepResults.map(savedResult) as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -102,7 +150,36 @@ export class RunsService implements OnModuleDestroy {
       });
 
       throw error;
+    } finally {
+      this.live.delete(run.id);
     }
+  }
+
+  /** The workflow's most recent runs, newest first, with live node phases for runs still going. */
+  async listRuns(workflowId: string, requesterId: string, limit = 20) {
+    const workflow = await this.prisma.workflow.findUnique({ where: { id: workflowId }, select: { userId: true } });
+    if (!workflow || workflow.userId !== requesterId) {
+      throw new NotFoundException(`Workflow ${workflowId} not found.`);
+    }
+
+    const runs = await this.prisma.agentRun.findMany({
+      where: { workflowId },
+      orderBy: { startedAt: 'desc' },
+      take: Math.min(Math.max(Math.floor(limit) || 20, 1), MAX_LISTED_RUNS),
+      select: { id: true, status: true, startedAt: true, completedAt: true, summary: true, trigger: true, results: true },
+    });
+
+    return runs.map(run => {
+      const live = this.live.get(run.id);
+      // An unfinished run this process isn't running was cut off, e.g. by a restart.
+      const interrupted = !live && (run.status === 'RUNNING' || run.status === 'PENDING');
+      return {
+        ...run,
+        status: interrupted ? 'FAILED' : run.status,
+        summary: interrupted ? 'Stopped before finishing (the server restarted).' : run.summary,
+        ...(live ? { livePhases: { ...live } } : {}),
+      };
+    });
   }
 
   async findSteps(runId: string, requesterId: string) {

@@ -16,6 +16,10 @@ interface TopBarProps {
   onRun: () => void;
   saveState: SaveState;
   onSave: () => void;
+  historyOpen: boolean;
+  onToggleHistory: () => void;
+  /** A run started from Slack or Telegram is in progress. */
+  liveRun: boolean;
   user: {
     name?: string | null;
     email?: string | null;
@@ -24,7 +28,7 @@ interface TopBarProps {
 }
 
 export default function TopBar({
-  name, setName, runState, onRun, saveState, onSave, user,
+  name, setName, runState, onRun, saveState, onSave, historyOpen, onToggleHistory, liveRun, user,
 }: TopBarProps) {
   const [editingName, setEditingName] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
@@ -152,6 +156,29 @@ export default function TopBar({
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
         >
           {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : saveState === 'error' ? 'Save failed' : 'Save'}
+        </button>
+
+        <button
+          type="button"
+          onClick={onToggleHistory}
+          title="Recent runs, including ones started from Slack or Telegram"
+          style={{
+            position: 'relative',
+            padding: '6px 13px', borderRadius: 7,
+            background: historyOpen ? 'var(--brand-soft)' : 'transparent',
+            border: `1px solid ${historyOpen ? 'rgba(108,99,255,0.4)' : 'var(--border-strong)'}`,
+            color: historyOpen ? 'var(--brand-text)' : 'var(--text-muted)',
+            fontSize: 12, fontWeight: 500, cursor: 'pointer',
+            fontFamily: 'inherit', transition: 'all 0.15s',
+          }}
+        >
+          History
+          {liveRun && (
+            <span style={{
+              position: 'absolute', top: -3, right: -3, width: 8, height: 8, borderRadius: '50%',
+              background: 'var(--brand)', animation: 'pulseGlow 1s infinite',
+            }} />
+          )}
         </button>
 
         <button

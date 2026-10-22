@@ -39,7 +39,13 @@ type ExecutorContext = {
   initialInput?: unknown;
   /** The Slack or Telegram message that started the run, if one did. */
   triggerEvent?: TriggerEvent;
+  /** Told when each step starts and each node finishes, so a run can be watched live. Not passed to handlers. */
+  onProgress?: (event: RunProgress) => void;
 };
+
+export type RunProgress =
+  | { type: 'step'; wave: number; nodeIds: string[] }
+  | { type: 'result'; result: StepResult };
 
 export type StepResult = {
   nodeId: string;
@@ -233,6 +239,14 @@ export async function executeWorkflow(
   assertCanvasJson(canvasJson);
   // Also rejects cycles.
   const plan = buildRunPlan(canvasJson);
+  const { onProgress, ...handlerContext } = context;
+  const report = (event: RunProgress) => {
+    try {
+      onProgress?.(event);
+    } catch {
+      // A watcher's failure never affects the run.
+    }
+  };
   const { edges } = canvasJson;
   const { nodesById, upstream } = buildGraph(canvasJson);
   const results: StepResult[] = [];
@@ -255,7 +269,7 @@ export async function executeWorkflow(
     try {
       if (!handler) throw new Error(`No handler registered for node type: ${node.type}`);
 
-      const params = buildNodeParams(node, context);
+      const params = buildNodeParams(node, handlerContext);
       logger.log(
         `Starting node ${node.id} (${node.type}) wave=${wave} input=${formatLogValue(input)} params=${formatNodeParams(params)}`,
       );
@@ -274,6 +288,7 @@ export async function executeWorkflow(
   }
 
   for (const [wave, step] of plan.entries()) {
+    report({ type: 'step', wave, nodeIds: step });
     const toRun: FlowNode[] = [];
     for (const nodeId of step) {
       const blocker = [...upstream.get(nodeId)!].find(id => blocked.has(id));
@@ -283,16 +298,24 @@ export async function executeWorkflow(
       }
       logger.log(`Skipping node ${nodeId}: upstream node ${blocker} did not complete`);
       blocked.add(nodeId);
-      results.push({
+      const skipped: StepResult = {
         nodeId,
         input: null,
         output: `Skipped because ${blocker} did not complete.`,
         status: 'SKIPPED',
         wave,
-      });
+      };
+      results.push(skipped);
+      report({ type: 'result', result: skipped });
     }
 
-    for (const result of await Promise.all(toRun.map(node => runNode(node, wave)))) {
+    const finished = toRun.map(node =>
+      runNode(node, wave).then(result => {
+        report({ type: 'result', result });
+        return result;
+      }),
+    );
+    for (const result of await Promise.all(finished)) {
       results.push(result);
       if (result.status === 'COMPLETED') stepOutputs.set(result.nodeId, result.output);
       else blocked.add(result.nodeId);
