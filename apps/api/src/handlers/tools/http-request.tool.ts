@@ -1,10 +1,11 @@
+import { safeFetch } from '../../common/network-guard';
 import type { Tool, ToolContext, ToolDefinition } from './base.tool';
 
 export class HttpRequestTool implements Tool {
   definition: ToolDefinition = {
     name: 'http_request',
     description:
-      'Make an HTTP request to any URL and return the response body. Use this to fetch data from external APIs or services.',
+      'Make an HTTP request to a public URL and return the response body. Use this to fetch data from external APIs or services. Private and internal network addresses are not reachable.',
     parameters: {
       type: 'object',
       properties: {
@@ -45,11 +46,10 @@ export class HttpRequestTool implements Tool {
     }
 
     try {
-      const response = await fetch(url, {
+      const response = await safeFetch(url, {
         method,
         headers,
         body: body && method !== 'GET' && method !== 'DELETE' ? body : undefined,
-        signal: AbortSignal.timeout(15_000),
       });
 
       const text = await response.text();

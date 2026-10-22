@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import type { NodeHandler, ToolCallRecord } from '../handlers/base.handler';
 import { registry } from '../handlers/registry';
 import type { TriggerEvent } from '../connectors/trigger-event';
+import { summarizeForLog } from '../common/log-summary';
 import { assembleNodeInput, handlerPayload, isDatabaseConfigNode } from './node-input';
 
 type FlowNode = {
@@ -271,12 +272,12 @@ export async function executeWorkflow(
 
       const params = buildNodeParams(node, handlerContext);
       logger.log(
-        `Starting node ${node.id} (${node.type}) wave=${wave} input=${formatLogValue(input)} params=${formatNodeParams(params)}`,
+        `Starting node ${node.id} (${node.type}) wave=${wave} input=${summarizeForLog(input)} params=${Object.keys(params).join(',')}`,
       );
       const output = await handler.execute(params, input, {
         recordToolCall: call => toolCalls.push(call),
       });
-      logger.log(`Completed node ${node.id} (${node.type}) output=${formatLogValue(output)}`);
+      logger.log(`Completed node ${node.id} (${node.type}) output=${summarizeForLog(output)}`);
 
       return { nodeId: node.id, input, output, status: 'COMPLETED', wave, ...withToolCalls() };
     } catch (error) {
@@ -323,23 +324,4 @@ export async function executeWorkflow(
   }
 
   return results;
-}
-
-function formatNodeParams(params: Record<string, unknown>): string {
-  const { prompt, userId, workflowOwnerId, ...safeParams } = params;
-  return formatLogValue({
-    ...safeParams,
-    hasPrompt: typeof prompt === 'string' && prompt.length > 0,
-    userId: typeof userId === 'string' ? userId : undefined,
-    workflowOwnerId: typeof workflowOwnerId === 'string' ? workflowOwnerId : undefined,
-  });
-}
-
-function formatLogValue(value: unknown): string {
-  const text = typeof value === 'string' ? value : JSON.stringify(value);
-  if (!text) {
-    return 'undefined';
-  }
-
-  return text.length > 500 ? `${text.slice(0, 500)}...` : text;
 }

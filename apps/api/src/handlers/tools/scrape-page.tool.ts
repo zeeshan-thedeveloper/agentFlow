@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { parse } from 'node-html-parser';
+import { safeFetch } from '../../common/network-guard';
 import type { Tool, ToolContext, ToolDefinition } from './base.tool';
 
 const DEFAULT_MAX_LENGTH = 8000;
@@ -62,11 +63,18 @@ export class ScrapePageTool implements Tool {
     }
 
     const maxLength = clampMaxLength(args.maxLength);
-    this.logger.log(`Starting page scrape: url="${trimmedUrl}" maxLength=${maxLength}`);
+    // Only the host is logged: paths and queries can carry personal data or tokens.
+    const host = (() => {
+      try {
+        return new URL(trimmedUrl).host;
+      } catch {
+        return 'invalid-url';
+      }
+    })();
+    this.logger.log(`Starting page scrape: host=${host} maxLength=${maxLength}`);
 
     try {
-      const response = await fetch(trimmedUrl, {
-        signal: AbortSignal.timeout(15_000),
+      const response = await safeFetch(trimmedUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; AgentFlow/1.0)',
         },
@@ -85,12 +93,12 @@ export class ScrapePageTool implements Tool {
       const text = collapseWhitespace(contentRoot.structuredText || contentRoot.innerText);
 
       if (!text) {
-        this.logger.log(`Completed page scrape: url="${trimmedUrl}" characters=0`);
+        this.logger.log(`Completed page scrape: host=${host} characters=0`);
         return 'No readable text content found on this page.';
       }
 
       const result = truncateText(text, maxLength);
-      this.logger.log(`Completed page scrape: url="${trimmedUrl}" characters=${result.length}`);
+      this.logger.log(`Completed page scrape: host=${host} characters=${result.length}`);
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

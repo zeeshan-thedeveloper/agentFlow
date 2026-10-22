@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { MongoClient } from 'mongodb';
+import { assertPublicDatabase } from '../../../common/network-guard';
 
 const clients = new Map<string, MongoClient>();
 
@@ -10,6 +11,7 @@ function hashUri(uri: string): string {
 export async function getMongoClient(uri: string): Promise<MongoClient> {
   const key = hashUri(uri);
   if (!clients.has(key)) {
+    await assertPublicDatabase(uri);
     const client = new MongoClient(uri, { maxPoolSize: 5, serverSelectionTimeoutMS: 5000 });
     await client.connect();
     clients.set(key, client);

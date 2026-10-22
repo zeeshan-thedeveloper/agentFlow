@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { summarizeForLog } from '../../common/log-summary';
 import { PrismaClient } from '@prisma/client';
 import { createDecipheriv, createHash } from 'crypto';
 import type { Tool, ToolContext, ToolDefinition } from './base.tool';
@@ -188,7 +189,7 @@ export class WebSearchTool implements Tool {
 
     const numResults = clampNumResults(args.numResults);
     this.logger.log(
-      `Starting web search: provider=${providerConfig.provider} query="${query.trim()}" numResults=${numResults}`,
+      `Starting web search: provider=${providerConfig.provider} query=${summarizeForLog(query.trim())} numResults=${numResults}`,
     );
 
     try {
