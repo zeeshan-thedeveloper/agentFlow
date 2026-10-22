@@ -1,4 +1,4 @@
-import { DatabaseIcon, GitBranch, HardDrive, Hash, Mail, MessagesSquare, Send } from 'lucide-react';
+import { DatabaseIcon, GitBranch, HardDrive, Hash, Mail, Send } from 'lucide-react';
 import type { ConnectorKind, ConnectorProvider, FlowNode, LibraryNodeType, NodeTypeConfig } from './types';
 
 export const NW = 200;
@@ -128,15 +128,14 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
       category: 'integrations',
     },
   },
-  gmail: connectorType('Gmail', '#EA4335', <Mail size={16} strokeWidth={1.8} />, 'Let an Agent search, read and send email'),
+  gmail: connectorType('Gmail', '#EA4335', <Mail size={16} strokeWidth={1.8} />, 'Let an Agent send email for you'),
   drive: connectorType('Google Drive', '#1A73E8', <HardDrive size={16} strokeWidth={1.8} />, 'Let an Agent search and read your files'),
-  gchat: connectorType('Google Chat', '#00AC47', <MessagesSquare size={16} strokeWidth={1.8} />, 'Let an Agent read your Chat spaces'),
   slack: connectorType('Slack', '#E01E5A', <Hash size={16} strokeWidth={1.8} />, 'Let an Agent read and post in Slack'),
   telegram: connectorType('Telegram', '#229ED9', <Send size={16} strokeWidth={1.8} />, 'Let an Agent message people on Telegram'),
   github: connectorType('GitHub', '#8B5CF6', <GitBranch size={16} strokeWidth={1.8} />, 'Let an Agent work with your repos'),
 };
 
-export const CONNECTOR_KINDS: ConnectorKind[] = ['gmail', 'drive', 'gchat', 'slack', 'telegram', 'github'];
+export const CONNECTOR_KINDS: ConnectorKind[] = ['gmail', 'drive', 'slack', 'telegram', 'github'];
 
 export function isConnectorKind(value: unknown): value is ConnectorKind {
   return CONNECTOR_KINDS.includes(value as ConnectorKind);
@@ -149,9 +148,15 @@ export const CONNECTOR_INFO: Record<ConnectorKind, {
   /** Label for the opt-in that lets the agent change things, when the app has one. */
   writeLabel?: string;
 }> = {
-  gmail: { provider: 'google', abilities: 'Search and read email.', writeLabel: 'Allow sending email' },
-  drive: { provider: 'google', abilities: 'Search and read Docs, Sheets, Slides and text files. Read-only.' },
-  gchat: { provider: 'google', abilities: 'List Chat spaces and read messages. Read-only; Google Workspace accounts only.' },
+  gmail: {
+    provider: 'google',
+    abilities: 'Sends email from your account when allowed below. Searching and reading email also needs reading turned on for your Google connection (test users only for now).',
+    writeLabel: 'Allow sending email',
+  },
+  drive: {
+    provider: 'google',
+    abilities: 'Search and read Docs, Sheets, Slides and text files. Read-only. Needs reading turned on for your Google connection (test users only for now).',
+  },
   slack: { provider: 'slack', abilities: 'List channels, read channels the bot is in, and post messages.' },
   telegram: { provider: 'telegram', abilities: 'Send messages to chats that have talked to the bot.' },
   github: { provider: 'github', abilities: 'Read repos, issues, pull requests and files.', writeLabel: 'Allow opening issues and commenting' },
@@ -160,7 +165,7 @@ export const CONNECTOR_INFO: Record<ConnectorKind, {
 /** The line under an app node's name: what an agent wired to it may do. */
 export function connectorSubtitle(node: Pick<FlowNode, 'connector' | 'allowWrite'>): string {
   switch (node.connector) {
-    case 'gmail': return node.allowWrite ? 'Read & send email' : 'Read-only';
+    case 'gmail': return node.allowWrite ? 'Can send email' : 'Sending off';
     case 'github': return node.allowWrite ? 'Read, open issues & comment' : 'Read-only';
     case 'slack': return 'Read & post messages';
     case 'telegram': return 'Send messages';

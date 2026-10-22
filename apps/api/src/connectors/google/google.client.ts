@@ -1,21 +1,16 @@
 import type { ConnectorStore, GoogleCredential, StoredConnector } from '../connector.store';
 
-// Gmail, Drive and Google Chat share one Google OAuth connection. Sending mail
-// is asked for up front, but an agent only gets the send tool when its Gmail
-// node allows it. Chat is opt-in: its API only works for Google Workspace
-// accounts, so asking for it would fail for personal Gmail accounts.
-export const GOOGLE_SCOPES = [
-  'openid',
-  'email',
-  'https://www.googleapis.com/auth/gmail.readonly',
-  'https://www.googleapis.com/auth/gmail.send',
-  'https://www.googleapis.com/auth/drive.readonly',
-];
+// Gmail and Drive share one Google OAuth connection. By default it asks only
+// for what Google has reviewed for AgentFlow: sending email, which an agent
+// gets only when its Gmail node allows it. Reading email and Drive uses
+// restricted scopes Google hasn't verified for AgentFlow, so it is a separate
+// opt-in that only works for the project's test users.
+export const GOOGLE_SCOPES = ['openid', 'email', 'https://www.googleapis.com/auth/gmail.send'];
 
-export const GOOGLE_CHAT_SCOPES = [
-  'https://www.googleapis.com/auth/chat.spaces.readonly',
-  'https://www.googleapis.com/auth/chat.messages.readonly',
-];
+export const GMAIL_READ_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+export const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
+export const DRIVE_READ_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+export const GOOGLE_READ_SCOPES = [GMAIL_READ_SCOPE, DRIVE_READ_SCOPE];
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const REFRESH_MARGIN_MS = 60_000;
@@ -29,13 +24,13 @@ function clientConfig() {
   return { clientId, clientSecret };
 }
 
-export function googleAuthUrl(redirectUri: string, state: string, includeChat: boolean): string {
+export function googleAuthUrl(redirectUri: string, state: string, includeRead: boolean): string {
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   url.search = new URLSearchParams({
     client_id: clientConfig().clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: [...GOOGLE_SCOPES, ...(includeChat ? GOOGLE_CHAT_SCOPES : [])].join(' '),
+    scope: [...GOOGLE_SCOPES, ...(includeRead ? GOOGLE_READ_SCOPES : [])].join(' '),
     // offline + consent makes Google return a refresh token every time.
     access_type: 'offline',
     prompt: 'consent',
