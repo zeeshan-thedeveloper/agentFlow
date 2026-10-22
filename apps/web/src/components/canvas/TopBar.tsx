@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { signOut } from 'next-auth/react';
 import ThemeToggle from '@/components/ThemeToggle';
 import KeysSettingsDialog from './KeysSettingsDialog';
-import type { RunState } from './types';
+import type { RunMode, RunState } from './types';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -14,6 +14,8 @@ interface TopBarProps {
   setName: (name: string) => void;
   runState: RunState;
   onRun: () => void;
+  runMode: RunMode;
+  onRunModeChange: (runMode: RunMode) => void;
   saveState: SaveState;
   onSave: () => void;
   user: {
@@ -23,7 +25,9 @@ interface TopBarProps {
   };
 }
 
-export default function TopBar({ name, setName, runState, onRun, saveState, onSave, user }: TopBarProps) {
+export default function TopBar({
+  name, setName, runState, onRun, runMode, onRunModeChange, saveState, onSave, user,
+}: TopBarProps) {
   const [editingName, setEditingName] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -151,6 +155,43 @@ export default function TopBar({ name, setName, runState, onRun, saveState, onSa
         >
           {saveState === 'saving' ? 'Saving' : saveState === 'saved' ? 'Saved' : saveState === 'error' ? 'Save failed' : 'Save'}
         </button>
+
+        <div
+          role="radiogroup"
+          aria-label="Run mode"
+          style={{
+            display: 'flex', padding: 2, borderRadius: 7,
+            border: '1px solid var(--border-strong)',
+          }}
+        >
+          {([
+            { value: 'parallel', label: 'Parallel', hint: 'Nodes that do not depend on each other run at the same time' },
+            { value: 'sequential', label: 'One at a time', hint: 'Nodes run one after another' },
+          ] as const).map(option => {
+            const active = runMode === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                title={option.hint}
+                disabled={runState === 'running'}
+                onClick={() => onRunModeChange(option.value)}
+                style={{
+                  padding: '4px 9px', borderRadius: 5, border: 'none',
+                  background: active ? 'var(--brand-soft)' : 'transparent',
+                  color: active ? 'var(--brand-text)' : 'var(--text-muted)',
+                  fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                  cursor: runState === 'running' ? 'default' : 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
 
         <button
           onClick={onRun}

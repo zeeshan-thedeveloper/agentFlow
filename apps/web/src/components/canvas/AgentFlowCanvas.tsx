@@ -1,21 +1,23 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { FlowNode, FlowEdge, RunState, RunPhasesMap, LibraryNodeType, PersistedWorkflow, ToolCallRecord } from './types';
+import type { FlowNode, FlowEdge, RunMode, RunState, RunPhasesMap, LibraryNodeType, PersistedWorkflow, ToolCallRecord } from './types';
 import { NODE_TYPES } from './constants';
 import TopBar from './TopBar';
 import NodeLibrary from './NodeLibrary';
 import CanvasBoard from './CanvasBoard';
 import ConfigPanel from './ConfigPanel';
-import { DEFAULT_EDGES, DEFAULT_NODES, DEFAULT_WORKFLOW_NAME } from './defaultWorkflow';
+import { DEFAULT_EDGES, DEFAULT_NODES, DEFAULT_RUN_MODE, DEFAULT_WORKFLOW_NAME } from './defaultWorkflow';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 type RunStep = {
   nodeId: string;
-  status: 'COMPLETED' | 'FAILED';
+  status: 'COMPLETED' | 'FAILED' | 'SKIPPED';
   output: unknown;
+  /** Steps sharing a wave ran side by side. */
+  wave?: number;
   toolCalls?: ToolCallRecord[];
 };
 
@@ -132,6 +134,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   const [nodeToolCalls, setNodeToolCalls] = useState<Record<string, ToolCallRecord[]>>({});
   const [nodes, setNodes] = useState<FlowNode[]>(DEFAULT_NODES);
   const [edges, setEdges] = useState<FlowEdge[]>(DEFAULT_EDGES);
+  const [runMode, setRunMode] = useState<RunMode>(DEFAULT_RUN_MODE);
 
   const selNode = nodes.find(n => n.id === selected) ?? null;
 
@@ -159,6 +162,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         setName(workflow.name);
         setNodes(workflow.canvasJson.nodes);
         setEdges(workflow.canvasJson.edges);
+        setRunMode(workflow.canvasJson.runMode ?? 'sequential');
       } catch {
         if (!cancelled) setSaveState('error');
       }
@@ -178,7 +182,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
       body: JSON.stringify({
         id: workflowId,
         name,
-        canvasJson: { nodes, edges },
+        canvasJson: { nodes, edges, runMode },
       }),
     });
 
@@ -274,24 +278,38 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         throw new Error(getErrorMessage(runResult, 'Workflow run failed'));
       }
 
-      const steps = runResult.steps.length > 0
+      const allSteps: RunStep[] = runResult.steps.length > 0
         ? runResult.steps
         : executionNodeIds.map(nodeId => ({ nodeId, status: 'COMPLETED' as const, output: null }));
+      const steps = allSteps.filter(step => step.status !== 'SKIPPED');
+      const skippedIds = allSteps.filter(step => step.status === 'SKIPPED').map(step => step.nodeId);
 
       if (progressTimer) clearInterval(progressTimer);
 
       setRunPhases(Object.fromEntries(executionNodeIds.map(nodeId => [nodeId, 'queued'])) as RunPhasesMap);
 
+      // Replay one wave at a time, so nodes that ran side by side light up together.
+      const waveOrder = [...new Set(steps.map((step, index) => step.wave ?? index))].sort((a, b) => a - b);
+      const slotOf = (step: RunStep, index: number) => waveOrder.indexOf(step.wave ?? index);
+
       steps.forEach((step, index) => {
-        setTimeout(() => setRunPhases(previous => ({ ...previous, [step.nodeId]: 'running' })), index * 320);
+        const slot = slotOf(step, index);
+        setTimeout(() => setRunPhases(previous => ({ ...previous, [step.nodeId]: 'running' })), slot * 320);
         setTimeout(
           () => setRunPhases(previous => ({
             ...previous,
             [step.nodeId]: step.status === 'FAILED' ? 'failed' : 'done',
           })),
-          index * 320 + 240,
+          slot * 320 + 240,
         );
       });
+
+      // Skipped nodes never ran: drop them back to idle instead of leaving them queued.
+      setTimeout(() => setRunPhases(previous => {
+        const next = { ...previous };
+        for (const nodeId of skippedIds) delete next[nodeId];
+        return next;
+      }), waveOrder.length * 320);
 
       const hasFailure =
         runResult.run.status === 'FAILED' || steps.some(step => step.status === 'FAILED');
@@ -302,14 +320,17 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             ? failedStep.output
             : JSON.stringify(failedStep.output, null, 2) ?? 'Node execution failed'
           : getErrorMessage(runResult, 'Workflow run failed');
-      const total = steps.length * 320 + 500;
+      const total = waveOrder.length * 320 + 500;
       setNodeOutputs(Object.fromEntries(steps.map(step => [step.nodeId, step.output])));
       setNodeToolCalls(Object.fromEntries(
         runResult.steps.filter(step => step.toolCalls?.length).map(step => [step.nodeId, step.toolCalls!]),
       ));
 
       if (hasFailure) {
-        setRunError(failedStep ? `${failedStep.nodeId}: ${failureMessage}` : failureMessage);
+        const skippedNote = skippedIds.length > 0
+          ? ` (${skippedIds.length} downstream node${skippedIds.length === 1 ? '' : 's'} skipped)`
+          : '';
+        setRunError(failedStep ? `${failedStep.nodeId}: ${failureMessage}${skippedNote}` : failureMessage);
         if (failedStep) setSelected(failedStep.nodeId);
       }
 
@@ -410,6 +431,8 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         setName={setName}
         runState={runState}
         onRun={handleRun}
+        runMode={runMode}
+        onRunModeChange={setRunMode}
         saveState={saveState}
         onSave={handleSave}
         user={user}

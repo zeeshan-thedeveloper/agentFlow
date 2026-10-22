@@ -47,14 +47,23 @@ export interface FlowNode {
   actionParams?: Record<string, unknown>;
 }
 
+/** 'data' (the default) runs the target after the source and passes its output; 'wait' only orders them. */
+export type EdgeKind = 'data' | 'wait';
+
 export interface FlowEdge {
   from: string;
   to: string;
+  kind?: EdgeKind;
 }
+
+/** 'parallel' starts every ready node at once; 'sequential' runs one node at a time. */
+export type RunMode = 'parallel' | 'sequential';
 
 export interface WorkflowCanvasJson {
   nodes: FlowNode[];
   edges: FlowEdge[];
+  /** Missing on workflows saved before run modes existed; those run sequentially. */
+  runMode?: RunMode;
 }
 
 export interface PersistedWorkflow {
