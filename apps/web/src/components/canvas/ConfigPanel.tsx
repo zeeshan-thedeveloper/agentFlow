@@ -26,6 +26,13 @@ const CHAT_TRIGGERS: Record<string, 'slack' | 'telegram'> = {
 };
 
 export const REPLY_IN_CHAT = 'Reply in chat';
+export const EMAIL_NOTIFICATION = 'Send email notification';
+
+const OUTPUT_SUBTITLES: Record<string, string> = {
+  'Return output': 'Receives result',
+  [REPLY_IN_CHAT]: 'Replies in chat',
+  [EMAIL_NOTIFICATION]: 'Emails the result',
+};
 
 const AVAILABLE_TOOLS: { name: string; label: string; description: string }[] = [
   {
@@ -455,6 +462,7 @@ export default function ConfigPanel({
                 {[
                   { id: 'Return output', desc: 'Keep the result in the run' },
                   { id: REPLY_IN_CHAT, desc: 'Also send it back to the Slack or Telegram message that started the run' },
+                  { id: EMAIL_NOTIFICATION, desc: 'Also email the result from your Gmail account, every time the workflow runs' },
                 ].map(option => {
                   const active = (node.outputMode ?? 'Return output') === option.id;
                   return (
@@ -467,10 +475,7 @@ export default function ConfigPanel({
                       <input
                         type="radio"
                         checked={active}
-                        onChange={() => onUpdate({
-                          outputMode: option.id,
-                          subtitle: option.id === REPLY_IN_CHAT ? 'Replies in chat' : 'Receives result',
-                        })}
+                        onChange={() => onUpdate({ outputMode: option.id, subtitle: OUTPUT_SUBTITLES[option.id] })}
                         style={{ accentColor: '#3B82F6', margin: '2px 0 0' }}
                       />
                       <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -482,6 +487,45 @@ export default function ConfigPanel({
                 })}
               </div>
             </Section>
+
+            {node.outputMode === EMAIL_NOTIFICATION && (
+              <>
+                <Section label="Gmail connection">
+                  <ConnectorSetup provider="google" onBeforeLeave={onSaveWorkflow} />
+                </Section>
+                <Section label="Send to">
+                  <input
+                    value={node.notifyEmail ?? ''}
+                    onChange={e => onUpdate({ notifyEmail: e.target.value })}
+                    placeholder="you@example.com"
+                    style={{
+                      width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
+                      borderRadius: 7, padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)',
+                      outline: 'none', fontFamily: 'inherit',
+                    }}
+                  />
+                  <p style={{ margin: '6px 0 0', fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.45 }}>
+                    Up to 5 addresses, separated by commas.
+                  </p>
+                </Section>
+                <Section label="Subject">
+                  <input
+                    value={node.notifySubject ?? ''}
+                    onChange={e => onUpdate({ notifySubject: e.target.value })}
+                    placeholder="AgentFlow notification"
+                    style={{
+                      width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
+                      borderRadius: 7, padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)',
+                      outline: 'none', fontFamily: 'inherit',
+                    }}
+                  />
+                  <p style={{ margin: '6px 0 0', fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.45 }}>
+                    Each run emails the result from your Google account, like a Slack or Telegram notification.
+                    AgentFlow only sends; it never reads your mailbox.
+                  </p>
+                </Section>
+              </>
+            )}
 
             <Section label="Latest Result">
               <pre style={{

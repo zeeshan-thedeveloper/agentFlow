@@ -50,10 +50,10 @@ export default function PrivacyPage() {
         <p>If you connect a Google account, AgentFlow asks only for the permissions its features need:</p>
         <ul>
           <li><strong>Sign-in</strong> (your name, email address and profile picture): to create your account and show who is signed in.</li>
-          <li><strong>Gmail: send email</strong>: an agent you wired to a Gmail node can send a plain-text email from your account, only if you turned on &ldquo;Allow sending email&rdquo; for that node. This is off by default, and this permission does not let AgentFlow read your mailbox.</li>
+          <li><strong>Gmail: send email</strong>: to send email notifications from your account, the same way workflows can notify you on Slack or Telegram. A notification is sent only when you set an Output step to &ldquo;Send email notification&rdquo; with recipients you choose, or turn on &ldquo;Allow sending email&rdquo; on a Gmail node (off by default). This permission does not let AgentFlow read your mailbox.</li>
         </ul>
         <p>AgentFlow does not ask for access to read your mailbox, your Google Drive or any other Google data.</p>
-        <p>The Gmail permission is used only while a workflow you built is running, and only by agents connected to a Gmail node where you allowed sending. The email&apos;s recipient, subject and text come from your workflow; the text may be written by the AI provider configured on that agent (OpenAI, using your own API key). A record of what was sent is shown only to you, in your run results and run history.</p>
+        <p>The Gmail permission is used only while a workflow you built is running, and only by the steps where you turned email on. The email&apos;s recipient, subject and text come from your workflow; the text may be written by the AI provider configured on that workflow&apos;s agent (OpenAI, using your own API key). A record of what was sent is shown only to you, in your run results and run history.</p>
         <p>We do not use Google user data to serve advertising, we do not sell it, we do not use it to develop, improve or train generalized AI or machine-learning models, and people do not read it unless you ask us to for support, it is needed for security, or the law requires it.</p>
         <p>
           AgentFlow&apos;s use and transfer to any other app of information received from Google APIs will adhere to the{' '}
