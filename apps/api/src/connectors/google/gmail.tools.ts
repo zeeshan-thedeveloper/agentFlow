@@ -13,6 +13,33 @@ function singleLine(value: string): string {
   return value.replace(/[\r\n]+/g, ' ').trim();
 }
 
+/** Sends one plain-text email from the connected account; returns Gmail's message id. */
+export async function sendGmail(
+  session: GoogleSession,
+  message: { to: string; subject: string; body: string; threadId?: string },
+): Promise<string> {
+  const raw = [
+    `To: ${singleLine(message.to)}`,
+    `Subject: ${encodeHeader(singleLine(message.subject))}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(message.body, 'utf8').toString('base64'),
+  ].join('\r\n');
+
+  const response = await session.fetch(`${API}/messages/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      raw: Buffer.from(raw, 'utf8').toString('base64url'),
+      ...(message.threadId ? { threadId: message.threadId } : {}),
+    }),
+  });
+  if (!response.ok) throw new Error(await googleError(response));
+  return ((await response.json()) as { id: string }).id;
+}
+
 /** The send tool, when the node allows sending and Google granted gmail.send. */
 export function createGmailTools(session: GoogleSession, allowSend: boolean): Tool[] {
   const send: Tool = {
@@ -35,27 +62,13 @@ export function createGmailTools(session: GoogleSession, allowSend: boolean): To
       const subject = singleLine(String(args.subject ?? ''));
       if (!to) throw new Error('A recipient is required.');
 
-      const raw = [
-        `To: ${to}`,
-        `Subject: ${encodeHeader(subject)}`,
-        'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset="UTF-8"',
-        'Content-Transfer-Encoding: base64',
-        '',
-        Buffer.from(String(args.body ?? ''), 'utf8').toString('base64'),
-      ].join('\r\n');
-
-      const response = await session.fetch(`${API}/messages/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          raw: Buffer.from(raw, 'utf8').toString('base64url'),
-          ...(args.thread_id ? { threadId: String(args.thread_id) } : {}),
-        }),
+      const id = await sendGmail(session, {
+        to,
+        subject,
+        body: String(args.body ?? ''),
+        ...(args.thread_id ? { threadId: String(args.thread_id) } : {}),
       });
-      if (!response.ok) throw new Error(await googleError(response));
-      const sent = (await response.json()) as { id: string };
-      return `Email sent to ${to} (message id ${sent.id}).`;
+      return `Email sent to ${to} (message id ${id}).`;
     },
   };
 

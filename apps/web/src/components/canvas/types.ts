@@ -48,6 +48,9 @@ export interface FlowNode {
   tools?: string[];
   maxIterations?: number;
   outputMode?: string;
+  /** Output "Send email notification": comma-separated recipients and an optional subject. */
+  notifyEmail?: string;
+  notifySubject?: string;
   integrationId?: string;
   connectionName?: string;
   dbType?: 'postgresql' | 'mongodb';

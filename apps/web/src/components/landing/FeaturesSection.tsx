@@ -11,7 +11,7 @@ const features = [
   },
   {
     title: 'Your apps as tools',
-    description: 'Give agents Gmail, Slack, Telegram and GitHub. Sending email and making changes are off until you allow them on a node.',
+    description: 'Give agents Slack, Telegram and GitHub, and get results as email, Slack or Telegram notifications. Sending and changes are off until you allow them.',
     icon: 'M8 7h8v4H8zM5 15h14M7 19h10',
   },
   {
