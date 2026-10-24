@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Email, LegalPage, LegalSection } from '@/components/legal/LegalPage';
+import { Contact, LegalPage, LegalSection, Operator } from '@/components/legal/LegalPage';
 import '../landing.css';
 
 export const metadata: Metadata = {
@@ -13,7 +13,7 @@ export default function TermsPage() {
       title="Terms of Service"
       intro={
         <p>
-          These terms cover your use of AgentFlow at agentflow.zeeshanahmed.app, operated by Zeeshan Ahmed
+          These terms cover your use of AgentFlow at agentflow.zeeshanahmed.app, operated by <Operator />
           (&ldquo;we&rdquo;, &ldquo;us&rdquo;). By signing in or using AgentFlow you agree to them. If you don&apos;t
           agree, please don&apos;t use the service. Our <a href="/privacy" className="l-link">Privacy Policy</a> explains
           how we handle your data.
@@ -26,7 +26,7 @@ export default function TermsPage() {
       </LegalSection>
 
       <LegalSection title="Your account">
-        <p>You sign in with a Google or GitHub account and must be at least 16 years old. You are responsible for what happens under your account and for keeping access to it secure. Tell us at <Email /> if you think someone else has used it.</p>
+        <p>You sign in with a Google or GitHub account and must be at least 16 years old. You are responsible for what happens under your account and for keeping access to it secure. Tell us through <Contact /> if you think someone else has used it.</p>
       </LegalSection>
 
       <LegalSection title="Your keys, connections and costs">
@@ -78,7 +78,7 @@ export default function TermsPage() {
       </LegalSection>
 
       <LegalSection title="Contact">
-        <p>Questions about these terms: <Email />.</p>
+        <p>Questions about these terms: <Contact />.</p>
       </LegalSection>
     </LegalPage>
   );
