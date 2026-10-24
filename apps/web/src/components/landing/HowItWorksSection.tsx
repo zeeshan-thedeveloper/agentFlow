@@ -3,7 +3,7 @@ const steps = [
     step: '01',
     title: 'Build the workflow',
     description: 'Drag a trigger, agents and outputs onto the canvas, and wire in the apps and databases each agent may use.',
-    code: ['trigger: slack_message', 'agent: support_agent', 'apps: [google_drive, github]'],
+    code: ['trigger: slack_message', 'agent: support_agent', 'apps: [github, gmail]'],
   },
   {
     step: '02',

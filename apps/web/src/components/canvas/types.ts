@@ -5,8 +5,8 @@ export const SCHEMA_NODE = 'schema' as const;
 export type NodeType = 'trigger' | 'agent' | 'output' | 'integration' | 'query-runner' | 'connector' | typeof SCHEMA_NODE;
 
 /** The apps a connector node can stand for; wiring one into an Agent gives it that app's tools. */
-export type ConnectorKind = 'gmail' | 'drive' | 'slack' | 'telegram' | 'github';
-/** Accounts a user connects; Google covers Gmail and Drive. */
+export type ConnectorKind = 'gmail' | 'slack' | 'telegram' | 'github';
+/** Accounts a user connects; Google is used for Gmail (sending only). */
 export type ConnectorProvider = 'google' | 'slack' | 'telegram' | 'github';
 
 export type LibraryNodeType = Exclude<NodeType, 'connector'> | 'database' | ConnectorKind;

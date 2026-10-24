@@ -6,10 +6,6 @@ export interface ConnectorStatus {
   name?: string | null;
   /** Connection id; the Slack events URL is built from it. */
   id?: string;
-  /** Google only: whether reading email and Drive was granted. */
-  read?: boolean;
-  /** Google only: whether this account may turn on reading (test users only for now). */
-  readAllowed?: boolean;
 }
 
 export type ConnectorStatuses = Record<ConnectorProvider, ConnectorStatus>;
@@ -51,8 +47,8 @@ export const disconnectConnector = (provider: ConnectorProvider) =>
   request<{ ok: boolean }>(`/${provider}`, { method: 'DELETE' });
 
 /** Full-page redirect to Google's consent screen; it returns to the canvas. */
-export function startGoogleConnect(includeRead: boolean) {
-  window.location.href = `/api/connectors/google/start${includeRead ? '?read=1' : ''}`;
+export function startGoogleConnect() {
+  window.location.href = '/api/connectors/google/start';
 }
 
 export function slackEventsUrl(connectionId: string) {

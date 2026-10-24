@@ -21,7 +21,7 @@ export default function TermsPage() {
       }
     >
       <LegalSection title="The service">
-        <p>AgentFlow lets you build workflows of AI agents on a visual canvas, connect them to apps such as Gmail, Google Drive, Slack, Telegram, GitHub and databases, and run them yourself or when a chat message arrives.</p>
+        <p>AgentFlow lets you build workflows of AI agents on a visual canvas, connect them to apps such as Gmail, Slack, Telegram, GitHub and databases, and run them yourself or when a chat message arrives.</p>
         <p>AgentFlow is under active development and is offered free of charge. Features may change, be limited or be removed, and the service may be unavailable at times.</p>
       </LegalSection>
 
