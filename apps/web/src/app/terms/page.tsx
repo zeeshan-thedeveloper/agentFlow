@@ -21,7 +21,7 @@ export default function TermsPage() {
       }
     >
       <LegalSection title="The service">
-        <p>AgentFlow lets you build workflows of AI agents on a visual canvas, connect them to apps such as Gmail, Slack, Telegram, GitHub and databases, and run them yourself or when a chat message arrives.</p>
+        <p>AgentFlow lets you build workflows of AI agents on a visual canvas, connect them to apps such as Gmail, Slack, Telegram, GitHub and databases, run them yourself or when a chat message arrives, and get their results as notifications by email, Slack or Telegram.</p>
         <p>AgentFlow is under active development and is offered free of charge. Features may change, be limited or be removed, and the service may be unavailable at times.</p>
       </LegalSection>
 
@@ -39,6 +39,7 @@ export default function TermsPage() {
 
       <LegalSection title="What agents do for you">
         <p>Agents act on the instructions you give them, using the tools and apps you connect. You decide what each agent may do. Some actions, such as sending email or opening GitHub issues, are off until you allow them on a node.</p>
+        <p>Email notifications are sent from your own Gmail account to the recipients you set. Only send them to people who expect them; they are subject to Gmail&apos;s own limits and policies. You can change or turn off a notification at any time in the workflow&apos;s Output step.</p>
         <p>AI output can be wrong, incomplete or unexpected, and text an agent reads (an email, document, web page or message) may try to mislead it. Review what your workflows do, especially before allowing them to send messages or change things. You are responsible for the actions your workflows take and for the messages they send.</p>
       </LegalSection>
 
@@ -46,7 +47,7 @@ export default function TermsPage() {
         <p>Don&apos;t use AgentFlow to:</p>
         <ul>
           <li>break the law or anyone else&apos;s rights, including privacy and intellectual property;</li>
-          <li>send spam, scams, harassment or malware, or access accounts, systems or data you aren&apos;t authorized to;</li>
+          <li>send spam, unsolicited bulk email or notifications, scams, harassment or malware, or access accounts, systems or data you aren&apos;t authorized to;</li>
           <li>get around the limits or terms of the AI providers and apps you connect;</li>
           <li>attack, overload or probe AgentFlow, or try to reach other users&apos; data.</li>
         </ul>
