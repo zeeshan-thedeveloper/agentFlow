@@ -24,6 +24,7 @@ export default function PrivacyPage() {
         <ul>
           <li>We collect what we need to run your workflows: your account, the workflows you build, the keys and connections you add, and the history of your runs.</li>
           <li>Secrets you give us (API keys, tokens, connection strings) are stored encrypted.</li>
+          <li>Workflows can notify you of their results by email (sent from your own Gmail account), Slack or Telegram, only where you set this up.</li>
           <li>When a workflow runs, the data its agent reads is sent to the AI provider you set up (OpenAI, with your own API key) so the agent can do the task. We don&apos;t sell your data, use it for advertising, or use it to train AI models.</li>
           <li>You can disconnect any app and delete your account at any time. Deleting your account deletes everything we store about you.</li>
         </ul>
@@ -31,7 +32,7 @@ export default function PrivacyPage() {
 
       <LegalSection title="Information we collect">
         <p><strong>Account information.</strong> When you sign in with Google or GitHub we receive your name, email address and profile picture, and store a record of that sign-in so you can sign in again.</p>
-        <p><strong>Workflows.</strong> The workflows you build on the canvas: their nodes, prompts, settings and connections between nodes.</p>
+        <p><strong>Workflows.</strong> The workflows you build on the canvas: their nodes, prompts, settings and connections between nodes, including the recipients and subject you set for email notifications.</p>
         <p><strong>API keys.</strong> Keys you add for AI and search providers (for example OpenAI and Tavily). They are encrypted before they are stored and are only decrypted to make requests you started.</p>
         <p><strong>Connected apps.</strong> When you connect an app we store what is needed to act for you there, encrypted:</p>
         <ul>
@@ -73,6 +74,7 @@ export default function PrivacyPage() {
           <li>To sign you in and keep your session.</li>
           <li>To save your workflows and run them when you click Run or when a Slack or Telegram message triggers them.</li>
           <li>To call the AI providers and connected apps your workflows use, with your keys and connections.</li>
+          <li>To send the notifications you set up: email from your Gmail account to the recipients you chose, or messages to your Slack or Telegram.</li>
           <li>To show your run results and history.</li>
           <li>To keep the service secure, fix problems and understand which pages are used.</li>
         </ul>
@@ -83,7 +85,8 @@ export default function PrivacyPage() {
         <p>Only the services needed to do what you asked:</p>
         <ul>
           <li><strong>AI and search providers</strong> you configure (OpenAI, Tavily): prompts, the input to each agent and the results of its tools are sent to them when a workflow runs.</li>
-          <li><strong>Apps you connect</strong> (Google, Slack, Telegram, GitHub, your databases): AgentFlow sends them the requests your workflows make, such as reading a channel or posting a reply.</li>
+          <li><strong>Apps you connect</strong> (Google, Slack, Telegram, GitHub, your databases): AgentFlow sends them the requests your workflows make, such as posting a reply in Slack or sending an email notification through Gmail.</li>
+          <li><strong>People you notify</strong>: the recipients you set on an email notification receive the workflow result it contains.</li>
           <li><strong>Websites</strong> an agent visits with its HTTP or page-reading tools.</li>
           <li><strong>Infrastructure providers</strong> that host our servers and database.</li>
           <li><strong>Authorities</strong>, if the law requires it.</li>
