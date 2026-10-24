@@ -115,19 +115,6 @@ export default function TopBar({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <button
-          style={{
-            padding: '6px 13px', borderRadius: 7, background: 'transparent',
-            border: '1px solid var(--border-strong)', color: 'var(--text-muted)',
-            fontSize: 12, fontWeight: 500, cursor: 'pointer',
-            fontFamily: 'inherit', transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
-        >
-          Share
-        </button>
-
-        <button
           onClick={onSave}
           disabled={saveState === 'saving'}
           style={{

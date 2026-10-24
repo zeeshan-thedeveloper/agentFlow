@@ -14,6 +14,8 @@ services:
       # Gmail, Drive and Google Chat connectors exchange and refresh OAuth tokens on the API.
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # Comma-separated test-user emails allowed to let agents read email and Drive (unverified scopes).
+      GOOGLE_READ_ACCESS_EMAILS: ${GOOGLE_READ_ACCESS_EMAILS:-}
     ports:
       - '127.0.0.1:18001:18001'
     network_mode: host

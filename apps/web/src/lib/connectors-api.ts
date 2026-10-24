@@ -8,6 +8,8 @@ export interface ConnectorStatus {
   id?: string;
   /** Google only: whether reading email and Drive was granted. */
   read?: boolean;
+  /** Google only: whether this account may turn on reading (test users only for now). */
+  readAllowed?: boolean;
 }
 
 export type ConnectorStatuses = Record<ConnectorProvider, ConnectorStatus>;
