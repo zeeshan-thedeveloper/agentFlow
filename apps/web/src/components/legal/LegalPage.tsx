@@ -2,8 +2,10 @@ import type { ReactNode } from 'react';
 import { Footer } from '@/components/landing/Footer';
 import { NavBar } from '@/components/landing/NavBar';
 
-export const CONTACT_EMAIL = 'zeeshanahmedd0010@gmail.com';
-export const LAST_UPDATED = '22 October 2026';
+/** The operator's portfolio site, which has the contact details. */
+export const OPERATOR_URL = 'https://www.zeeshanahmed.app/';
+export const CONTACT_URL = 'https://www.zeeshanahmed.app/#contact';
+export const LAST_UPDATED = '24 October 2026';
 
 /** Shared frame for the privacy policy and terms: landing header and footer around a readable column. */
 export function LegalPage({ title, intro, children }: { title: string; intro: ReactNode; children: ReactNode }) {
@@ -32,6 +34,12 @@ export function LegalSection({ id, title, children }: { id?: string; title: stri
   );
 }
 
-export function Email() {
-  return <a href={`mailto:${CONTACT_EMAIL}`} className="l-link">{CONTACT_EMAIL}</a>;
+/** The operator's name, linking to their portfolio site. */
+export function Operator() {
+  return <a href={OPERATOR_URL} className="l-link" target="_blank" rel="noreferrer">Zeeshan Ahmed</a>;
+}
+
+/** Where to get in touch: the contact section of the operator's portfolio site. */
+export function Contact() {
+  return <a href={CONTACT_URL} className="l-link" target="_blank" rel="noreferrer">zeeshanahmed.app/#contact</a>;
 }

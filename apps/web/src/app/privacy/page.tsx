@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Email, LegalPage, LegalSection } from '@/components/legal/LegalPage';
+import { Contact, LegalPage, LegalSection, Operator } from '@/components/legal/LegalPage';
 import '../landing.css';
 
 export const metadata: Metadata = {
@@ -14,9 +14,9 @@ export default function PrivacyPage() {
       intro={
         <p>
           AgentFlow (&ldquo;AgentFlow&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is a visual builder for AI agent
-          workflows, available at agentflow.zeeshanahmed.app and operated by Zeeshan Ahmed. This policy explains what
+          workflows, available at agentflow.zeeshanahmed.app and operated by <Operator />. This policy explains what
           we collect when you use AgentFlow, why, where it goes, and how to remove it. If anything here is unclear,
-          email <Email />.
+          get in touch through <Contact />.
         </p>
       }
     >
@@ -108,7 +108,7 @@ export default function PrivacyPage() {
         <ul>
           <li>Disconnect any app from its node&apos;s settings, and remove API keys under Keys.</li>
           <li>Delete your account from Settings; this removes your workflows, keys, connections and run history.</li>
-          <li>Ask us for a copy of your data, or to correct or delete it, by emailing <Email />.</li>
+          <li>Ask us for a copy of your data, or to correct or delete it, through <Contact />.</li>
         </ul>
         <p>Depending on where you live (for example under the GDPR or UK GDPR), you may have further rights, including to object to or restrict processing and to complain to your data protection authority. We process your data to provide the service you asked for and, for security and analytics, on the basis of our legitimate interests.</p>
       </LegalSection>
@@ -126,7 +126,7 @@ export default function PrivacyPage() {
       </LegalSection>
 
       <LegalSection title="Contact">
-        <p>Questions or requests about your data: <Email />.</p>
+        <p>Questions or requests about your data: <Contact />.</p>
       </LegalSection>
     </LegalPage>
   );

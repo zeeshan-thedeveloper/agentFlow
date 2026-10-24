@@ -3,7 +3,7 @@ import { BrandMark } from '@/components/BrandMark';
 const columns = [
   { title: 'Product', links: [{ label: 'Features', href: '/#features' }, { label: 'How it works', href: '/#how-it-works' }, { label: 'Sign in', href: '/login' }] },
   { title: 'Legal', links: [{ label: 'Privacy Policy', href: '/privacy' }, { label: 'Terms of Service', href: '/terms' }] },
-  { title: 'Contact', links: [{ label: 'Email us', href: 'mailto:zeeshanahmedd0010@gmail.com' }] },
+  { title: 'Contact', links: [{ label: 'Get in touch', href: 'https://www.zeeshanahmed.app/#contact' }, { label: 'About the maker', href: 'https://www.zeeshanahmed.app/' }] },
 ];
 
 export function Footer() {
