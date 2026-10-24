@@ -124,7 +124,7 @@ export function ConnectorSetup({ provider, onBeforeLeave }: ConnectorSetupProps)
           </span>
         </div>
 
-        {provider === 'google' && !status.read && (
+        {provider === 'google' && !status.read && status.readAllowed && (
           <p style={hintStyle}>
             Agents can send email. Reading email and Drive is off.{' '}
             <button type="button" onClick={() => connectGoogle(true)} style={{ ...hintStyle, color: 'var(--brand-text)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
@@ -163,10 +163,10 @@ export function ConnectorSetup({ provider, onBeforeLeave }: ConnectorSetupProps)
       {provider === 'google' && (
         <>
           <p style={hintStyle}>One Google connection covers Gmail and Drive. You&apos;ll be sent to Google to allow access. By default agents can only send email, and only from Gmail nodes where you allow it.</p>
-          <label style={{ ...hintStyle, display: 'flex', gap: 6, alignItems: 'flex-start', cursor: 'pointer' }}>
+          {status?.readAllowed && <label style={{ ...hintStyle, display: 'flex', gap: 6, alignItems: 'flex-start', cursor: 'pointer' }}>
             <input type="checkbox" checked={includeRead} onChange={e => setIncludeRead(e.target.checked)} style={{ margin: '1px 0 0' }} />
             Also let agents read email and Drive files. Google hasn&apos;t verified this access for AgentFlow yet, so it only works for the app&apos;s test users.
-          </label>
+          </label>}
           {errorLine}
           <button type="button" disabled={busy} onClick={() => connectGoogle(includeRead)} style={buttonStyle('#1A73E8', true)}>
             {busy ? 'Opening Google…' : 'Connect Google'}
