@@ -24,7 +24,7 @@ export function HeroSection() {
             Build AI workflows on a <span className="gradient-text">visual canvas</span>
           </h1>
           <p className="reveal l-text-secondary mx-auto mt-6 max-w-2xl text-lg leading-8">
-            Wire agents to Gmail, Drive, Slack, Telegram, GitHub and your database, start them from a chat message or a click, and watch every step run.
+            Wire agents to Gmail, Slack, Telegram, GitHub and your database, start them from a chat message or a click, and watch every step run.
           </p>
           <div className="reveal mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a href="/login" className="btn-primary-landing rounded-xl px-6 py-3 text-sm font-bold">
@@ -71,7 +71,7 @@ export function HeroSection() {
               </div>
               <MiniNode className="node-trigger left-[7%] top-[28%]" label="Trigger" title="Slack mention" meta="@AgentFlow in #support" />
               <MiniNode className="node-agent left-[42%] top-[42%]" label="Agent" title="Support agent" meta="GPT-4.1 Mini" />
-              <MiniNode className="node-agent right-[7%] top-[27%]" label="App" title="Google Drive" meta="Search the help docs" />
+              <MiniNode className="node-agent right-[7%] top-[27%]" label="App" title="GitHub" meta="Look up open issues" />
               <MiniNode className="node-output bottom-[21%] right-[7%]" label="Output" title="Reply in chat" meta="Answers in the thread" />
               <div className="l-overlay absolute bottom-5 left-5 rounded-xl p-3 backdrop-blur">
                 <div className="l-text-faint mb-2 text-[10px] font-bold uppercase tracking-[0.18em]">Run</div>

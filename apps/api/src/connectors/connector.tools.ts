@@ -1,7 +1,6 @@
 import type { Tool } from '../handlers/tools/base.tool';
 import type { ConnectorKind, ConnectorStore } from './connector.store';
 import { createGitHubTools } from './github/github.client';
-import { createDriveTools } from './google/drive.tools';
 import { createGmailTools } from './google/gmail.tools';
 import { GoogleSession } from './google/google.client';
 import { createSlackTools } from './slack/slack.client';
@@ -14,7 +13,7 @@ export interface AgentConnector {
   allowWrite: boolean;
 }
 
-export const CONNECTOR_KINDS: ConnectorKind[] = ['gmail', 'drive', 'slack', 'telegram', 'github'];
+export const CONNECTOR_KINDS: ConnectorKind[] = ['gmail', 'slack', 'telegram', 'github'];
 
 export function isConnectorKind(value: unknown): value is ConnectorKind {
   return CONNECTOR_KINDS.includes(value as ConnectorKind);
@@ -42,22 +41,11 @@ export async function createConnectorTools(
         const gmail = createGmailTools(session, allowWrite);
         if (gmail.length === 0) {
           throw new Error(
-            'The Gmail node gives the agent nothing to do: turn on "Allow sending email", or reconnect Google with reading enabled.',
+            'The Gmail node gives the agent nothing to do: turn on "Allow sending email" on it, and tick "Send email on your behalf" when connecting Google.',
           );
         }
         tools.push(...gmail);
-        const names = gmail.map(tool => tool.definition.name);
-        const abilities = [
-          ...(names.includes('gmail_read') ? ['search and read email'] : []),
-          ...(names.includes('gmail_send') ? ['send email'] : []),
-        ];
-        notes.push(`Gmail (${session.email}): ${abilities.join(', and ')}.`);
-        break;
-      }
-      case 'drive': {
-        const session = await googleSession();
-        tools.push(...createDriveTools(session));
-        notes.push(`Google Drive (${session.email}): search and read files (read-only).`);
+        notes.push(`Gmail (${session.email}): send email. You cannot read the mailbox.`);
         break;
       }
       case 'slack': {

@@ -73,7 +73,6 @@ export function ConnectorSetup({ provider, onBeforeLeave }: ConnectorSetupProps)
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
-  const [includeRead, setIncludeRead] = useState(false);
   const label = PROVIDER_LABELS[provider];
   const field = (name: string) => fields[name] ?? '';
   const setField = (name: string, value: string) => setFields(previous => ({ ...previous, [name]: value }));
@@ -92,7 +91,7 @@ export function ConnectorSetup({ provider, onBeforeLeave }: ConnectorSetupProps)
     }
   }
 
-  async function connectGoogle(read: boolean) {
+  async function connectGoogle() {
     setBusy(true);
     try {
       await onBeforeLeave?.();
@@ -102,7 +101,7 @@ export function ConnectorSetup({ provider, onBeforeLeave }: ConnectorSetupProps)
       setError('Save the workflow before connecting Google.');
       return;
     }
-    startGoogleConnect(read);
+    startGoogleConnect();
   }
 
   if (!statuses) {
@@ -123,16 +122,6 @@ export function ConnectorSetup({ provider, onBeforeLeave }: ConnectorSetupProps)
             {label} · {status.name}
           </span>
         </div>
-
-        {provider === 'google' && !status.read && status.readAllowed && (
-          <p style={hintStyle}>
-            Agents can send email. Reading email and Drive is off.{' '}
-            <button type="button" onClick={() => connectGoogle(true)} style={{ ...hintStyle, color: 'var(--brand-text)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
-              Reconnect with reading
-            </button>{' '}
-            (test users only for now).
-          </p>
-        )}
 
         {provider === 'slack' && status.id && (
           <>
@@ -162,13 +151,9 @@ export function ConnectorSetup({ provider, onBeforeLeave }: ConnectorSetupProps)
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {provider === 'google' && (
         <>
-          <p style={hintStyle}>One Google connection covers Gmail and Drive. You&apos;ll be sent to Google to allow access. By default agents can only send email, and only from Gmail nodes where you allow it.</p>
-          {status?.readAllowed && <label style={{ ...hintStyle, display: 'flex', gap: 6, alignItems: 'flex-start', cursor: 'pointer' }}>
-            <input type="checkbox" checked={includeRead} onChange={e => setIncludeRead(e.target.checked)} style={{ margin: '1px 0 0' }} />
-            Also let agents read email and Drive files. Google hasn&apos;t verified this access for AgentFlow yet, so it only works for the app&apos;s test users.
-          </label>}
+          <p style={hintStyle}>You&apos;ll be sent to Google to allow AgentFlow to send email for you. Tick &ldquo;Send email on your behalf&rdquo; there. Agents can only send from Gmail nodes where you allow it, and AgentFlow never reads your mailbox.</p>
           {errorLine}
-          <button type="button" disabled={busy} onClick={() => connectGoogle(includeRead)} style={buttonStyle('#1A73E8', true)}>
+          <button type="button" disabled={busy} onClick={() => connectGoogle()} style={buttonStyle('#1A73E8', true)}>
             {busy ? 'Opening Google…' : 'Connect Google'}
           </button>
         </>

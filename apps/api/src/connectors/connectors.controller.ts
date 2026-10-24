@@ -1,10 +1,9 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, HttpCode, Inject, Param, Post, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Query, Req } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { requireUserId, type AuthenticatedRequest } from '../integrations/integrations.controller';
-import { PrismaService } from '../prisma/prisma.service';
 import { CONNECTOR_PROVIDERS, ConnectorStore, type ConnectorProvider } from './connector.store';
 import { githubIdentity } from './github/github.client';
-import { GOOGLE_READ_SCOPES, exchangeGoogleCode, googleAuthUrl, revokeGoogleToken } from './google/google.client';
+import { exchangeGoogleCode, googleAuthUrl, revokeGoogleToken } from './google/google.client';
 import { slackIdentity } from './slack/slack.client';
 import { telegramApi } from './telegram/telegram.client';
 
@@ -24,25 +23,7 @@ async function orBadRequest<T>(work: Promise<T>): Promise<T> {
 /** Connecting and disconnecting a user's apps. Called through the web app, which sets x-user-id. */
 @Controller('connectors')
 export class ConnectorsController {
-  constructor(
-    @Inject(ConnectorStore) private readonly store: ConnectorStore,
-    @Inject(PrismaService) private readonly prisma: PrismaService,
-  ) {}
-
-  /**
-   * Reading email and Drive uses restricted scopes Google hasn't verified for
-   * AgentFlow, so only the accounts in GOOGLE_READ_ACCESS_EMAILS (the Cloud
-   * project's test users) may turn it on. Nobody can when it is unset.
-   */
-  private async canReadGoogle(userId: string): Promise<boolean> {
-    const allowed = (process.env.GOOGLE_READ_ACCESS_EMAILS ?? '')
-      .split(',')
-      .map(email => email.trim().toLowerCase())
-      .filter(Boolean);
-    if (allowed.length === 0) return false;
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-    return Boolean(user?.email && allowed.includes(user.email.toLowerCase()));
-  }
+  constructor(@Inject(ConnectorStore) private readonly store: ConnectorStore) {}
 
   @Get()
   async list(@Req() req: AuthenticatedRequest) {
@@ -56,28 +37,20 @@ export class ConnectorsController {
             name: connector.name,
             // Used to show the Slack events URL; Telegram's webhook is set up automatically.
             id: connector.id,
-            ...(provider === 'google'
-              ? { read: GOOGLE_READ_SCOPES.every(scope => (connector.data as { scopes: string[] }).scopes.includes(scope)) }
-              : {}),
           }
         : { connected: false };
     }
-    status.google = { ...(status.google as object), readAllowed: await this.canReadGoogle(userId) };
     return status;
   }
 
   @Get('google/auth-url')
-  async googleAuthUrl(
+  googleAuthUrl(
     @Query('redirectUri') redirectUri: string,
     @Query('state') state: string,
-    @Query('read') read: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    const userId = requireUserId(req);
-    if (read === '1' && !(await this.canReadGoogle(userId))) {
-      throw new ForbiddenException('Reading email and Drive is only available to test users for now.');
-    }
-    return { url: googleAuthUrl(requireString(redirectUri, 'redirectUri'), requireString(state, 'state'), read === '1') };
+    requireUserId(req);
+    return { url: googleAuthUrl(requireString(redirectUri, 'redirectUri'), requireString(state, 'state')) };
   }
 
   @Post('google')
@@ -86,11 +59,6 @@ export class ConnectorsController {
     const data = await orBadRequest(
       exchangeGoogleCode(requireString(body.code, 'code'), requireString(body.redirectUri, 'redirectUri')),
     );
-    // Someone can edit Google's consent URL to add scopes, so reading scopes are
-    // dropped here for accounts that aren't allowed them; tools follow this list.
-    if (!(await this.canReadGoogle(userId))) {
-      data.scopes = data.scopes.filter(scope => !GOOGLE_READ_SCOPES.includes(scope));
-    }
     await this.store.save(userId, 'google', data, data.email);
     return { ok: true, name: data.email };
   }

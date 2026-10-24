@@ -2,19 +2,18 @@ import type { PrismaService } from '../prisma/prisma.service';
 import { decryptCredential, encryptCredential } from '../integrations/credential.crypto';
 
 /**
- * Each user can connect one account per provider. Google covers Gmail and
- * Drive. Credentials live in user_integration_credentials like database
+ * Each user can connect one account per provider. Google is used for Gmail
+ * (sending only). Credentials live in user_integration_credentials like database
  * connections, under the provider name as integrationId.
  */
 export type ConnectorProvider = 'google' | 'slack' | 'telegram' | 'github';
 export const CONNECTOR_PROVIDERS: ConnectorProvider[] = ['google', 'slack', 'telegram', 'github'];
 
 /** The apps a canvas connector node can stand for. */
-export type ConnectorKind = 'gmail' | 'drive' | 'slack' | 'telegram' | 'github';
+export type ConnectorKind = 'gmail' | 'slack' | 'telegram' | 'github';
 
 export const PROVIDER_OF: Record<ConnectorKind, ConnectorProvider> = {
   gmail: 'google',
-  drive: 'google',
   slack: 'slack',
   telegram: 'telegram',
   github: 'github',

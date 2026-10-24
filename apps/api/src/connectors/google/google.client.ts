@@ -1,16 +1,10 @@
 import type { ConnectorStore, GoogleCredential, StoredConnector } from '../connector.store';
 
-// Gmail and Drive share one Google OAuth connection. By default it asks only
-// for what Google has reviewed for AgentFlow: sending email, which an agent
-// gets only when its Gmail node allows it. Reading email and Drive uses
-// restricted scopes Google hasn't verified for AgentFlow, so it is a separate
-// opt-in that only works for the project's test users.
-export const GOOGLE_SCOPES = ['openid', 'email', 'https://www.googleapis.com/auth/gmail.send'];
-
-export const GMAIL_READ_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+// The Google connection asks only for sign-in and sending email. An agent
+// gets the send tool only when its Gmail node allows it. AgentFlow never asks
+// to read the mailbox or Drive.
 export const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
-export const DRIVE_READ_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
-export const GOOGLE_READ_SCOPES = [GMAIL_READ_SCOPE, DRIVE_READ_SCOPE];
+export const GOOGLE_SCOPES = ['openid', 'email', GMAIL_SEND_SCOPE];
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const REFRESH_MARGIN_MS = 60_000;
@@ -24,13 +18,13 @@ function clientConfig() {
   return { clientId, clientSecret };
 }
 
-export function googleAuthUrl(redirectUri: string, state: string, includeRead: boolean): string {
+export function googleAuthUrl(redirectUri: string, state: string): string {
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   url.search = new URLSearchParams({
     client_id: clientConfig().clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: [...GOOGLE_SCOPES, ...(includeRead ? GOOGLE_READ_SCOPES : [])].join(' '),
+    scope: GOOGLE_SCOPES.join(' '),
     // offline + consent makes Google return a refresh token every time.
     access_type: 'offline',
     prompt: 'consent',
