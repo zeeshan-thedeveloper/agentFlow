@@ -40,6 +40,10 @@ interface CanvasNodeCardProps {
   databaseNames?: string[];
   /** Apps wired into an agent, shown as badges. */
   connectorKinds?: ConnectorKind[];
+  /** Names of knowledge bases wired into this agent. */
+  knowledgeNames?: string[];
+  /** Folder of the Files node wired into this agent, if any. */
+  filesFolder?: string;
 }
 
 function IcoFailed() {
@@ -71,6 +75,8 @@ export default function CanvasNodeCard({
   onLayoutHeight,
   databaseNames = [],
   connectorKinds = [],
+  knowledgeNames = [],
+  filesFolder,
 }: CanvasNodeCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [layoutHeight, setLayoutHeight] = useState(NH);
@@ -98,6 +104,14 @@ export default function CanvasNodeCard({
     ? worldNode.connectionName || 'Select connection'
     : worldNode.type === 'connector'
     ? connectorSubtitle(worldNode)
+    : worldNode.type === 'knowledge'
+    ? worldNode.integrationId && worldNode.integrationId !== 'database'
+      ? `${worldNode.connectionName || worldNode.integrationId.split(':').pop()} · ${worldNode.knowledgeBase || 'unnamed'}`
+      : 'Select connection'
+    : worldNode.type === 'files'
+    ? worldNode.integrationId && worldNode.integrationId !== 'database'
+      ? `${worldNode.connectionName || worldNode.integrationId.split(':').pop()} · /${worldNode.folder || 'unnamed'}`
+      : 'Select connection'
     : isDatabaseNode(worldNode)
     ? worldNode.integrationId && worldNode.integrationId !== 'database'
       ? `${worldNode.connectionName || worldNode.integrationId.split(':').pop()} · ${isMongoDatabase(worldNode) ? 'MongoDB' : 'Read-only'}`
@@ -118,7 +132,7 @@ export default function CanvasNodeCard({
     const observer = new ResizeObserver(report);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [worldNode.id, worldNode.label, worldNode.subtitle, worldNode.tools, subtitle, databaseNames.length, connectorKinds.length, onLayoutHeight]);
+  }, [worldNode.id, worldNode.label, worldNode.subtitle, worldNode.tools, subtitle, databaseNames.length, connectorKinds.length, knowledgeNames.length, filesFolder, onLayoutHeight]);
 
   const isAgent = worldNode.type === 'agent';
   const showOutputPanel =
@@ -312,7 +326,7 @@ export default function CanvasNodeCard({
               {subtitle}
             </div>
           )}
-          {worldNode.type === 'agent' && ((worldNode.tools?.length ?? 0) > 0 || databaseNames.length > 0 || connectorKinds.length > 0) && (
+          {worldNode.type === 'agent' && ((worldNode.tools?.length ?? 0) > 0 || databaseNames.length > 0 || connectorKinds.length > 0 || knowledgeNames.length > 0 || filesFolder !== undefined) && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 5 }}>
               {[...new Set(connectorKinds)].map(kind => {
                 const app = NODE_TYPES[kind];
@@ -338,6 +352,47 @@ export default function CanvasNodeCard({
                   </span>
                 );
               })}
+              {filesFolder !== undefined && (
+                <span
+                  title="Can create PDFs and save them here"
+                  style={{
+                    fontSize: 8,
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: '#F97316',
+                    background: 'rgba(249,115,22,0.12)',
+                    border: '1px solid rgba(249,115,22,0.3)',
+                    borderRadius: 4,
+                    padding: '1px 5px',
+                    lineHeight: 1.6,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  PDF · {filesFolder || 'files'}
+                </span>
+              )}
+              {knowledgeNames.map(name => (
+                <span
+                  key={`kb-${name}`}
+                  title="Can search this knowledge base"
+                  style={{
+                    fontSize: 8,
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: '#EC4899',
+                    background: 'rgba(236,72,153,0.12)',
+                    border: '1px solid rgba(236,72,153,0.3)',
+                    borderRadius: 4,
+                    padding: '1px 5px',
+                    lineHeight: 1.6,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  KB · {name}
+                </span>
+              ))}
               {databaseNames.map(name => (
                 <span
                   key={`db-${name}`}

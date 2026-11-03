@@ -127,8 +127,6 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
   const [nodeToolCalls, setNodeToolCalls] = useState<Record<string, ToolCallRecord[]>>({});
   const [nodes, setNodes] = useState<FlowNode[]>(DEFAULT_NODES);
   const [edges, setEdges] = useState<FlowEdge[]>(DEFAULT_EDGES);
-  // Outcome of connecting an app through a redirect (Google), read from the URL on return.
-  const [connectNotice, setConnectNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const { runs, refresh: refreshRuns } = useWorkflowRuns(workflowId);
   // A run started from Slack or Telegram that the canvas is animating.
@@ -213,15 +211,6 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
     setNodeOutputs(outputs);
     setNodeToolCalls(toolCalls);
   }
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const connectError = params.get('connectError');
-    const connected = params.get('connected');
-    if (!connectError && !connected) return;
-    setConnectNotice(connectError ? { ok: false, text: connectError } : { ok: true, text: 'Google connected.' });
-    window.history.replaceState(null, '', window.location.pathname);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -490,6 +479,10 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         ? { subtitle: 'Receives result', outputMode: 'Return output' }
         : type === 'database'
         ? { integrationId: 'database', dbType: 'postgresql', label: 'Database', subtitle: 'Select connection' }
+        : type === 'knowledge'
+        ? { integrationId: 'database', knowledgeBase: 'docs', label: 'Knowledge', subtitle: 'Select connection' }
+        : type === 'files'
+        ? { integrationId: 'database', folder: 'reports', label: 'Files', subtitle: 'Select connection' }
         : nodeType === 'schema'
         ? { integrationId: '', connectionName: '', subtitle: 'Select connection' }
         : nodeType === 'query-runner'
@@ -572,7 +565,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             disabled={runState === 'running'}
           />
 
-          {chatNotice && !connectNotice && !runError && (
+          {chatNotice && !runError && (
             <div
               role="status"
               style={{
@@ -598,29 +591,6 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
                 type="button"
                 title="Dismiss"
                 onClick={() => setChatNotice(null)}
-                style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13 }}
-              >
-                x
-              </button>
-            </div>
-          )}
-
-          {connectNotice && !runError && (
-            <div
-              role="status"
-              style={{
-                position: 'absolute', left: 18, right: 18, top: 14, zIndex: 50,
-                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8,
-                border: `1px solid ${connectNotice.ok ? 'rgba(34,197,94,0.42)' : 'rgba(239,68,68,0.42)'}`,
-                background: `color-mix(in srgb, var(--panel-bg) 92%, ${connectNotice.ok ? '#22c55e' : '#ef4444'})`,
-                boxShadow: '0 14px 36px var(--shadow-soft)', fontSize: 12, color: 'var(--text-secondary)',
-              }}
-            >
-              <span style={{ flex: 1 }}>{connectNotice.text}</span>
-              <button
-                type="button"
-                title="Dismiss"
-                onClick={() => setConnectNotice(null)}
                 style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13 }}
               >
                 x
@@ -709,7 +679,6 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
             onUpdate={patch => updateNode(selNode.id, patch)}
             onDelete={() => removeNode(selNode.id)}
             onRun={handleRun}
-            onSaveWorkflow={saveWorkflow}
             runOutput={nodeOutputs[selNode.id]}
           />
         )}

@@ -2,12 +2,12 @@ import type { ReactElement } from 'react';
 
 export const SCHEMA_NODE = 'schema' as const;
 
-export type NodeType = 'trigger' | 'agent' | 'output' | 'integration' | 'query-runner' | 'connector' | typeof SCHEMA_NODE;
+export type NodeType = 'trigger' | 'agent' | 'output' | 'integration' | 'query-runner' | 'connector' | 'knowledge' | 'files' | typeof SCHEMA_NODE;
 
 /** The apps a connector node can stand for; wiring one into an Agent gives it that app's tools. */
-export type ConnectorKind = 'gmail' | 'slack' | 'telegram' | 'github';
-/** Accounts a user connects; Google is used for Gmail (sending only). */
-export type ConnectorProvider = 'google' | 'slack' | 'telegram' | 'github';
+export type ConnectorKind = 'slack' | 'telegram' | 'github';
+/** Accounts a user connects. */
+export type ConnectorProvider = 'slack' | 'telegram' | 'github';
 
 export type LibraryNodeType = Exclude<NodeType, 'connector'> | 'database' | ConnectorKind;
 
@@ -48,16 +48,19 @@ export interface FlowNode {
   tools?: string[];
   maxIterations?: number;
   outputMode?: string;
-  /** Output "Send email notification": comma-separated recipients and an optional subject. */
-  notifyEmail?: string;
-  notifySubject?: string;
   integrationId?: string;
   connectionName?: string;
   dbType?: 'postgresql' | 'mongodb';
   actionId?: string;
   actionParams?: Record<string, unknown>;
   connector?: ConnectorKind;
-  /** Gmail: may send email. GitHub: may open issues and comment. */
+  /** Knowledge: the knowledge base (a group of documents) in the selected PostgreSQL connection. */
+  knowledgeBase?: string;
+  /** Files: the folder agents save PDFs to, and where to announce new files (empty means off). */
+  folder?: string;
+  notifySlackChannel?: string;
+  notifyTelegramChatId?: string;
+  /** GitHub: may open issues and comment. */
   allowWrite?: boolean;
 }
 

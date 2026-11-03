@@ -9,12 +9,10 @@ import {
   disconnectConnector,
   slackEventsUrl,
   slackManifest,
-  startGoogleConnect,
 } from '@/lib/connectors-api';
 import type { ConnectorProvider } from './types';
 
 const PROVIDER_LABELS: Record<ConnectorProvider, string> = {
-  google: 'Google',
   slack: 'Slack',
   telegram: 'Telegram',
   github: 'GitHub',
@@ -62,12 +60,10 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 
 interface ConnectorSetupProps {
   provider: ConnectorProvider;
-  /** Saves the workflow before a full-page redirect (Google sign-in) leaves the canvas. */
-  onBeforeLeave?: () => Promise<unknown>;
 }
 
 /** Shows whether an app is connected, and walks through connecting it. */
-export function ConnectorSetup({ provider, onBeforeLeave }: ConnectorSetupProps) {
+export function ConnectorSetup({ provider }: ConnectorSetupProps) {
   const { statuses, error: loadError, refresh } = useConnectors();
   const status = statuses?.[provider];
   const [busy, setBusy] = useState(false);
@@ -89,19 +85,6 @@ export function ConnectorSetup({ provider, onBeforeLeave }: ConnectorSetupProps)
     } finally {
       setBusy(false);
     }
-  }
-
-  async function connectGoogle() {
-    setBusy(true);
-    try {
-      await onBeforeLeave?.();
-    } catch {
-      // Unsaved changes would be lost on the redirect, so stop here.
-      setBusy(false);
-      setError('Save the workflow before connecting Google.');
-      return;
-    }
-    startGoogleConnect();
   }
 
   if (!statuses) {
@@ -149,16 +132,6 @@ export function ConnectorSetup({ provider, onBeforeLeave }: ConnectorSetupProps)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {provider === 'google' && (
-        <>
-          <p style={hintStyle}>You&apos;ll be sent to Google to allow AgentFlow to send email for you. Tick &ldquo;Send email on your behalf&rdquo; there. Agents can only send from Gmail nodes where you allow it, and AgentFlow never reads your mailbox.</p>
-          {errorLine}
-          <button type="button" disabled={busy} onClick={() => connectGoogle()} style={buttonStyle('#1A73E8', true)}>
-            {busy ? 'Opening Google…' : 'Connect Google'}
-          </button>
-        </>
-      )}
-
       {provider === 'slack' && (
         <>
           <Steps>

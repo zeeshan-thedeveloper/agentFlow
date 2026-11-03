@@ -14,10 +14,25 @@ export type FlowNodeRef = {
   integrationId?: unknown;
 };
 
-/** A connector node (Gmail, Slack, GitHub, ...) wired into an agent. */
+/** A connector node (Slack, Telegram, GitHub) wired into an agent. */
 export interface ConnectorRef {
   kind: string;
   allowWrite: boolean;
+}
+
+/** A Knowledge node wired into an agent: which connection and knowledge base to search. */
+export interface KnowledgeRef {
+  integrationId: string;
+  knowledgeBase: string;
+  name: string;
+}
+
+/** A Files node wired into an agent: where it saves files and who hears about new ones. */
+export interface FilesRef {
+  integrationId: string;
+  folder: string;
+  notifySlackChannel: string;
+  notifyTelegramChatId: string;
 }
 
 export interface NodeInput {
@@ -29,9 +44,13 @@ export interface NodeInput {
   databases?: string[];
   /** Connector nodes wired into an agent, used as tools. */
   connectors?: ConnectorRef[];
+  /** Knowledge nodes wired into an agent, searched with a tool. */
+  knowledge?: KnowledgeRef[];
+  /** Files nodes wired into an agent, used with the create_pdf tool. */
+  files?: FilesRef[];
 }
 
-export type ConnectionRole = 'database-tool' | 'connector-tool' | 'connection' | 'schema' | 'query' | 'data';
+export type ConnectionRole = 'database-tool' | 'connector-tool' | 'knowledge-tool' | 'files-tool' | 'connection' | 'schema' | 'query' | 'data';
 
 export function isDatabaseConfigNode(node: FlowNodeRef): boolean {
   return node.type === 'integration' && String(node.integrationId ?? '').startsWith('database');
@@ -40,6 +59,8 @@ export function isDatabaseConfigNode(node: FlowNodeRef): boolean {
 export function connectionRole(source: FlowNodeRef, target: FlowNodeRef): ConnectionRole {
   if (isDatabaseConfigNode(source)) return target.type === 'agent' ? 'database-tool' : 'connection';
   if (source.type === 'connector' && target.type === 'agent') return 'connector-tool';
+  if (source.type === 'knowledge' && target.type === 'agent') return 'knowledge-tool';
+  if (source.type === 'files' && target.type === 'agent') return 'files-tool';
   if (source.type === 'schema') return 'schema';
   if (target.type === 'query-runner') return 'query';
   if (target.type === 'integration' && source.type === 'agent') return 'query';
@@ -48,6 +69,14 @@ export function connectionRole(source: FlowNodeRef, target: FlowNodeRef): Connec
 
 function isConnectorRef(value: unknown): value is ConnectorRef {
   return typeof (value as ConnectorRef | null)?.kind === 'string';
+}
+
+function isKnowledgeRef(value: unknown): value is KnowledgeRef {
+  return typeof (value as KnowledgeRef | null)?.integrationId === 'string';
+}
+
+function isFilesRef(value: unknown): value is FilesRef {
+  return typeof (value as FilesRef | null)?.folder === 'string';
 }
 
 function schemaFromStepOutput(value: unknown): string {
@@ -100,6 +129,12 @@ export function assembleNodeInput(
       case 'connector-tool':
         if (isConnectorRef(value)) input.connectors = [...(input.connectors ?? []), value];
         break;
+      case 'knowledge-tool':
+        if (isKnowledgeRef(value)) input.knowledge = [...(input.knowledge ?? []), value];
+        break;
+      case 'files-tool':
+        if (isFilesRef(value)) input.files = [...(input.files ?? []), value];
+        break;
       case 'connection':
         input.connection = asText(value);
         break;
@@ -135,7 +170,9 @@ export function isNodeInput(value: unknown): value is NodeInput {
       'query' in value ||
       'connection' in value ||
       'databases' in value ||
-      'connectors' in value)
+      'connectors' in value ||
+      'knowledge' in value ||
+      'files' in value)
   );
 }
 

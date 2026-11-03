@@ -6,12 +6,12 @@ const features = [
   },
   {
     title: 'Agents with real tools',
-    description: 'Agents run on OpenAI models and can search the web, read pages, call HTTP APIs and query your PostgreSQL database read-only.',
+    description: 'Agents run on OpenAI models and can search the web, read pages, call HTTP APIs query your PostgreSQL database read-only and create PDF reports.',
     icon: 'M6 8l6-4 6 4v8l-6 4-6-4V8zM12 4v16',
   },
   {
-    title: 'Your apps as tools',
-    description: 'Give agents Slack, Telegram and GitHub, and get results as email, Slack or Telegram notifications. Sending and changes are off until you allow them.',
+    title: 'RAG knowledge bases',
+    description: 'Add documents to a knowledge base in your own Postgres (a free Neon database works). They are chunked and embedded with pgvector, and agents search them by meaning.',
     icon: 'M8 7h8v4H8zM5 15h14M7 19h10',
   },
   {

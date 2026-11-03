@@ -5,6 +5,8 @@ import { QueryRunnerConfigSection } from './QueryRunnerConfigSection';
 import { SchemaConfigSection } from './SchemaConfigSection';
 import { CONNECTOR_INFO, NODE_TYPES, isConnectorKind, nodeTypeConfig } from './constants';
 import { ConnectorSetup } from './ConnectorSetup';
+import { KnowledgeConfigSection } from './KnowledgeConfigSection';
+import { FilesConfigSection } from './FilesConfigSection';
 
 interface ConfigPanelProps {
   node: FlowNode;
@@ -15,8 +17,6 @@ interface ConfigPanelProps {
   onDelete: () => void;
   onRun?: () => void;
   runOutput?: unknown;
-  /** Saves the workflow; used before connecting an app leaves the page. */
-  onSaveWorkflow?: () => Promise<unknown>;
 }
 
 /** Trigger types started by a message in a chat app, and the connection each needs. */
@@ -26,12 +26,10 @@ const CHAT_TRIGGERS: Record<string, 'slack' | 'telegram'> = {
 };
 
 export const REPLY_IN_CHAT = 'Reply in chat';
-export const EMAIL_NOTIFICATION = 'Send email notification';
 
 const OUTPUT_SUBTITLES: Record<string, string> = {
   'Return output': 'Receives result',
   [REPLY_IN_CHAT]: 'Replies in chat',
-  [EMAIL_NOTIFICATION]: 'Emails the result',
 };
 
 const AVAILABLE_TOOLS: { name: string; label: string; description: string }[] = [
@@ -99,7 +97,6 @@ export default function ConfigPanel({
   onDelete,
   onRun,
   runOutput,
-  onSaveWorkflow,
 }: ConfigPanelProps) {
   const t = nodeTypeConfig(node);
   const triggerInputMode = node.triggerInputMode ?? 'none';
@@ -197,7 +194,7 @@ export default function ConfigPanel({
             {chatTrigger && (
               <>
                 <Section label="Connection">
-                  <ConnectorSetup provider={chatTrigger} onBeforeLeave={onSaveWorkflow} />
+                  <ConnectorSetup provider={chatTrigger} />
                 </Section>
                 <Section label="Only messages containing">
                   <input
@@ -462,7 +459,6 @@ export default function ConfigPanel({
                 {[
                   { id: 'Return output', desc: 'Keep the result in the run' },
                   { id: REPLY_IN_CHAT, desc: 'Also send it back to the Slack or Telegram message that started the run' },
-                  { id: EMAIL_NOTIFICATION, desc: 'Also email the result from your Gmail account, every time the workflow runs' },
                 ].map(option => {
                   const active = (node.outputMode ?? 'Return output') === option.id;
                   return (
@@ -487,45 +483,6 @@ export default function ConfigPanel({
                 })}
               </div>
             </Section>
-
-            {node.outputMode === EMAIL_NOTIFICATION && (
-              <>
-                <Section label="Gmail connection">
-                  <ConnectorSetup provider="google" onBeforeLeave={onSaveWorkflow} />
-                </Section>
-                <Section label="Send to">
-                  <input
-                    value={node.notifyEmail ?? ''}
-                    onChange={e => onUpdate({ notifyEmail: e.target.value })}
-                    placeholder="you@example.com"
-                    style={{
-                      width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
-                      borderRadius: 7, padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)',
-                      outline: 'none', fontFamily: 'inherit',
-                    }}
-                  />
-                  <p style={{ margin: '6px 0 0', fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.45 }}>
-                    Up to 5 addresses, separated by commas.
-                  </p>
-                </Section>
-                <Section label="Subject">
-                  <input
-                    value={node.notifySubject ?? ''}
-                    onChange={e => onUpdate({ notifySubject: e.target.value })}
-                    placeholder="AgentFlow notification"
-                    style={{
-                      width: '100%', background: 'var(--surface-bg)', border: '1px solid var(--border-strong)',
-                      borderRadius: 7, padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)',
-                      outline: 'none', fontFamily: 'inherit',
-                    }}
-                  />
-                  <p style={{ margin: '6px 0 0', fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.45 }}>
-                    Each run emails the result from your Google account, like a Slack or Telegram notification.
-                    AgentFlow only sends; it never reads your mailbox.
-                  </p>
-                </Section>
-              </>
-            )}
 
             <Section label="Latest Result">
               <pre style={{
@@ -593,10 +550,22 @@ export default function ConfigPanel({
           </Section>
         )}
 
+        {node.type === 'knowledge' && (
+          <Section label="Knowledge">
+            <KnowledgeConfigSection node={node} onUpdate={onUpdate} wiredToAgent={wiredToAgent} />
+          </Section>
+        )}
+
+        {node.type === 'files' && (
+          <Section label="Files">
+            <FilesConfigSection node={node} onUpdate={onUpdate} wiredToAgent={wiredToAgent} />
+          </Section>
+        )}
+
         {connector && node.connector && (
           <>
             <Section label="Connection">
-              <ConnectorSetup provider={connector.provider} onBeforeLeave={onSaveWorkflow} />
+              <ConnectorSetup provider={connector.provider} />
             </Section>
             <Section label="What the agent can do">
               <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{connector.abilities}</p>

@@ -21,7 +21,7 @@ export default function TermsPage() {
       }
     >
       <LegalSection title="The service">
-        <p>AgentFlow lets you build workflows of AI agents on a visual canvas, connect them to apps such as Gmail, Slack, Telegram, GitHub and databases, run them yourself or when a chat message arrives, and get their results as notifications by email, Slack or Telegram.</p>
+        <p>AgentFlow lets you build workflows of AI agents on a visual canvas, connect them to apps such as Slack, Telegram, GitHub and databases, give them knowledge bases to search and storage to save PDFs to, run them yourself or when a chat message arrives, and get notified on Slack or Telegram.</p>
         <p>AgentFlow is under active development and is offered free of charge. Features may change, be limited or be removed, and the service may be unavailable at times.</p>
       </LegalSection>
 
@@ -32,15 +32,15 @@ export default function TermsPage() {
       <LegalSection title="Your keys, connections and costs">
         <ul>
           <li>AI and search features use API keys you provide (for example OpenAI and Tavily). Usage is billed to you by those providers under their own terms; we don&apos;t cover those costs.</li>
-          <li>When you connect an app, you confirm you are allowed to give AgentFlow that access, and you remain bound by that app&apos;s own terms (for example Google, Slack, Telegram and GitHub).</li>
+          <li>When you connect an app, you confirm you are allowed to give AgentFlow that access, and you remain bound by that app&apos;s own terms (for example Slack, Telegram and GitHub).</li>
           <li>You can disconnect apps and remove keys at any time.</li>
         </ul>
       </LegalSection>
 
       <LegalSection title="What agents do for you">
-        <p>Agents act on the instructions you give them, using the tools and apps you connect. You decide what each agent may do. Some actions, such as sending email or opening GitHub issues, are off until you allow them on a node.</p>
-        <p>Email notifications are sent from your own Gmail account to the recipients you set. Only send them to people who expect them; they are subject to Gmail&apos;s own limits and policies. You can change or turn off a notification at any time in the workflow&apos;s Output step.</p>
-        <p>AI output can be wrong, incomplete or unexpected, and text an agent reads (an email, document, web page or message) may try to mislead it. Review what your workflows do, especially before allowing them to send messages or change things. You are responsible for the actions your workflows take and for the messages they send.</p>
+        <p>Agents act on the instructions you give them, using the tools and apps you connect. You decide what each agent may do. Some actions, such as opening GitHub issues, are off until you allow them on a node.</p>
+        <p>Knowledge base documents and files are stored in the database you connect, under your control; you are responsible for having the right to store and process them.</p>
+        <p>AI output can be wrong, incomplete or unexpected, and text an agent reads (a document, web page or message) may try to mislead it. Review what your workflows do, especially before allowing them to send messages or change things. You are responsible for the actions your workflows take and for the messages they send.</p>
       </LegalSection>
 
       <LegalSection title="Acceptable use">

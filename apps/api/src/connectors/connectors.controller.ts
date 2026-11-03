@@ -1,9 +1,8 @@
-import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Req } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { requireUserId, type AuthenticatedRequest } from '../integrations/integrations.controller';
 import { CONNECTOR_PROVIDERS, ConnectorStore, type ConnectorProvider } from './connector.store';
 import { githubIdentity } from './github/github.client';
-import { exchangeGoogleCode, googleAuthUrl, revokeGoogleToken } from './google/google.client';
 import { slackIdentity } from './slack/slack.client';
 import { telegramApi } from './telegram/telegram.client';
 
@@ -41,26 +40,6 @@ export class ConnectorsController {
         : { connected: false };
     }
     return status;
-  }
-
-  @Get('google/auth-url')
-  googleAuthUrl(
-    @Query('redirectUri') redirectUri: string,
-    @Query('state') state: string,
-    @Req() req: AuthenticatedRequest,
-  ) {
-    requireUserId(req);
-    return { url: googleAuthUrl(requireString(redirectUri, 'redirectUri'), requireString(state, 'state')) };
-  }
-
-  @Post('google')
-  async connectGoogle(@Body() body: { code?: string; redirectUri?: string }, @Req() req: AuthenticatedRequest) {
-    const userId = requireUserId(req);
-    const data = await orBadRequest(
-      exchangeGoogleCode(requireString(body.code, 'code'), requireString(body.redirectUri, 'redirectUri')),
-    );
-    await this.store.save(userId, 'google', data, data.email);
-    return { ok: true, name: data.email };
   }
 
   @Post('slack')
@@ -121,10 +100,6 @@ export class ConnectorsController {
     if (provider === 'telegram') {
       const telegram = await this.store.get(userId, 'telegram').catch(() => null);
       if (telegram) await telegramApi(telegram.data.botToken, 'deleteWebhook').catch(() => undefined);
-    }
-    if (provider === 'google') {
-      const google = await this.store.get(userId, 'google').catch(() => null);
-      if (google) await revokeGoogleToken(google.data);
     }
 
     await this.store.delete(userId, provider as ConnectorProvider);

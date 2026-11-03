@@ -114,6 +114,25 @@ function buildNodeParams(node: FlowNode, context: ExecutorContext): Record<strin
     };
   }
 
+  if (node.type === 'knowledge') {
+    return {
+      integrationId: node.integrationId,
+      knowledgeBase: node.knowledgeBase,
+      label: node.label,
+      ...context,
+    };
+  }
+
+  if (node.type === 'files') {
+    return {
+      integrationId: node.integrationId,
+      folder: node.folder,
+      notifySlackChannel: node.notifySlackChannel,
+      notifyTelegramChatId: node.notifyTelegramChatId,
+      ...context,
+    };
+  }
+
   if (node.params && typeof node.params === 'object' && !Array.isArray(node.params)) {
     return {
       ...node.params,

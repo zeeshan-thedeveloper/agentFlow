@@ -9,6 +9,8 @@ import { QueryRunnerHandler } from './query-runner.handler';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectorStore } from '../connectors/connector.store';
 import { ConnectorHandler } from './connector.handler';
+import { KnowledgeHandler } from './knowledge.handler';
+import { FilesHandler } from './files.handler';
 
 const prisma = new PrismaService();
 const credentialResolver = new CredentialResolver(prisma);
@@ -23,4 +25,6 @@ export const registry: Record<string, NodeHandler> = {
   database: new DatabaseHandler(),
   'query-runner': new QueryRunnerHandler(credentialResolver, prisma),
   connector: new ConnectorHandler(),
+  knowledge: new KnowledgeHandler(),
+  files: new FilesHandler(),
 };

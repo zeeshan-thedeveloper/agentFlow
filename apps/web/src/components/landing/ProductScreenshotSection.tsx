@@ -50,7 +50,7 @@ export function ProductScreenshotSection() {
               </svg>
               <CanvasNode className="node-trigger left-[5%] top-[22%]" label="Trigger" title="Telegram message" />
               <CanvasNode className="node-agent left-[38%] top-[42%]" label="Agent" title="Research assistant" />
-              <CanvasNode className="node-agent right-[4%] top-[22%]" label="App" title="Gmail" />
+              <CanvasNode className="node-agent right-[4%] top-[22%]" label="Knowledge" title="RAG docs" />
               <CanvasNode className="node-output bottom-[18%] right-[4%]" label="Output" title="Reply in chat" />
               <CanvasNode className="node-agent bottom-[18%] left-[15%]" label="Database" title="Read-only query" />
             </div>
