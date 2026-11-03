@@ -106,7 +106,7 @@ export default function CanvasNodeCard({
     ? connectorSubtitle(worldNode)
     : worldNode.type === 'knowledge'
     ? worldNode.integrationId && worldNode.integrationId !== 'database'
-      ? `${worldNode.connectionName || worldNode.integrationId.split(':').pop()} · ${worldNode.knowledgeBase || 'unnamed'}`
+      ? `${worldNode.connectionName || worldNode.integrationId.split(':').pop()} · ${worldNode.knowledgeBase || 'unnamed'}${worldNode.allowWrite ? ' · read & write' : ''}`
       : 'Select connection'
     : worldNode.type === 'files'
     ? worldNode.integrationId?.startsWith('storage:')
