@@ -31,7 +31,7 @@ The backend walks the graph, runs each agent's tool loop, and stores every input
 
 ### Agentic AI
 - **ReAct tool loop.** Each agent calls OpenAI function-calling in a loop: think, call a tool, read the result, repeat until it has an answer or hits an iteration cap.
-- **Tools that come from the graph.** Wiring a node into an agent gives it tools: `search_knowledge`, `run_sql`, `create_pdf`/`list_files`, `slack_send_message`, `telegram_send_message`, GitHub tools (read repos, issues and files; open issues and comment), plus web search, page reading and HTTP requests.
+- **Tools that come from the graph.** Wiring a node into an agent gives it tools: `search_knowledge`/`add_to_knowledge`, `run_sql`, `create_pdf`/`list_files`, `slack_send_message`, `telegram_send_message`, GitHub tools (read repos, issues and files; open issues and comment), plus web search, page reading and HTTP requests.
 - **Multi-agent workflows.** Agents pass results along data edges; a run plan decides which steps run in parallel and which in order.
 - **Chat-triggered runs.** A Slack mention or Telegram message starts matching workflows through signed webhooks, and the answer is posted back in the same thread.
 - **Guardrails by design.** Databases are queried in read-only transactions with table allow-lists; writes to apps are opt-in per node; text the agent reads is marked as data, not instructions, to reduce prompt-injection risk; outbound requests are blocked from private networks (SSRF and DNS-rebinding protection).
@@ -40,6 +40,7 @@ The backend walks the graph, runs each agent's tool loop, and stores every input
 - **Bring your own vector store.** A Knowledge node points at any PostgreSQL database with **pgvector**. A free **Neon** database works out of the box.
 - **Ingestion pipeline.** Pasted text or uploaded `.txt`/`.md` files are split into overlapping, boundary-aware chunks, embedded with `text-embedding-3-small`, and stored with an **HNSW** cosine index (created automatically).
 - **Semantic retrieval as a tool.** The agent decides when to call `search_knowledge`, can rephrase and search again, and grounds its answer in the passages it found, with document names and relevance scores.
+- **Agents can write too.** With "Allow the agent to add documents" on, an agent gets `add_to_knowledge` and can save notes, answers or summaries that later runs will find.
 - **Several knowledge bases per database**, managed from the canvas (add, replace, remove documents).
 
 ### Agent-created files

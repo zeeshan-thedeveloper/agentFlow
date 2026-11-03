@@ -119,6 +119,7 @@ function buildNodeParams(node: FlowNode, context: ExecutorContext): Record<strin
       integrationId: node.integrationId,
       knowledgeBase: node.knowledgeBase,
       label: node.label,
+      allowWrite: node.allowWrite === true,
       ...context,
     };
   }

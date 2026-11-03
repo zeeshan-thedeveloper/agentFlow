@@ -8,12 +8,8 @@ import {
   knowledgeConnectionString,
   listDocuments,
   requireKnowledgeBaseName,
-  saveDocument,
 } from './knowledge.store';
-import { chunkText, embed } from './knowledge.text';
-
-const MAX_DOCUMENT_CHARS = 500_000;
-const MAX_TITLE_CHARS = 200;
+import { ingestDocument, requireDocumentTitle } from './knowledge.ingest';
 
 async function orBadRequest<T>(work: () => Promise<T>): Promise<T> {
   try {
@@ -21,13 +17,6 @@ async function orBadRequest<T>(work: () => Promise<T>): Promise<T> {
   } catch (error) {
     throw new BadRequestException(error instanceof Error ? error.message : String(error));
   }
-}
-
-function requireTitle(value: unknown): string {
-  const title = typeof value === 'string' ? value.trim() : '';
-  if (!title) throw new BadRequestException('Give the document a name.');
-  if (title.length > MAX_TITLE_CHARS) throw new BadRequestException(`Document names are at most ${MAX_TITLE_CHARS} characters.`);
-  return title;
 }
 
 /** Adding, listing and removing the documents in a Knowledge node's knowledge base. */
@@ -59,21 +48,14 @@ export class KnowledgeController {
     @Req() req: AuthenticatedRequest,
   ) {
     const userId = requireUserId(req);
-    const title = requireTitle(body.title);
-    const text = typeof body.text === 'string' ? body.text : '';
-    if (text.length > MAX_DOCUMENT_CHARS) {
-      throw new BadRequestException(`A document can be at most ${MAX_DOCUMENT_CHARS.toLocaleString('en-US')} characters; split it into parts.`);
-    }
-    const chunks = chunkText(text);
-    if (chunks.length === 0) throw new BadRequestException('The document has no text.');
-
     return orBadRequest(async () => {
+      const title = requireDocumentTitle(body.title);
+      const text = typeof body.text === 'string' ? body.text : '';
       const knowledgeBase = requireKnowledgeBaseName(body.knowledgeBase);
       const connectionString = await knowledgeConnectionString(this.resolver, userId, body.integrationId);
       const client = await openAIClientFor(this.prisma, userId);
-      const embeddings = await embed(client, chunks);
-      await saveDocument(connectionString, knowledgeBase, title, chunks, embeddings);
-      return { ok: true, document: title, chunks: chunks.length };
+      const chunks = await ingestDocument(client, connectionString, knowledgeBase, title, text);
+      return { ok: true, document: title, chunks };
     });
   }
 
@@ -86,8 +68,8 @@ export class KnowledgeController {
     @Req() req: AuthenticatedRequest,
   ) {
     const userId = requireUserId(req);
-    const title = requireTitle(document);
     return orBadRequest(async () => {
+      const title = requireDocumentTitle(document);
       const connectionString = await knowledgeConnectionString(this.resolver, userId, integrationId);
       await deleteDocument(connectionString, requireKnowledgeBaseName(knowledgeBase), title);
       return { ok: true };

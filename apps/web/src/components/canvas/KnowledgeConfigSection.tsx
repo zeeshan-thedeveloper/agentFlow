@@ -146,6 +146,29 @@ export function KnowledgeConfigSection({ node, onUpdate, wiredToAgent }: Props) 
         <p style={hintStyle}>One database can hold several knowledge bases; this name picks which one the agent searches.</p>
       </div>
 
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <label style={labelStyle}>What the agent can do</label>
+        <label style={{
+          display: 'flex', alignItems: 'flex-start', gap: 9, padding: '8px 10px', borderRadius: 7, cursor: 'pointer',
+          border: `1px solid ${node.allowWrite ? `${COLOR}55` : 'var(--border-subtle)'}`,
+        }}>
+          <input
+            type="checkbox"
+            checked={node.allowWrite === true}
+            onChange={e => onUpdate({ allowWrite: e.target.checked })}
+            style={{ accentColor: COLOR, margin: '2px 0 0', flexShrink: 0 }}
+          />
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>Allow the agent to add documents</span>
+            <span style={{ fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.45 }}>
+              The agent can always search. With this on it can also save notes, answers or summaries here with
+              add_to_knowledge, replacing a document of the same name. Off by default: text it reads could try to
+              get it to save misleading content.
+            </span>
+          </span>
+        </label>
+      </div>
+
       {target.integrationId && target.knowledgeBase && (
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>

@@ -60,7 +60,7 @@ export interface FlowNode {
   folder?: string;
   notifySlackChannel?: string;
   notifyTelegramChatId?: string;
-  /** GitHub: may open issues and comment. */
+  /** GitHub: may open issues and comment. Knowledge: may add documents. */
   allowWrite?: boolean;
 }
 

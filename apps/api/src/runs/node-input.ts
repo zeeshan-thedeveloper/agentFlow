@@ -25,6 +25,8 @@ export interface KnowledgeRef {
   integrationId: string;
   knowledgeBase: string;
   name: string;
+  /** The agent may add documents, not only search. */
+  allowWrite?: boolean;
 }
 
 /** A Files node wired into an agent: where it saves files and who hears about new ones. */
