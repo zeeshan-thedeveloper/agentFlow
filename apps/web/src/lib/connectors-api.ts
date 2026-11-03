@@ -70,6 +70,7 @@ export function slackManifest(eventsUrl?: string) {
           'im:read',
           'im:history',
           'files:write',
+          'files:read',
         ],
       },
     },

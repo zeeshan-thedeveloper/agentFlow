@@ -139,8 +139,8 @@ export function FilesConfigSection({ node, onUpdate, wiredToAgent }: Props) {
         background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.28)',
       }}>
         Connect this to an <strong>Agent</strong> to let it create PDF documents (reports, summaries, invoices…) and
-        read the files here: PDFs, images and text. Photos and documents sent to your Telegram bot are saved here
-        too. Files live in your own S3-compatible storage, such as Neon storage, Cloudflare R2 or AWS S3.
+        read the files here: PDFs, images and text. Photos and documents sent to your Slack or Telegram bot are saved
+        here too (Slack needs the files:read scope). Files live in your own S3-compatible storage, such as Neon storage, Cloudflare R2 or AWS S3.
       </div>
 
       <StorageSelector

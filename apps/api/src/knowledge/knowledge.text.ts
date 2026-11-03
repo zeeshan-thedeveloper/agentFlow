@@ -4,7 +4,7 @@ export const EMBEDDING_MODEL = 'text-embedding-3-small';
 export const EMBEDDING_DIMENSIONS = 1536;
 
 const CHUNK_CHARS = 1200;
-const OVERLAP_CHARS = 200;
+export const OVERLAP_CHARS = 200;
 const EMBED_BATCH = 96;
 
 /**

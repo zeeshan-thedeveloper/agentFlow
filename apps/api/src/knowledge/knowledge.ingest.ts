@@ -30,6 +30,6 @@ export async function ingestDocument(
   const chunks = chunkText(text);
   if (chunks.length === 0) throw new Error('The document has no text.');
   const embeddings = await embed(client, chunks);
-  await saveDocument(connectionString, knowledgeBase, title, chunks, embeddings);
+  await saveDocument(connectionString, knowledgeBase, title, chunks, embeddings, text);
   return chunks.length;
 }

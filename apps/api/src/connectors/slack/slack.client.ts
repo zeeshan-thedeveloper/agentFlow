@@ -22,6 +22,19 @@ export async function slackApi<T extends Record<string, unknown>>(
   return result;
 }
 
+/** Downloads a file shared in Slack; needs the files:read scope. */
+export async function downloadSlackFile(botToken: string, url: string): Promise<Buffer> {
+  // The bot token goes only to Slack's own file host.
+  if (new URL(url).hostname !== 'files.slack.com') throw new Error('Slack file URL is not on files.slack.com.');
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${botToken}` } });
+  if (!response.ok) throw new Error(`Slack file download failed with ${response.status}.`);
+  // Without files:read Slack answers with its sign-in page instead of the file.
+  if ((response.headers.get('content-type') ?? '').startsWith('text/html')) {
+    throw new Error('Slack would not send the file; add the files:read scope to the Slack app and reinstall it.');
+  }
+  return Buffer.from(await response.arrayBuffer());
+}
+
 /** Checks Slack's request signature, so only Slack can start a workflow through the webhook. */
 export function verifySlackSignature(
   signingSecret: string,

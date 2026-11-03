@@ -5,6 +5,7 @@ import { requireUserId, type AuthenticatedRequest } from '../integrations/integr
 import { PrismaService } from '../prisma/prisma.service';
 import {
   deleteDocument,
+  getDocumentText,
   knowledgeConnectionString,
   listDocuments,
   requireKnowledgeBaseName,
@@ -56,6 +57,24 @@ export class KnowledgeController {
       const client = await openAIClientFor(this.prisma, userId);
       const chunks = await ingestDocument(client, connectionString, knowledgeBase, title, text);
       return { ok: true, document: title, chunks };
+    });
+  }
+
+  /** A document's full text, to edit it on the canvas. */
+  @Get('documents/content')
+  content(
+    @Query('integrationId') integrationId: string,
+    @Query('knowledgeBase') knowledgeBase: string,
+    @Query('document') document: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const userId = requireUserId(req);
+    return orBadRequest(async () => {
+      const title = requireDocumentTitle(document);
+      const connectionString = await knowledgeConnectionString(this.resolver, userId, integrationId);
+      const text = await getDocumentText(connectionString, requireKnowledgeBaseName(knowledgeBase), title);
+      if (text === null) throw new Error(`There is no document "${title}".`);
+      return { document: title, text };
     });
   }
 

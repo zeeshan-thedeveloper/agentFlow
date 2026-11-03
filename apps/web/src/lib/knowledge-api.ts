@@ -35,5 +35,9 @@ export const addKnowledgeDocument = (target: KnowledgeTarget, title: string, tex
     body: JSON.stringify({ ...target, title, text }),
   });
 
+/** The full text of a document, to edit it. */
+export const getKnowledgeDocument = ({ integrationId, knowledgeBase }: KnowledgeTarget, document: string) =>
+  request<{ document: string; text: string }>(`/documents/content${query({ integrationId, knowledgeBase, document })}`).then(body => body.text);
+
 export const deleteKnowledgeDocument = ({ integrationId, knowledgeBase }: KnowledgeTarget, document: string) =>
   request<{ ok: boolean }>(`/documents${query({ integrationId, knowledgeBase, document })}`, { method: 'DELETE' });

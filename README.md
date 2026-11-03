@@ -40,12 +40,12 @@ The backend walks the graph, runs each agent's tool loop, and stores every input
 - **Bring your own vector store.** A Knowledge node points at any PostgreSQL database with **pgvector**. A free **Neon** database works out of the box.
 - **Ingestion pipeline.** Pasted text or uploaded `.txt`/`.md` files are split into overlapping, boundary-aware chunks, embedded with `text-embedding-3-small`, and stored with an **HNSW** cosine index (created automatically).
 - **Semantic retrieval as a tool.** The agent decides when to call `search_knowledge`, can rephrase and search again, and grounds its answer in the passages it found, with document names and relevance scores.
-- **Agents can write too.** With "Allow the agent to add documents" on, an agent gets `add_to_knowledge` and can save notes, answers or summaries that later runs will find.
+- **Agents can read, write and update.** Agents can list and read whole documents; with "Allow the agent to add documents" on they can also add, update (read, change, save under the same title) and delete them. Documents can be edited on the canvas too.
 - **Several knowledge bases per database**, managed from the canvas (add, replace, remove documents).
 
 ### Agent-created files
 - A **Files** node lets an agent **read** stored files (PDF text, images through a vision model, text files) and write a report in Markdown and save it as a **PDF** in your own **S3-compatible object storage** (Neon storage, Cloudflare R2, AWS S3).
-- Photos and documents sent to the Telegram bot are saved to the folder automatically, so you can ask about them in the same message.
+- Photos and documents sent to the Slack or Telegram bot are saved to the folder automatically, and the agent reads them before answering, so you can ask about a PDF in the same message.
 - New files, whether an agent created them or you uploaded them, can be announced on **Slack** or **Telegram** with the PDF attached.
 
 ### Platform engineering

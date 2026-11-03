@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import {
   addKnowledgeDocument,
   deleteKnowledgeDocument,
+  getKnowledgeDocument,
   listKnowledgeDocuments,
   type KnowledgeDocument,
 } from '@/lib/knowledge-api';
@@ -63,6 +64,8 @@ export function KnowledgeConfigSection({ node, onUpdate, wiredToAgent }: Props) 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** The document being edited; saving under its name replaces it. */
+  const [editing, setEditing] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!target.integrationId || !target.knowledgeBase) {
@@ -193,6 +196,20 @@ export function KnowledgeConfigSection({ node, onUpdate, wiredToAgent }: Props) 
                   </div>
                   <button
                     type="button"
+                    title={`Edit ${doc.document}`}
+                    disabled={busy}
+                    onClick={() => run(async () => {
+                      const content = await getKnowledgeDocument(target, doc.document);
+                      setTitle(doc.document);
+                      setText(content);
+                      setEditing(doc.document);
+                    })}
+                    style={{ border: 'none', background: 'transparent', color: COLOR, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
                     title={`Remove ${doc.document}`}
                     disabled={busy}
                     onClick={() => run(() => deleteKnowledgeDocument(target, doc.document).then(() => `Removed ${doc.document}.`))}
@@ -206,7 +223,7 @@ export function KnowledgeConfigSection({ node, onUpdate, wiredToAgent }: Props) 
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <label style={labelStyle}>Add a document</label>
+            <label style={labelStyle}>{editing ? `Editing ${editing}` : 'Add a document'}</label>
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Document name, e.g. Refund policy" style={inputStyle} />
             <textarea
               value={text}
@@ -230,14 +247,27 @@ export function KnowledgeConfigSection({ node, onUpdate, wiredToAgent }: Props) 
               disabled={busy || !title.trim() || !text.trim()}
               onClick={() => run(async () => {
                 const result = await addKnowledgeDocument(target, title.trim(), text);
+                // Renaming while editing saves a new document, so remove the old one.
+                if (editing && editing !== result.document) await deleteKnowledgeDocument(target, editing);
                 setTitle('');
                 setText('');
-                return `Added ${result.document} (${result.chunks} chunk${result.chunks === 1 ? '' : 's'}).`;
+                setEditing(null);
+                return `${editing ? 'Updated' : 'Added'} ${result.document} (${result.chunks} chunk${result.chunks === 1 ? '' : 's'}).`;
               })}
               style={buttonStyle(COLOR, true)}
             >
-              {busy ? 'Embedding…' : 'Add to knowledge base'}
+              {busy ? 'Embedding…' : editing ? 'Save changes' : 'Add to knowledge base'}
             </button>
+            {editing && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => { setEditing(null); setTitle(''); setText(''); }}
+                style={buttonStyle('var(--text-muted)')}
+              >
+                Cancel editing
+              </button>
+            )}
             <p style={hintStyle}>
               Text is split into chunks and embedded with your OpenAI key (text-embedding-3-small). Adding a document
               with an existing name replaces it.
