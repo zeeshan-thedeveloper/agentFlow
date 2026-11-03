@@ -109,9 +109,9 @@ export default function CanvasNodeCard({
       ? `${worldNode.connectionName || worldNode.integrationId.split(':').pop()} · ${worldNode.knowledgeBase || 'unnamed'}`
       : 'Select connection'
     : worldNode.type === 'files'
-    ? worldNode.integrationId && worldNode.integrationId !== 'database'
+    ? worldNode.integrationId?.startsWith('storage:')
       ? `${worldNode.connectionName || worldNode.integrationId.split(':').pop()} · /${worldNode.folder || 'unnamed'}`
-      : 'Select connection'
+      : 'Select storage'
     : isDatabaseNode(worldNode)
     ? worldNode.integrationId && worldNode.integrationId !== 'database'
       ? `${worldNode.connectionName || worldNode.integrationId.split(':').pop()} · ${isMongoDatabase(worldNode) ? 'MongoDB' : 'Read-only'}`

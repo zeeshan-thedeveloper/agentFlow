@@ -482,7 +482,7 @@ export default function AgentFlowCanvas({ user }: AgentFlowCanvasProps) {
         : type === 'knowledge'
         ? { integrationId: 'database', knowledgeBase: 'docs', label: 'Knowledge', subtitle: 'Select connection' }
         : type === 'files'
-        ? { integrationId: 'database', folder: 'reports', label: 'Files', subtitle: 'Select connection' }
+        ? { integrationId: '', folder: 'reports', label: 'Files', subtitle: 'Select storage' }
         : nodeType === 'schema'
         ? { integrationId: '', connectionName: '', subtitle: 'Select connection' }
         : nodeType === 'query-runner'

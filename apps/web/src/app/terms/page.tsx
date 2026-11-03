@@ -39,7 +39,7 @@ export default function TermsPage() {
 
       <LegalSection title="What agents do for you">
         <p>Agents act on the instructions you give them, using the tools and apps you connect. You decide what each agent may do. Some actions, such as opening GitHub issues, are off until you allow them on a node.</p>
-        <p>Knowledge base documents and files are stored in the database you connect, under your control; you are responsible for having the right to store and process them.</p>
+        <p>Knowledge base documents and files are stored in the database and storage you connect, under your control; you are responsible for having the right to store and process them.</p>
         <p>AI output can be wrong, incomplete or unexpected, and text an agent reads (a document, web page or message) may try to mislead it. Review what your workflows do, especially before allowing them to send messages or change things. You are responsible for the actions your workflows take and for the messages they send.</p>
       </LegalSection>
 

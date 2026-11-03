@@ -1,10 +1,27 @@
+/** A saved S3-compatible storage connection (Neon storage, Cloudflare R2, AWS S3, ...). */
+export interface StorageConnection {
+  integrationId: string;
+  name: string;
+  maskedHint: string | null;
+}
+
+export interface StorageFields {
+  name: string;
+  endpoint: string;
+  region: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+}
+
 export interface StoredFile {
+  /** The object key, "<folder>/<name>". */
   id: string;
   folder: string;
   name: string;
   contentType: string;
   size: number;
-  /** 'agent' when an agent created it, 'upload' when added from the canvas. */
+  /** 'agent' or 'upload' right after saving; empty in listings. */
   source: string;
   createdAt: string;
 }
@@ -28,6 +45,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const query = (params: Record<string, string>) => `?${new URLSearchParams(params)}`;
+
+export const listStorages = () => request<StorageConnection[]>('/storages');
+
+/** Checks the credentials can reach the bucket, then saves them. */
+export const saveStorage = (fields: StorageFields) =>
+  request<StorageConnection>('/storages', { method: 'POST', body: JSON.stringify(fields) });
+
+export const deleteStorage = (integrationId: string) =>
+  request<{ ok: boolean }>(`/storages${query({ integrationId })}`, { method: 'DELETE' });
 
 export const listFiles = ({ integrationId, folder }: FilesTarget) =>
   request<{ files: StoredFile[] }>(query({ integrationId, folder })).then(body => body.files);

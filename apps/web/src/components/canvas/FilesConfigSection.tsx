@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { useConnectors } from '@/hooks/useConnectors';
 import { deleteFile, fileDownloadUrl, listFiles, uploadFile, type StoredFile } from '@/lib/files-api';
 import { ConnectorSetup } from './ConnectorSetup';
-import { DatabaseConnectionSelector } from './DatabaseConnectionSelector';
+import { StorageSelector } from './StorageSelector';
 import type { FlowNode } from './types';
 
 interface Props {
@@ -85,12 +85,12 @@ function NotifyOption({
 }
 
 /**
- * A Files node is a folder in the user's PostgreSQL database. Wired into an
+ * A Files node is a folder in the user's S3-compatible storage. Wired into an
  * Agent, the agent can create PDFs there; new files can be announced (with the
  * file attached) on Slack or Telegram.
  */
 export function FilesConfigSection({ node, onUpdate, wiredToAgent }: Props) {
-  const integrationId = node.integrationId && node.integrationId !== 'database' ? node.integrationId : '';
+  const integrationId = node.integrationId?.startsWith('storage:') ? node.integrationId : '';
   const folder = (node.folder ?? '').trim();
 
   const [files, setFiles] = useState<StoredFile[] | null>(null);
@@ -139,23 +139,16 @@ export function FilesConfigSection({ node, onUpdate, wiredToAgent }: Props) {
         background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.28)',
       }}>
         Connect this to an <strong>Agent</strong> to let it create PDF documents (reports, summaries, invoices…).
-        Files are saved in your own PostgreSQL database, such as a free Neon one.
+        Files are saved in your own S3-compatible storage, such as Neon storage, Cloudflare R2 or AWS S3.
       </div>
 
-      <DatabaseConnectionSelector
+      <StorageSelector
         selectedIntegrationId={integrationId || undefined}
-        filterPrefix="database:pg"
-        enginePrefix="database:pg"
-        engine="postgresql"
-        integrationName="PostgreSQL"
-        onSelect={id => {
-          const name = id ? id.split(':').pop() ?? id : undefined;
-          onUpdate({
-            integrationId: id || 'database',
-            connectionName: name,
-            subtitle: name ?? 'Select connection',
-          });
-        }}
+        onSelect={connection => onUpdate({
+          integrationId: connection?.integrationId ?? '',
+          connectionName: connection?.name,
+          subtitle: connection?.name ?? 'Select storage',
+        })}
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -205,7 +198,7 @@ export function FilesConfigSection({ node, onUpdate, wiredToAgent }: Props) {
                     {file.name}
                   </div>
                   <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>
-                    {formatSize(file.size)} · {file.source === 'agent' ? 'by an agent' : 'uploaded'} · {new Date(file.createdAt).toLocaleString()}
+                    {formatSize(file.size)} · {new Date(file.createdAt).toLocaleString()}
                   </div>
                 </a>
                 <button
