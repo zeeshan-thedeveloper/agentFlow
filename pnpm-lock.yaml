@@ -41,7 +41,7 @@ importers:
         specifier: ^4.104.0
         version: 4.104.0
       pdfjs-dist:
-        specifier: 3.11.174
+        specifier: ^3.11.174
         version: 3.11.174
       pdfkit:
         specifier: ^0.15.2
