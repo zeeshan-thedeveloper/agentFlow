@@ -1,6 +1,6 @@
 import type OpenAI from 'openai';
 import type { Tool, ToolDefinition } from '../handlers/tools/base.tool';
-import { searchKnowledge } from './knowledge.store';
+import { deleteDocument, getDocumentText, listDocuments, searchKnowledge } from './knowledge.store';
 import { embed } from './knowledge.text';
 import { ingestDocument, requireDocumentTitle } from './knowledge.ingest';
 
@@ -20,10 +20,101 @@ export interface AgentKnowledgeBase {
   allowWrite: boolean;
 }
 
-/** search_knowledge for every wired knowledge base, and add_to_knowledge for those that allow writes. */
+const MAX_READ_CHARS = 20_000;
+
+/**
+ * Search, list and read for every wired knowledge base; add and delete for
+ * those that allow writes. Updating a document is read, change, then add
+ * with the same title.
+ */
 export function createKnowledgeTools(client: OpenAI, bases: AgentKnowledgeBase[]): Tool[] {
   const writable = bases.filter(base => base.allowWrite);
-  return [createSearchTool(client, bases), ...(writable.length > 0 ? [createAddTool(client, writable)] : [])];
+  return [
+    createSearchTool(client, bases),
+    createListTool(bases),
+    createReadTool(bases),
+    ...(writable.length > 0 ? [createAddTool(client, writable), createDeleteTool(writable)] : []),
+  ];
+}
+
+/** Resolves the knowledge_base argument when several are wired, and describes it in the tool schema. */
+function picker(bases: AgentKnowledgeBase[], purpose: string) {
+  const byName = new Map(bases.map(base => [base.name, base]));
+  const several = bases.length > 1;
+  return {
+    several,
+    properties: several
+      ? { knowledge_base: { type: 'string', enum: [...byName.keys()], description: `Which knowledge base to ${purpose}.` } }
+      : {},
+    required: several ? ['knowledge_base'] : [],
+    pick(args: Record<string, unknown>): AgentKnowledgeBase {
+      const base = several ? byName.get(String(args.knowledge_base ?? '')) : bases[0];
+      if (!base) throw new Error(`Unknown knowledge base. Choose one of: ${[...byName.keys()].join(', ')}.`);
+      return base;
+    },
+  };
+}
+
+function createListTool(bases: AgentKnowledgeBase[]): Tool {
+  const target = picker(bases, 'list');
+  return {
+    definition: {
+      name: 'list_knowledge_documents',
+      description: 'List the documents in a knowledge base by title, newest first, with their size.',
+      parameters: { type: 'object', properties: { ...target.properties }, required: target.required },
+    },
+    async run(args) {
+      const base = target.pick(args);
+      const documents = await listDocuments(base.connectionString, base.knowledgeBase);
+      return JSON.stringify(documents.map(doc => ({ title: doc.document, characters: doc.characters, addedAt: doc.addedAt })));
+    },
+  };
+}
+
+function createReadTool(bases: AgentKnowledgeBase[]): Tool {
+  const target = picker(bases, 'read from');
+  return {
+    definition: {
+      name: 'read_knowledge_document',
+      description: 'Read the full text of one knowledge base document by its exact title (see list_knowledge_documents).',
+      parameters: {
+        type: 'object',
+        properties: { title: { type: 'string' }, ...target.properties },
+        required: ['title', ...target.required],
+      },
+    },
+    async run(args) {
+      const base = target.pick(args);
+      const title = requireDocumentTitle(args.title);
+      const text = await getDocumentText(base.connectionString, base.knowledgeBase, title);
+      if (text === null) throw new Error(`There is no document "${title}". Call list_knowledge_documents to see the titles.`);
+      return text.length > MAX_READ_CHARS ? `${text.slice(0, MAX_READ_CHARS)}\n... (truncated; ${text.length} characters in all)` : text;
+    },
+  };
+}
+
+function createDeleteTool(bases: AgentKnowledgeBase[]): Tool {
+  const target = picker(bases, 'delete from');
+  return {
+    definition: {
+      name: 'delete_knowledge_document',
+      description: 'Delete a document from a knowledge base by its exact title. Only do this when the user asks or the document is clearly wrong or outdated.',
+      parameters: {
+        type: 'object',
+        properties: { title: { type: 'string' }, ...target.properties },
+        required: ['title', ...target.required],
+      },
+    },
+    async run(args) {
+      const base = target.pick(args);
+      const title = requireDocumentTitle(args.title);
+      if ((await getDocumentText(base.connectionString, base.knowledgeBase, title)) === null) {
+        throw new Error(`There is no document "${title}".`);
+      }
+      await deleteDocument(base.connectionString, base.knowledgeBase, title);
+      return JSON.stringify({ deleted: title, knowledgeBase: base.name });
+    },
+  };
 }
 
 function createAddTool(client: OpenAI, bases: AgentKnowledgeBase[]): Tool {
@@ -36,7 +127,7 @@ function createAddTool(client: OpenAI, bases: AgentKnowledgeBase[]): Tool {
       description:
         `Save a document to ${several ? 'a connected knowledge base' : 'the connected knowledge base'} so it can be found by ` +
         'search_knowledge later, in this run or future ones. Use it for facts, notes, answers or summaries worth keeping. ' +
-        'A document with the same title is replaced, so reuse a title to update it.',
+        'A document with the same title is replaced: to update one, read it with read_knowledge_document, change it, and save it under the same title.',
       parameters: {
         type: 'object',
         properties: {

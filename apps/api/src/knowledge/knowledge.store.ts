@@ -1,7 +1,7 @@
 import type { PoolClient } from 'pg';
 import type { CredentialResolver } from '../integrations/credential.resolver';
 import { postgresConnectionString, withPostgresClient } from '../integrations/postgres-connection';
-import { EMBEDDING_DIMENSIONS } from './knowledge.text';
+import { EMBEDDING_DIMENSIONS, OVERLAP_CHARS } from './knowledge.text';
 
 // Knowledge lives in the user's own PostgreSQL database (Neon, Supabase, ...),
 // in one table with the pgvector extension. Each row is one chunk of a
@@ -45,6 +45,12 @@ async function tableExists(client: PoolClient): Promise<boolean> {
   return result.rows[0]?.exists === true;
 }
 
+// The document's full original text is kept on its first chunk, so it can be
+// shown and edited as written. Tables made before this column get it added.
+async function ensureSourceColumn(client: PoolClient): Promise<void> {
+  await client.query(`ALTER TABLE ${KNOWLEDGE_TABLE} ADD COLUMN IF NOT EXISTS source_text text`);
+}
+
 /** Creates the pgvector extension and the knowledge table the first time a document is added. */
 async function ensureTable(client: PoolClient): Promise<void> {
   try {
@@ -65,6 +71,7 @@ async function ensureTable(client: PoolClient): Promise<void> {
       embedding vector(${EMBEDDING_DIMENSIONS}) NOT NULL,
       created_at timestamptz NOT NULL DEFAULT now()
     )`);
+  await ensureSourceColumn(client);
   await client.query(
     `CREATE INDEX IF NOT EXISTS ${KNOWLEDGE_TABLE}_document_idx ON ${KNOWLEDGE_TABLE} (knowledge_base, document)`,
   );
@@ -82,6 +89,7 @@ export async function saveDocument(
   document: string,
   chunks: string[],
   embeddings: number[][],
+  sourceText: string,
 ): Promise<void> {
   await withPostgresClient(connectionString, async client => {
     await client.query('BEGIN');
@@ -89,8 +97,9 @@ export async function saveDocument(
     await client.query(`DELETE FROM ${KNOWLEDGE_TABLE} WHERE knowledge_base = $1 AND document = $2`, [knowledgeBase, document]);
     for (let index = 0; index < chunks.length; index++) {
       await client.query(
-        `INSERT INTO ${KNOWLEDGE_TABLE} (knowledge_base, document, chunk_index, content, embedding) VALUES ($1, $2, $3, $4, $5::vector)`,
-        [knowledgeBase, document, index, chunks[index], toVector(embeddings[index])],
+        `INSERT INTO ${KNOWLEDGE_TABLE} (knowledge_base, document, chunk_index, content, embedding, source_text)
+         VALUES ($1, $2, $3, $4, $5::vector, $6)`,
+        [knowledgeBase, document, index, chunks[index], toVector(embeddings[index]), index === 0 ? sourceText : null],
       );
     }
     await client.query('COMMIT');
@@ -100,8 +109,10 @@ export async function saveDocument(
 export async function listDocuments(connectionString: string, knowledgeBase: string): Promise<KnowledgeDocument[]> {
   return withPostgresClient(connectionString, async client => {
     if (!(await tableExists(client))) return [];
+    await ensureSourceColumn(client);
     const result = await client.query<{ document: string; chunks: string; characters: string; added_at: Date }>(
-      `SELECT document, count(*) AS chunks, sum(length(content)) AS characters, max(created_at) AS added_at
+      `SELECT document, count(*) AS chunks, coalesce(max(length(source_text)), sum(length(content))) AS characters,
+              max(created_at) AS added_at
          FROM ${KNOWLEDGE_TABLE}
         WHERE knowledge_base = $1
         GROUP BY document
@@ -114,6 +125,34 @@ export async function listDocuments(connectionString: string, knowledgeBase: str
       characters: Number(row.characters),
       addedAt: row.added_at.toISOString(),
     }));
+  });
+}
+
+/** Joins chunks that overlap, for documents saved before the original text was kept. */
+function joinChunks(chunks: string[]): string {
+  let text = chunks[0] ?? '';
+  for (const chunk of chunks.slice(1)) {
+    // Chunks start OVERLAP_CHARS before the previous one ended; trimming can shorten that, so fall back to the longest match.
+    let overlap = text.endsWith(chunk.slice(0, OVERLAP_CHARS)) ? OVERLAP_CHARS : 0;
+    for (let k = Math.min(chunk.length, OVERLAP_CHARS); !overlap && k >= 20; k--) {
+      if (text.endsWith(chunk.slice(0, k))) overlap = k;
+    }
+    text = overlap ? text + chunk.slice(overlap) : `${text}\n\n${chunk}`;
+  }
+  return text;
+}
+
+/** A document's full text, or null if there is none with that name. */
+export async function getDocumentText(connectionString: string, knowledgeBase: string, document: string): Promise<string | null> {
+  return withPostgresClient(connectionString, async client => {
+    if (!(await tableExists(client))) return null;
+    await ensureSourceColumn(client);
+    const result = await client.query<{ content: string; source_text: string | null }>(
+      `SELECT content, source_text FROM ${KNOWLEDGE_TABLE} WHERE knowledge_base = $1 AND document = $2 ORDER BY chunk_index`,
+      [knowledgeBase, document],
+    );
+    if (result.rows.length === 0) return null;
+    return result.rows[0].source_text ?? joinChunks(result.rows.map(row => row.content));
   });
 }
 

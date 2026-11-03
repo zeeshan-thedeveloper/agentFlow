@@ -1,7 +1,9 @@
+import type OpenAI from 'openai';
 import type { Tool } from '../handlers/tools/base.tool';
 import type { ConnectorStore } from '../connectors/connector.store';
 import { notifyFileAdded, type FileNotifySettings } from './file-notify';
-import { listFiles, requireFileName, saveFile, type StorageCredential } from './files.store';
+import { readFileAsText } from './file-read';
+import { getFile, listFiles, requireFileName, saveFile, type StorageCredential } from './files.store';
 import { renderPdf } from './pdf';
 
 /** A Files node wired into an agent: where its PDFs go and who hears about them. */
@@ -16,7 +18,7 @@ function pdfName(value: unknown): string {
   return `${base}.pdf`;
 }
 
-export function createFileTools(store: ConnectorStore, userId: string, files: AgentFileStore): Tool[] {
+export function createFileTools(store: ConnectorStore, userId: string, files: AgentFileStore, client: OpenAI): Tool[] {
   const createPdf: Tool = {
     definition: {
       name: 'create_pdf',
@@ -58,5 +60,26 @@ export function createFileTools(store: ConnectorStore, userId: string, files: Ag
     },
   };
 
-  return [createPdf, list];
+  const read: Tool = {
+    definition: {
+      name: 'read_file',
+      description:
+        `Read a file from the "${files.folder}" folder of the connected storage: the text of a PDF or text file, ` +
+        'or a transcription of an image (a photo or screenshot of a ticket, receipt, document...). ' +
+        'Use list_files first to find the exact name.',
+      parameters: {
+        type: 'object',
+        properties: { name: { type: 'string', description: 'The file name exactly as list_files shows it.' } },
+        required: ['name'],
+      },
+    },
+    async run(args) {
+      const name = requireFileName(args.name);
+      const file = await getFile(files.storage, `${files.folder}/${name}`);
+      if (!file) throw new Error(`There is no file "${name}" in "${files.folder}". Call list_files to see the names.`);
+      return readFileAsText(client, file);
+    },
+  };
+
+  return [createPdf, list, read];
 }

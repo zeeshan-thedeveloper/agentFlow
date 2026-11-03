@@ -35,6 +35,8 @@ export interface FilesRef {
   folder: string;
   notifySlackChannel: string;
   notifyTelegramChatId: string;
+  /** Files from the Telegram message that started the run, as saved (or not) by the Files node. */
+  received?: string[];
 }
 
 export interface NodeInput {
