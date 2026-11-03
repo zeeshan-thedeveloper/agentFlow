@@ -20,7 +20,7 @@ On the canvas you connect nodes into a workflow:
 
 - a **Trigger** (a button click, a Slack mention or a Telegram message),
 - one or more **Agents** that reason in a ReAct loop and call tools,
-- **tool nodes** wired into an agent: a **Knowledge** base (RAG), a **PostgreSQL** database, **Files** storage for PDFs, and apps like **Slack**, **Telegram** and **GitHub**,
+- **tool nodes** wired into an agent: a **Knowledge** base (RAG), a **PostgreSQL** database, **Files** in S3-compatible object storage, and apps like **Slack**, **Telegram** and **GitHub**,
 - an **Output** that keeps the result or replies in the chat that started the run.
 
 The backend walks the graph, runs each agent's tool loop, and stores every input, output and tool call so a run can be inspected step by step.
@@ -43,7 +43,7 @@ The backend walks the graph, runs each agent's tool loop, and stores every input
 - **Several knowledge bases per database**, managed from the canvas (add, replace, remove documents).
 
 ### Agent-created files
-- A **Files** node lets an agent write a report in Markdown and save it as a **PDF** in your own Postgres storage.
+- A **Files** node lets an agent write a report in Markdown and save it as a **PDF** in your own **S3-compatible object storage** (Neon storage, Cloudflare R2, AWS S3).
 - New files, whether an agent created them or you uploaded them, can be announced on **Slack** or **Telegram** with the PDF attached.
 
 ### Platform engineering
@@ -58,7 +58,7 @@ The backend walks the graph, runs each agent's tool loop, and stores every input
 
 ```
 Slack message ──► Trigger ──► Agent ◄── Knowledge (Neon + pgvector)
-                                │  ◄── Files (PDFs)  ──► Slack / Telegram notification
+                                │  ◄── Files (S3 bucket) ──► Slack / Telegram notification
                                 ▼
                      Output: reply in the Slack thread
 ```
@@ -79,7 +79,7 @@ Slack message ──► Trigger ──► Agent ◄── Knowledge (Neon + pgve
 | Agent | An OpenAI model with a prompt, running a tool loop |
 | Knowledge | A RAG knowledge base in your Postgres (pgvector); gives the agent `search_knowledge` |
 | Database | A PostgreSQL connection the agent can query read-only with `run_sql` |
-| Files | A folder in your Postgres; the agent can create PDFs there, with Slack/Telegram notifications |
+| Files | A folder in your S3-compatible storage; the agent can create PDFs there, with Slack/Telegram notifications |
 | Slack / Telegram / GitHub | Apps the agent can use as tools |
 | Output | Keeps the result, or replies in the chat that started the run |
 
@@ -95,7 +95,7 @@ packages/types                                 shared types
 
 - **Handler registry.** Every node type maps to a handler; adding a node means writing one handler, not changing the executor.
 - **Tools are plain objects** (`definition` + `run`), so database, knowledge, file and app tools all plug into the same agent loop.
-- **User data stays in user databases.** Knowledge chunks and files are written to the Postgres connection the user picks, not to AgentFlow's own database.
+- **User data stays in user infrastructure.** Knowledge chunks go to the user's Postgres and files to the user's own bucket, not to AgentFlow's database.
 
 More detail is in [docs/architecture](docs/architecture).
 
@@ -109,7 +109,7 @@ More detail is in [docs/architecture](docs/architecture).
 | Vector search | PostgreSQL + pgvector (HNSW, cosine distance); Neon works on the free tier |
 | Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS |
 | Backend | NestJS 10, TypeScript, Prisma 5, node-postgres |
-| Documents | PDFKit |
+| Documents and storage | PDFKit, AWS SDK v3 (S3-compatible object storage) |
 | Integrations | Slack Events API, Telegram Bot API, GitHub REST API, Tavily web search |
 | Auth and security | NextAuth (Google, GitHub sign-in), AES-256-GCM secrets, HMAC run tokens, SSRF guard |
 | Infrastructure | Docker, Docker Compose, GitHub Actions, pnpm workspaces |

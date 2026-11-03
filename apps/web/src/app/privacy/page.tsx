@@ -24,7 +24,7 @@ export default function PrivacyPage() {
         <ul>
           <li>We collect what we need to run your workflows: your account, the workflows you build, the keys and connections you add, and the history of your runs.</li>
           <li>Secrets you give us (API keys, tokens, connection strings) are stored encrypted.</li>
-          <li>Workflows can notify you on Slack or Telegram, only where you set this up. Documents for knowledge bases and files agents create are stored in your own database, not ours.</li>
+          <li>Workflows can notify you on Slack or Telegram, only where you set this up. Documents for knowledge bases and files agents create are stored in your own database and storage, not ours.</li>
           <li>When a workflow runs, the data its agent reads is sent to the AI provider you set up (OpenAI, with your own API key) so the agent can do the task. We don&apos;t sell your data, use it for advertising, or use it to train AI models.</li>
           <li>You can disconnect any app and delete your account at any time. Deleting your account deletes everything we store about you.</li>
         </ul>
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
           <li>GitHub: your personal access token and GitHub username.</li>
           <li>Databases: the connection string you enter and the table permissions you set.</li>
         </ul>
-        <p><strong>Knowledge bases and files.</strong> Documents you add to a Knowledge node, and files you upload or agents create on a Files node, are stored in the PostgreSQL database you connected to that node (for example your Neon database), not in AgentFlow&apos;s database. To make documents searchable, their text is sent to OpenAI with your own API key to create embeddings.</p>
+        <p><strong>Knowledge bases and files.</strong> Documents you add to a Knowledge node, are stored in the PostgreSQL database you connected to that node (for example your Neon database). Files you upload or agents create on a Files node are stored in the S3-compatible storage you connected (for example Neon storage); we keep its access keys encrypted, like other credentials. Neither is stored in AgentFlow&apos;s database. To make documents searchable, their text is sent to OpenAI with your own API key to create embeddings.</p>
         <p><strong>Run history.</strong> For each workflow run we keep what started it (the Run button, or a Slack or Telegram message with its text, sender ID and chat), its status and timing, and each step&apos;s result. Results can include text an agent read or wrote, such as part of an email, document or chat message, shortened to at most 4,000 characters per step.</p>
         <p><strong>Operational logs.</strong> Our servers keep technical logs to run and debug the service. They can include short excerpts (up to 500 characters) of workflow inputs, tool results and outputs. Logs are kept only as long as needed for operating and securing the service.</p>
         <p><strong>Usage analytics.</strong> Our public pages may use Google Analytics to count visits and see which pages are used. It sets cookies in your browser and does not receive your workflows or connected-app data.</p>

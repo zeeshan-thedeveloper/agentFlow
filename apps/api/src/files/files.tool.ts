@@ -1,12 +1,12 @@
 import type { Tool } from '../handlers/tools/base.tool';
 import type { ConnectorStore } from '../connectors/connector.store';
 import { notifyFileAdded, type FileNotifySettings } from './file-notify';
-import { listFiles, requireFileName, saveFile } from './files.store';
+import { listFiles, requireFileName, saveFile, type StorageCredential } from './files.store';
 import { renderPdf } from './pdf';
 
 /** A Files node wired into an agent: where its PDFs go and who hears about them. */
 export interface AgentFileStore {
-  connectionString: string;
+  storage: StorageCredential;
   folder: string;
   notify: FileNotifySettings;
 }
@@ -40,7 +40,7 @@ export function createFileTools(store: ConnectorStore, userId: string, files: Ag
       const name = pdfName(args.filename);
       const title = typeof args.title === 'string' && args.title.trim() ? args.title.trim() : name.replace(/\.pdf$/, '');
       const data = await renderPdf(title, args.content);
-      const saved = await saveFile(files.connectionString, { folder: files.folder, name, contentType: 'application/pdf', data, source: 'agent' });
+      const saved = await saveFile(files.storage, { folder: files.folder, name, contentType: 'application/pdf', data, source: 'agent' });
       const notes = await notifyFileAdded(store, userId, files.notify, saved, data, 'agent');
       return JSON.stringify({ saved: { name: saved.name, folder: saved.folder, size: saved.size }, notifications: notes });
     },
@@ -53,8 +53,8 @@ export function createFileTools(store: ConnectorStore, userId: string, files: Ag
       parameters: { type: 'object', properties: {} },
     },
     async run() {
-      const stored = await listFiles(files.connectionString, files.folder);
-      return JSON.stringify(stored.map(file => ({ name: file.name, size: file.size, source: file.source, createdAt: file.createdAt })));
+      const stored = await listFiles(files.storage, files.folder);
+      return JSON.stringify(stored.map(file => ({ name: file.name, size: file.size, createdAt: file.createdAt })));
     },
   };
 

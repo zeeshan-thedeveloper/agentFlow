@@ -22,7 +22,7 @@ import { knowledgeConnectionString, requireKnowledgeBaseName } from '../knowledg
 import type { FilesRef, KnowledgeRef } from '../runs/node-input';
 import { createFileTools } from '../files/files.tool';
 import { fileNotifySettings } from '../files/file-notify';
-import { filesConnectionString, requireFolderName } from '../files/files.store';
+import { requireFolderName, storageCredential } from '../files/files.store';
 
 const DEFAULT_MAX_ITERATIONS = 10;
 
@@ -166,14 +166,14 @@ export class AgentHandler implements NodeHandler {
     if (fileStores.length === 1) {
       const ref: FilesRef = fileStores[0];
       const folder = requireFolderName(ref.folder);
-      const connectionString = await filesConnectionString(this.credentialResolver, userId, ref.integrationId);
+      const storage = await storageCredential(this.credentialResolver, userId, ref.integrationId);
       const notify = fileNotifySettings(ref);
       prompt +=
         '\n\n## File storage\n' +
         `You can create PDF documents with create_pdf; they are saved to the "${folder}" folder. ` +
         'Create one when the task asks for a document, report or file. Use list_files to see what is already there.' +
         (notify.slackChannel || notify.telegramChatId ? ' The user is notified on Slack or Telegram when a file is saved.' : '');
-      tools.push(...createFileTools(this.connectorStore, userId, { connectionString, folder, notify }));
+      tools.push(...createFileTools(this.connectorStore, userId, { storage, folder, notify }));
     }
 
     const connectors = (nodeInput.connectors ?? []).flatMap(connector =>
