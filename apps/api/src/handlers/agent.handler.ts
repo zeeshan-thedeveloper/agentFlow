@@ -9,7 +9,7 @@ import { summarizeForLog } from '../common/log-summary';
 import { openAIClientFor } from '../common/openai-client';
 import { ConnectorStore } from '../connectors/connector.store';
 import { createConnectorTools, isConnectorKind } from '../connectors/connector.tools';
-import { describeTriggerEvent, isTriggerEvent } from '../connectors/trigger-event';
+import { describeTriggerEvent, isChatHistory, isTriggerEvent } from '../connectors/trigger-event';
 import { resolveTools } from './tools/registry';
 import {
   createSqlTool,
@@ -224,9 +224,21 @@ export class AgentHandler implements NodeHandler {
                   : '') +
                 (knowledgeBases.length > 0
                   ? ' When the answer may be in a connected knowledge base, search it with search_knowledge first.'
+                  : '') +
+                (knowledgeBases.length > 0 || fileStores.length > 0
+                  ? ' The user\'s own information (tickets, bookings, receipts, notes, documents) lives in the connected ' +
+                    'knowledge bases and files. Never say you don\'t know or don\'t have access to something personal ' +
+                    'before you have searched the knowledge bases and listed and read the relevant files.'
                   : ''),
             },
           ]
+        : []),
+      // Earlier messages in the same Slack or Telegram chat, so follow-up questions have context.
+      ...(isChatHistory(params.conversation)
+        ? params.conversation.flatMap(turn => [
+            { role: 'user' as const, content: turn.user },
+            { role: 'assistant' as const, content: turn.assistant },
+          ])
         : []),
       ...(userContent != null
         ? [{ role: 'user' as const, content: userContent }]
