@@ -484,6 +484,21 @@ export default function CanvasBoard({
                     })
                 : undefined
             }
+            filesFolder={
+              node.type === 'agent'
+                ? edges
+                    .map(edge => (edge.to === node.id ? nodeMap[edge.from] : undefined))
+                    .find(source => source?.type === 'files')?.folder
+                : undefined
+            }
+            knowledgeNames={
+              node.type === 'agent'
+                ? edges.flatMap(edge => {
+                    const source = edge.to === node.id ? nodeMap[edge.from] : undefined;
+                    return source?.type === 'knowledge' ? [source.knowledgeBase || source.label] : [];
+                  })
+                : undefined
+            }
             connectorKinds={
               node.type === 'agent'
                 ? edges.flatMap(edge => {

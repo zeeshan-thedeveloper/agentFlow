@@ -46,11 +46,6 @@ export const connectGitHub = (token: string) =>
 export const disconnectConnector = (provider: ConnectorProvider) =>
   request<{ ok: boolean }>(`/${provider}`, { method: 'DELETE' });
 
-/** Full-page redirect to Google's consent screen; it returns to the canvas. */
-export function startGoogleConnect() {
-  window.location.href = '/api/connectors/google/start';
-}
-
 export function slackEventsUrl(connectionId: string) {
   return `${PUBLIC_API_URL}/hooks/slack/${connectionId}`;
 }
@@ -74,6 +69,7 @@ export function slackManifest(eventsUrl?: string) {
           'groups:history',
           'im:read',
           'im:history',
+          'files:write',
         ],
       },
     },

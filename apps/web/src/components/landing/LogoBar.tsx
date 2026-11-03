@@ -1,5 +1,5 @@
 // Only what AgentFlow connects to today.
-const providers = ['OpenAI', 'Gmail', 'Slack', 'Telegram', 'GitHub', 'PostgreSQL'];
+const providers = ['OpenAI', 'pgvector', 'Slack', 'Telegram', 'GitHub', 'PostgreSQL'];
 
 export function LogoBar() {
   return (

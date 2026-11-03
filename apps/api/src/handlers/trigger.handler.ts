@@ -3,7 +3,8 @@ import type { NodeHandler } from './base.handler';
 export class TriggerHandler implements NodeHandler {
   async execute(params: Record<string, unknown>, input: unknown): Promise<unknown> {
     // Manual triggers are the default; Slack and Telegram triggers are started by
-    // their webhooks with the message as input. Cron validation is only a gate.
+    // their webhooks with the message as input. Cron is no longer offered; older
+    // saves that still have it run like Manual.
     const triggerType = params.triggerType ?? 'manual';
     const triggerInputMode = params.triggerInputMode ?? 'none';
 

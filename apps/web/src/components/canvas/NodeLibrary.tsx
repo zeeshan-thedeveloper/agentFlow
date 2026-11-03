@@ -3,7 +3,7 @@ import type { LibraryNodeType } from './types';
 import { CONNECTOR_KINDS, NODE_TYPES } from './constants';
 
 // Schema and Query Runner still run in saved workflows; new flows connect a Database straight to an Agent.
-const ACTIVE_NODE_TYPES: LibraryNodeType[] = ['trigger', 'agent', 'database', 'output'];
+const ACTIVE_NODE_TYPES: LibraryNodeType[] = ['trigger', 'agent', 'database', 'knowledge', 'files', 'output'];
 // Apps are wired into an Agent to give it tools, like a Database.
 const APP_NODE_TYPES: LibraryNodeType[] = CONNECTOR_KINDS;
 

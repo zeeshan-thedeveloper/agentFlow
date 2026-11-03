@@ -2,38 +2,27 @@ import type { PrismaService } from '../prisma/prisma.service';
 import { decryptCredential, encryptCredential } from '../integrations/credential.crypto';
 
 /**
- * Each user can connect one account per provider. Google is used for Gmail
- * (sending only). Credentials live in user_integration_credentials like database
- * connections, under the provider name as integrationId.
+ * Each user can connect one account per provider. Credentials live in
+ * user_integration_credentials like database connections, under the provider
+ * name as integrationId.
  */
-export type ConnectorProvider = 'google' | 'slack' | 'telegram' | 'github';
-export const CONNECTOR_PROVIDERS: ConnectorProvider[] = ['google', 'slack', 'telegram', 'github'];
+export type ConnectorProvider = 'slack' | 'telegram' | 'github';
+export const CONNECTOR_PROVIDERS: ConnectorProvider[] = ['slack', 'telegram', 'github'];
 
 /** The apps a canvas connector node can stand for. */
-export type ConnectorKind = 'gmail' | 'slack' | 'telegram' | 'github';
+export type ConnectorKind = 'slack' | 'telegram' | 'github';
 
 export const PROVIDER_OF: Record<ConnectorKind, ConnectorProvider> = {
-  gmail: 'google',
   slack: 'slack',
   telegram: 'telegram',
   github: 'github',
 };
 
 export const PROVIDER_LABELS: Record<ConnectorProvider, string> = {
-  google: 'Google',
   slack: 'Slack',
   telegram: 'Telegram',
   github: 'GitHub',
 };
-
-export interface GoogleCredential {
-  accessToken: string;
-  refreshToken: string;
-  /** Epoch milliseconds. */
-  expiresAt: number;
-  email: string;
-  scopes: string[];
-}
 
 export interface SlackCredential {
   botToken: string;
@@ -56,7 +45,6 @@ export interface GitHubCredential {
 }
 
 export interface CredentialData {
-  google: GoogleCredential;
   slack: SlackCredential;
   telegram: TelegramCredential;
   github: GitHubCredential;
@@ -107,14 +95,6 @@ export class ConnectorStore {
       create: { userId, integrationId: provider, authType: 'connector', encryptedData, name, maskedHint: name },
     });
     return { id: record.id, userId, name, data };
-  }
-
-  /** Replaces the stored data of an existing connection, e.g. after an OAuth token refresh. */
-  async update<P extends ConnectorProvider>(id: string, data: CredentialData[P]): Promise<void> {
-    await this.prisma.userIntegrationCredential.update({
-      where: { id },
-      data: { encryptedData: encryptCredential(JSON.stringify(data)) },
-    });
   }
 
   async delete(userId: string, provider: ConnectorProvider): Promise<void> {

@@ -1,4 +1,4 @@
-import { DatabaseIcon, GitBranch, Hash, Mail, Send } from 'lucide-react';
+import { BookOpen, DatabaseIcon, FileText, GitBranch, Hash, Send } from 'lucide-react';
 import type { ConnectorKind, ConnectorProvider, FlowNode, LibraryNodeType, NodeTypeConfig } from './types';
 
 export const NW = 200;
@@ -27,7 +27,7 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
           stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
-    lib: { desc: 'Starts the workflow', options: ['Manual', 'Cron Schedule', 'Slack message', 'Telegram message'] },
+    lib: { desc: 'Starts the workflow', options: ['Manual', 'Slack message', 'Telegram message'] },
   },
   agent: {
     label: 'Agent',
@@ -89,6 +89,30 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
       category: 'integrations',
     },
   },
+  knowledge: {
+    label: 'Knowledge',
+    color: '#EC4899',
+    glowA: 'rgba(236,72,153,0.22)',
+    glowB: 'rgba(236,72,153,0.08)',
+    icon: <BookOpen size={16} strokeWidth={1.8} />,
+    lib: {
+      desc: 'Documents an Agent can search (RAG)',
+      options: ['Add documents'],
+      category: 'integrations',
+    },
+  },
+  files: {
+    label: 'Files',
+    color: '#F97316',
+    glowA: 'rgba(249,115,22,0.22)',
+    glowB: 'rgba(249,115,22,0.08)',
+    icon: <FileText size={16} strokeWidth={1.8} />,
+    lib: {
+      desc: 'Let an Agent create PDFs and save them',
+      options: ['Save files'],
+      category: 'integrations',
+    },
+  },
   schema: {
     label: 'Schema',
     color: '#8B5CF6',
@@ -128,13 +152,12 @@ export const NODE_TYPES: Record<LibraryNodeType, NodeTypeConfig> = {
       category: 'integrations',
     },
   },
-  gmail: connectorType('Gmail', '#EA4335', <Mail size={16} strokeWidth={1.8} />, 'Let an Agent send email for you'),
   slack: connectorType('Slack', '#E01E5A', <Hash size={16} strokeWidth={1.8} />, 'Let an Agent read and post in Slack'),
   telegram: connectorType('Telegram', '#229ED9', <Send size={16} strokeWidth={1.8} />, 'Let an Agent message people on Telegram'),
   github: connectorType('GitHub', '#8B5CF6', <GitBranch size={16} strokeWidth={1.8} />, 'Let an Agent work with your repos'),
 };
 
-export const CONNECTOR_KINDS: ConnectorKind[] = ['gmail', 'slack', 'telegram', 'github'];
+export const CONNECTOR_KINDS: ConnectorKind[] = ['slack', 'telegram', 'github'];
 
 export function isConnectorKind(value: unknown): value is ConnectorKind {
   return CONNECTOR_KINDS.includes(value as ConnectorKind);
@@ -147,11 +170,6 @@ export const CONNECTOR_INFO: Record<ConnectorKind, {
   /** Label for the opt-in that lets the agent change things, when the app has one. */
   writeLabel?: string;
 }> = {
-  gmail: {
-    provider: 'google',
-    abilities: 'Sends plain-text email from your Google account, only when allowed below. AgentFlow can\'t read your mailbox.',
-    writeLabel: 'Allow sending email',
-  },
   slack: { provider: 'slack', abilities: 'List channels, read channels the bot is in, and post messages.' },
   telegram: { provider: 'telegram', abilities: 'Send messages to chats that have talked to the bot.' },
   github: { provider: 'github', abilities: 'Read repos, issues, pull requests and files.', writeLabel: 'Allow opening issues and commenting' },
@@ -160,7 +178,6 @@ export const CONNECTOR_INFO: Record<ConnectorKind, {
 /** The line under an app node's name: what an agent wired to it may do. */
 export function connectorSubtitle(node: Pick<FlowNode, 'connector' | 'allowWrite'>): string {
   switch (node.connector) {
-    case 'gmail': return node.allowWrite ? 'Can send email' : 'Sending off';
     case 'github': return node.allowWrite ? 'Read, open issues & comment' : 'Read-only';
     case 'slack': return 'Read & post messages';
     case 'telegram': return 'Send messages';

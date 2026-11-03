@@ -1,19 +1,17 @@
 import type { Tool } from '../handlers/tools/base.tool';
 import type { ConnectorKind, ConnectorStore } from './connector.store';
 import { createGitHubTools } from './github/github.client';
-import { createGmailTools } from './google/gmail.tools';
-import { GoogleSession } from './google/google.client';
 import { createSlackTools } from './slack/slack.client';
 import { createTelegramTools } from './telegram/telegram.client';
 
 /** A connector node wired into an agent. */
 export interface AgentConnector {
   kind: ConnectorKind;
-  /** Lets the agent send email (Gmail) or open issues and comment (GitHub). */
+  /** Lets the agent open issues and comment (GitHub). */
   allowWrite: boolean;
 }
 
-export const CONNECTOR_KINDS: ConnectorKind[] = ['gmail', 'slack', 'telegram', 'github'];
+export const CONNECTOR_KINDS: ConnectorKind[] = ['slack', 'telegram', 'github'];
 
 export function isConnectorKind(value: unknown): value is ConnectorKind {
   return CONNECTOR_KINDS.includes(value as ConnectorKind);
@@ -31,23 +29,9 @@ export async function createConnectorTools(
 
   const tools: Tool[] = [];
   const notes: string[] = [];
-  let google: GoogleSession | null = null;
-  const googleSession = async () => (google ??= new GoogleSession(store, await store.require(userId, 'google')));
 
   for (const [kind, allowWrite] of byKind) {
     switch (kind) {
-      case 'gmail': {
-        const session = await googleSession();
-        const gmail = createGmailTools(session, allowWrite);
-        if (gmail.length === 0) {
-          throw new Error(
-            'The Gmail node gives the agent nothing to do: turn on "Allow sending email" on it, and tick "Send email on your behalf" when connecting Google.',
-          );
-        }
-        tools.push(...gmail);
-        notes.push(`Gmail (${session.email}): send email. You cannot read the mailbox.`);
-        break;
-      }
       case 'slack': {
         const { data } = await store.require(userId, 'slack');
         tools.push(...createSlackTools(data.botToken, data.teamName));

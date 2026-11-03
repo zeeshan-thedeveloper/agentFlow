@@ -24,7 +24,7 @@ export function HeroSection() {
             Build AI workflows on a <span className="gradient-text">visual canvas</span>
           </h1>
           <p className="reveal l-text-secondary mx-auto mt-6 max-w-2xl text-lg leading-8">
-            Wire agents to Gmail, Slack, Telegram, GitHub and your database, start them from a chat message or a click, and watch every step run.
+            Wire agents to Slack, Telegram, GitHub, your database and a RAG knowledge base, start them from a chat message or a click, and watch every step run.
           </p>
           <div className="reveal mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a href="/login" className="btn-primary-landing rounded-xl px-6 py-3 text-sm font-bold">

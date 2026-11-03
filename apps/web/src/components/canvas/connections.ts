@@ -28,9 +28,17 @@ export function isConnectorNode(node: FlowNode): boolean {
   return node.type === 'connector';
 }
 
-/** Databases and connectors are wired into an Agent to hand it tools, not to pass data along. */
+export function isKnowledgeNode(node: FlowNode): boolean {
+  return node.type === 'knowledge';
+}
+
+export function isFilesNode(node: FlowNode): boolean {
+  return node.type === 'files';
+}
+
+/** Databases, knowledge bases, file storage and connectors are wired into an Agent to hand it tools, not to pass data along. */
 export function isToolNode(node: FlowNode): boolean {
-  return isDatabaseNode(node) || isConnectorNode(node);
+  return isDatabaseNode(node) || isConnectorNode(node) || isKnowledgeNode(node) || isFilesNode(node);
 }
 
 export function isMongoDatabase(node: FlowNode): boolean {
@@ -83,7 +91,11 @@ function typeRuleViolation(from: FlowNode, to: FlowNode): string | null {
   if (from.type === 'output') return 'Output is the end of a flow';
   if (isDatabaseNode(to)) return 'Connect from the database into the node that uses it';
   if (isConnectorNode(to)) return 'Connect from the app into the Agent that uses it';
+  if (isKnowledgeNode(to)) return 'Connect from the knowledge base into the Agent that searches it';
   if (isConnectorNode(from) && to.type !== 'agent') return 'Connect an app into an Agent';
+  if (isKnowledgeNode(from) && to.type !== 'agent') return 'Connect a knowledge base into an Agent';
+  if (isFilesNode(to)) return 'Connect from Files into the Agent that saves to it';
+  if (isFilesNode(from) && to.type !== 'agent') return 'Connect Files into an Agent';
   if (isDatabaseNode(from) && !DATABASE_TARGETS.has(to.type)) return 'Connect a database into an Agent';
   if (isDatabaseNode(from) && to.type === 'agent' && isMongoDatabase(from)) {
     return 'Agents can only use PostgreSQL databases for now';
@@ -91,8 +103,11 @@ function typeRuleViolation(from: FlowNode, to: FlowNode): string | null {
   return null;
 }
 
-function graphRuleViolation(from: FlowNode, to: FlowNode, edges: FlowEdge[]): string | null {
+function graphRuleViolation(from: FlowNode, to: FlowNode, nodes: FlowNode[], edges: FlowEdge[]): string | null {
   if (edges.some(edge => edgeKey(edge) === edgeKey({ from: from.id, to: to.id }))) return 'Already connected';
+  if (isFilesNode(from) && edges.some(edge => edge.to === to.id && nodes.some(node => node.id === edge.from && isFilesNode(node)))) {
+    return 'An Agent can use one Files node';
+  }
   if (reaches(to.id, from.id, edges)) return 'That would create a loop';
   return null;
 }
@@ -115,7 +130,7 @@ export function resolveConnection(
   // Use the direction the node types allow; if neither, explain the dragged direction.
   for (const [from, to] of [[a, b], [b, a]] as const) {
     if (typeRuleViolation(from, to)) continue;
-    const reason = graphRuleViolation(from, to, edges);
+    const reason = graphRuleViolation(from, to, nodes, edges);
     return reason ? { ok: false, reason } : { ok: true, from: from.id, to: to.id };
   }
   return { ok: false, reason: typeRuleViolation(a, b)! };

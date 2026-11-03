@@ -3,13 +3,13 @@ const steps = [
     step: '01',
     title: 'Build the workflow',
     description: 'Drag a trigger, agents and outputs onto the canvas, and wire in the apps and databases each agent may use.',
-    code: ['trigger: slack_message', 'agent: support_agent', 'apps: [github, gmail]'],
+    code: ['trigger: slack_message', 'agent: support_agent', 'knowledge: support_docs'],
   },
   {
     step: '02',
     title: 'Connect your accounts',
-    description: 'Add your OpenAI key and connect Google, Slack, Telegram or GitHub, then choose what each agent is allowed to do.',
-    code: ['openai: connected', 'gmail: read-only', 'github: read + comment'],
+    description: 'Add your OpenAI key connect a Postgres (Neon) database, Slack, Telegram or GitHub, then choose what each agent is allowed to do.',
+    code: ['openai: connected', 'pgvector: neon', 'github: read + comment'],
   },
   {
     step: '03',
