@@ -174,9 +174,14 @@ export class AgentHandler implements NodeHandler {
       prompt +=
         '\n\n## File storage\n' +
         `You can create PDF documents with create_pdf; they are saved to the "${folder}" folder. ` +
-        'Create one when the task asks for a document, report or file. Use list_files to see what is already there.' +
-        (notify.slackChannel || notify.telegramChatId ? ' The user is notified on Slack or Telegram when a file is saved.' : '');
-      tools.push(...createFileTools(this.connectorStore, userId, { storage, folder, notify }));
+        'Create one when the task asks for a document, report or file. ' +
+        'When the user refers to a document, ticket, receipt or file they have, look for it with list_files and read it with read_file ' +
+        'before asking them for it.' +
+        (notify.slackChannel || notify.telegramChatId ? ' The user is notified on Slack or Telegram when a file is saved.' : '') +
+        (ref.received?.length
+          ? `\nThe user sent files with this message, now in "${folder}": ${ref.received.join('; ')}. Read them with read_file when the message is about them.`
+          : '');
+      tools.push(...createFileTools(this.connectorStore, userId, { storage, folder, notify }, client));
     }
 
     const connectors = (nodeInput.connectors ?? []).flatMap(connector =>

@@ -31,7 +31,7 @@ The backend walks the graph, runs each agent's tool loop, and stores every input
 
 ### Agentic AI
 - **ReAct tool loop.** Each agent calls OpenAI function-calling in a loop: think, call a tool, read the result, repeat until it has an answer or hits an iteration cap.
-- **Tools that come from the graph.** Wiring a node into an agent gives it tools: `search_knowledge`/`add_to_knowledge`, `run_sql`, `create_pdf`/`list_files`, `slack_send_message`, `telegram_send_message`, GitHub tools (read repos, issues and files; open issues and comment), plus web search, page reading and HTTP requests.
+- **Tools that come from the graph.** Wiring a node into an agent gives it tools: `search_knowledge`/`add_to_knowledge`, `run_sql`, `create_pdf`/`list_files`/`read_file`, `slack_send_message`, `telegram_send_message`, GitHub tools (read repos, issues and files; open issues and comment), plus web search, page reading and HTTP requests.
 - **Multi-agent workflows.** Agents pass results along data edges; a run plan decides which steps run in parallel and which in order.
 - **Chat-triggered runs.** A Slack mention or Telegram message starts matching workflows through signed webhooks, and the answer is posted back in the same thread.
 - **Guardrails by design.** Databases are queried in read-only transactions with table allow-lists; writes to apps are opt-in per node; text the agent reads is marked as data, not instructions, to reduce prompt-injection risk; outbound requests are blocked from private networks (SSRF and DNS-rebinding protection).
@@ -44,7 +44,8 @@ The backend walks the graph, runs each agent's tool loop, and stores every input
 - **Several knowledge bases per database**, managed from the canvas (add, replace, remove documents).
 
 ### Agent-created files
-- A **Files** node lets an agent write a report in Markdown and save it as a **PDF** in your own **S3-compatible object storage** (Neon storage, Cloudflare R2, AWS S3).
+- A **Files** node lets an agent **read** stored files (PDF text, images through a vision model, text files) and write a report in Markdown and save it as a **PDF** in your own **S3-compatible object storage** (Neon storage, Cloudflare R2, AWS S3).
+- Photos and documents sent to the Telegram bot are saved to the folder automatically, so you can ask about them in the same message.
 - New files, whether an agent created them or you uploaded them, can be announced on **Slack** or **Telegram** with the PDF attached.
 
 ### Platform engineering
@@ -110,7 +111,7 @@ More detail is in [docs/architecture](docs/architecture).
 | Vector search | PostgreSQL + pgvector (HNSW, cosine distance); Neon works on the free tier |
 | Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS |
 | Backend | NestJS 10, TypeScript, Prisma 5, node-postgres |
-| Documents and storage | PDFKit, AWS SDK v3 (S3-compatible object storage) |
+| Documents and storage | PDFKit, pdf.js, OpenAI vision, AWS SDK v3 (S3-compatible object storage) |
 | Integrations | Slack Events API, Telegram Bot API, GitHub REST API, Tavily web search |
 | Auth and security | NextAuth (Google, GitHub sign-in), AES-256-GCM secrets, HMAC run tokens, SSRF guard |
 | Infrastructure | Docker, Docker Compose, GitHub Actions, pnpm workspaces |

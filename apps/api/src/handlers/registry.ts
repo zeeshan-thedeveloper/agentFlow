@@ -26,5 +26,5 @@ export const registry: Record<string, NodeHandler> = {
   'query-runner': new QueryRunnerHandler(credentialResolver, prisma),
   connector: new ConnectorHandler(),
   knowledge: new KnowledgeHandler(),
-  files: new FilesHandler(),
+  files: new FilesHandler(credentialResolver, connectorStore),
 };

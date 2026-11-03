@@ -2,6 +2,7 @@ import { Body, Controller, ForbiddenException, Headers, HttpCode, Inject, Logger
 import { timingSafeEqual } from 'crypto';
 import { ConnectorStore } from './connector.store';
 import { verifySlackSignature } from './slack/slack.client';
+import type { TelegramAttachment } from './trigger-event';
 import { TriggerDispatcher } from './trigger.dispatcher';
 
 type SlackPayload = {
@@ -24,6 +25,10 @@ type TelegramUpdate = {
   message?: {
     message_id: number;
     text?: string;
+    caption?: string;
+    document?: { file_id: string; file_name?: string; mime_type?: string; file_size?: number };
+    /** The same photo in several sizes, smallest first. */
+    photo?: { file_id: string; file_size?: number }[];
     chat: { id: number };
     from?: { username?: string; first_name?: string; is_bot?: boolean };
   };
@@ -101,7 +106,24 @@ export class HooksController {
     if (!sameSecret(connector.data.webhookSecret, secret)) throw new ForbiddenException('Invalid Telegram secret token.');
 
     const message = update.message;
-    if (!message?.text || message.from?.is_bot) return { ok: true };
+    if (!message || message.from?.is_bot) return { ok: true };
+
+    const attachments: TelegramAttachment[] = [];
+    if (message.document) {
+      attachments.push({
+        fileId: message.document.file_id,
+        name: message.document.file_name || `telegram-file-${message.message_id}`,
+        mimeType: message.document.mime_type || 'application/octet-stream',
+        size: message.document.file_size ?? 0,
+      });
+    }
+    const photo = message.photo?.at(-1);
+    if (photo) {
+      attachments.push({ fileId: photo.file_id, name: `telegram-photo-${message.message_id}.jpg`, mimeType: 'image/jpeg', size: photo.file_size ?? 0 });
+    }
+
+    const text = (message.text ?? message.caption ?? '').trim();
+    if (!text && attachments.length === 0) return { ok: true };
 
     try {
       await this.dispatcher.dispatch(connector.userId, {
@@ -109,7 +131,8 @@ export class HooksController {
         chatId: message.chat.id,
         messageId: message.message_id,
         from: message.from?.username ? `@${message.from.username}` : message.from?.first_name ?? 'someone',
-        text: message.text,
+        text: text || `Sent ${attachments.map(file => file.name).join(', ')}.`,
+        ...(attachments.length > 0 ? { attachments } : {}),
       });
     } catch (error) {
       // Answer 200 anyway: Telegram would otherwise keep redelivering the same update.

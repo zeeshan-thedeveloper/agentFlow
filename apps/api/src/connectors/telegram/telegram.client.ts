@@ -17,6 +17,15 @@ export async function telegramApi<T>(botToken: string, method: string, body: Rec
   return result.result as T;
 }
 
+/** Downloads a file someone sent the bot; Telegram serves files up to 20 MB this way. */
+export async function downloadTelegramFile(botToken: string, fileId: string): Promise<Buffer> {
+  const { file_path } = await telegramApi<{ file_path?: string }>(botToken, 'getFile', { file_id: fileId });
+  if (!file_path) throw new Error('Telegram did not return a download path for the file.');
+  const response = await fetch(`https://api.telegram.org/file/bot${botToken}/${file_path}`);
+  if (!response.ok) throw new Error(`Telegram file download failed with ${response.status}.`);
+  return Buffer.from(await response.arrayBuffer());
+}
+
 /** Sends text, split into Telegram's 4096-character limit. */
 export async function sendTelegramMessage(
   botToken: string,

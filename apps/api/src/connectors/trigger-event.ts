@@ -2,6 +2,14 @@ import type { ConnectorStore } from './connector.store';
 import { slackApi } from './slack/slack.client';
 import { sendTelegramMessage } from './telegram/telegram.client';
 
+/** A photo or document sent with a Telegram message; downloaded later with the bot token. */
+export interface TelegramAttachment {
+  fileId: string;
+  name: string;
+  mimeType: string;
+  size: number;
+}
+
 /** The chat message that started a run. Set only by the webhook endpoints, never by a client. */
 export type TriggerEvent =
   | {
@@ -19,6 +27,8 @@ export type TriggerEvent =
       messageId: number;
       from: string;
       text: string;
+      /** Photos and documents sent with the message. */
+      attachments?: TelegramAttachment[];
     };
 
 export function isTriggerEvent(value: unknown): value is TriggerEvent {
@@ -31,7 +41,8 @@ export function describeTriggerEvent(event: TriggerEvent): string {
   return event.source === 'slack'
     ? `This run was started by a Slack message from user ${event.user} in channel ${event.channel} ` +
         `(message ts ${event.ts}${event.threadTs ? `, thread ${event.threadTs}` : ''}).`
-    : `This run was started by a Telegram message from ${event.from} in chat ${event.chatId}.`;
+    : `This run was started by a Telegram message from ${event.from} in chat ${event.chatId}` +
+        (event.attachments?.length ? `, with ${event.attachments.length} attached file(s): ${event.attachments.map(file => file.name).join(', ')}.` : '.');
 }
 
 /** Sends `text` back to the chat the trigger message came from, as a reply to it. */
