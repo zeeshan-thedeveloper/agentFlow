@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { executeWorkflow, StepResult, type RunProgress } from './executor';
-import type { TriggerEvent } from '../connectors/trigger-event';
+import type { ChatTurn, TriggerEvent } from '../connectors/trigger-event';
 import { summarizeForLog } from '../common/log-summary';
 
 type RunWorkflowInput = {
@@ -21,6 +21,8 @@ type RunTrigger =
 
 const MAX_SAVED_OUTPUT_CHARS = 4000;
 const MAX_LISTED_RUNS = 50;
+/** How many earlier exchanges in the same chat an agent sees. */
+const HISTORY_TURNS = 8;
 
 function describeTrigger(body: RunWorkflowInput): RunTrigger {
   const event = body.triggerEvent;
@@ -107,10 +109,12 @@ export class RunsService implements OnModuleDestroy {
       this.logger.log(`Run ${run.id} started for workflow ${workflow.id}`);
 
       // The owner id is runtime context, not canvas data, so handlers receive it here.
+      const conversation = body.triggerEvent ? await this.chatHistory(workflow.id, workflow.canvasJson, body.triggerEvent) : [];
       const stepResults = await executeWorkflow(workflow.canvasJson, {
         userId: workflow.userId,
         initialInput: body.input,
         triggerEvent: body.triggerEvent,
+        ...(conversation.length > 0 ? { conversation } : {}),
         onProgress,
       });
 
@@ -221,6 +225,34 @@ export class RunsService implements OnModuleDestroy {
         },
       });
     }
+  }
+
+  /**
+   * Earlier exchanges in the chat this message came from (the same Telegram
+   * chat or Slack channel), rebuilt from this workflow's completed runs: the
+   * message that started each one and its agent's answer. Oldest first.
+   */
+  private async chatHistory(workflowId: string, canvasJson: Prisma.JsonValue, event: TriggerEvent): Promise<ChatTurn[]> {
+    const sameChat =
+      event.source === 'telegram'
+        ? { trigger: { path: ['chatId'], equals: event.chatId } }
+        : { trigger: { path: ['channel'], equals: event.channel } };
+    const runs = await this.prisma.agentRun.findMany({
+      where: { workflowId, status: 'COMPLETED', AND: [{ trigger: { path: ['source'], equals: event.source } }, sameChat] },
+      orderBy: { startedAt: 'desc' },
+      take: HISTORY_TURNS,
+      select: { trigger: true, results: true },
+    });
+
+    const nodeTypes = this.getNodeTypeMap(canvasJson);
+    const turns: ChatTurn[] = [];
+    for (const run of runs.reverse()) {
+      const user = (run.trigger as { text?: unknown } | null)?.text;
+      const results = Array.isArray(run.results) ? (run.results as { nodeId?: string; status?: string; output?: unknown }[]) : [];
+      const answer = results.filter(result => nodeTypes.get(result.nodeId ?? '') === 'agent' && result.status === 'COMPLETED').at(-1)?.output;
+      if (typeof user === 'string' && typeof answer === 'string' && answer.trim()) turns.push({ user, assistant: answer });
+    }
+    return turns;
   }
 
   private getNodeTypeMap(canvasJson: Prisma.JsonValue): Map<string, string> {

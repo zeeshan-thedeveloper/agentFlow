@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import type { NodeHandler, ToolCallRecord } from '../handlers/base.handler';
 import { registry } from '../handlers/registry';
-import type { TriggerEvent } from '../connectors/trigger-event';
+import type { ChatTurn, TriggerEvent } from '../connectors/trigger-event';
 import { summarizeForLog } from '../common/log-summary';
 import { assembleNodeInput, handlerPayload, isDatabaseConfigNode } from './node-input';
 
@@ -40,6 +40,8 @@ type ExecutorContext = {
   initialInput?: unknown;
   /** The Slack or Telegram message that started the run, if one did. */
   triggerEvent?: TriggerEvent;
+  /** Earlier exchanges in the chat the trigger message came from, oldest first. */
+  conversation?: ChatTurn[];
   /** Told when each step starts and each node finishes, so a run can be watched live. Not passed to handlers. */
   onProgress?: (event: RunProgress) => void;
 };

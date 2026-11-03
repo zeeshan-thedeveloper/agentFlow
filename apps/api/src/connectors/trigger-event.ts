@@ -11,6 +11,16 @@ export interface ChatAttachment {
   size: number;
 }
 
+/** One earlier exchange in the same chat: what the person sent and what the agent answered. */
+export interface ChatTurn {
+  user: string;
+  assistant: string;
+}
+
+export function isChatHistory(value: unknown): value is ChatTurn[] {
+  return Array.isArray(value) && value.every(turn => typeof turn?.user === 'string' && typeof turn?.assistant === 'string');
+}
+
 /** The chat message that started a run. Set only by the webhook endpoints, never by a client. */
 export type TriggerEvent =
   | {
