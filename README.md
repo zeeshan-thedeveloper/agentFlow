@@ -23,6 +23,9 @@ On the canvas you connect nodes into a workflow:
 - **tool nodes** wired into an agent: a **Knowledge** base (RAG), a **PostgreSQL** database, **Files** in S3-compatible object storage, and apps like **Slack**, **Telegram** and **GitHub**,
 - an **Output** that keeps the result or replies in the chat that started the run.
 
+<img width="1470" height="834" alt="image" src="https://github.com/user-attachments/assets/c4aec6eb-76b4-49ba-8e4b-cd77a5cc6035" />
+
+
 The backend walks the graph, runs each agent's tool loop, and stores every input, output and tool call so a run can be inspected step by step.
 
 ---
